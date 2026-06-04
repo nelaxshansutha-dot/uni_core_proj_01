@@ -1,0 +1,121 @@
+/* Marketplace.css */
+
+/* ── Market card ── */
+.market-card {
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    border-radius: 18px !important;
+    overflow: hidden;
+}
+.market-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(92, 45, 83, 0.12) !important;
+}
+
+/* ── Image grid layout ── */
+.market-img-grid {
+    display: grid;
+    height: 190px;
+    overflow: hidden;
+}
+.market-img-grid[data-count="1"] {
+    grid-template-columns: 1fr;
+}
+.market-img-grid[data-count="2"] {
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+}
+.market-img-grid[data-count="3"] {
+    grid-template-columns: 2fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 2px;
+}
+.market-img-grid[data-count="3"] .market-thumb:first-child {
+    grid-row: 1 / 3;
+}
+.market-img-grid[data-count="4"] {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 2px;
+}
+.market-thumb {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* ── Image upload grid in modal ── */
+.img-upload-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.img-upload-box {
+    border: 2px dashed #d0bfce;
+    border-radius: 12px;
+    height: 90px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    background: #faf7f9;
+    position: relative;
+    transition: border-color 0.2s ease, background 0.2s ease;
+    overflow: hidden;
+}
+.img-upload-box:hover {
+    border-color: var(--primary-color, #5c2d53);
+    background: #f5ecf3;
+}
+
+.img-preview-wrap {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+.img-preview {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 10px;
+}
+.img-remove-btn {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: rgba(0,0,0,0.55);
+    border: none;
+    color: #fff;
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    transition: background 0.2s;
+}
+.img-remove-btn:hover {
+    background: rgba(220, 38, 38, 0.8);
+}
+
+.img-upload-error {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(220,38,38,0.85);
+    color: #fff;
+    font-size: 0.6rem;
+    text-align: center;
+    padding: 2px 4px;
+}
+
+@media (max-width: 576px) {
+    .img-upload-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}

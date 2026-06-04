@@ -12,15 +12,17 @@ $controller = new MarketplaceController();
 if ($method === 'GET') {
     $controller->getItems();
 } else {
-    // Protected routes
+    // All write operations require authentication
     $user = AuthMiddleware::authenticate();
-    
+
+    $data = json_decode(file_get_contents("php://input"), true);
+
     if ($method === 'POST') {
-        $data = json_decode(file_get_contents("php://input"), true);
         $controller->createItem($data, $user['id']);
     } else if ($method === 'PUT') {
-        $data = json_decode(file_get_contents("php://input"), true);
         $controller->updateStatus($data, $user['id']);
+    } else if ($method === 'DELETE') {
+        $controller->deleteItem($data, $user['id']);
     } else {
         Response::error("Method not allowed.", 405);
     }
