@@ -14,6 +14,7 @@ if (PHP_VERSION_ID < 50600) {
             echo $err;
         }
     }
+    
     throw new RuntimeException($err);
 }
 
