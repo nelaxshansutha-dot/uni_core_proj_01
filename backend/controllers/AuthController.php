@@ -5,6 +5,8 @@ require_once __DIR__ . '/../models/Staff.php';
 require_once __DIR__ . '/../utils/Response.php';
 require_once __DIR__ . '/../utils/Validator.php';
 require_once __DIR__ . '/../config/Database.php';
+require_once __DIR__ . '/../utils/MailService.php';
+
 
 class AuthController {
     
@@ -115,8 +117,9 @@ class AuthController {
             $stmt = $db->prepare("INSERT INTO otp_verifications (user_id, otp_code, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 10 MINUTE))");
             $stmt->execute([$user_id, $otp]);
 
-            // Log OTP to file for testing
-            file_put_contents(__DIR__ . '/../otp_log.txt', date('Y-m-d H:i:s') . " | OTP for {$data['email']}: {$otp}\n", FILE_APPEND);
+            // Send OTP to email
+            MailService::sendOTP($data['email'], $otp);
+
 
             Response::success("Registration successful! An OTP has been sent to your email.", [
                 'user_id' => $user_id,
@@ -185,8 +188,9 @@ class AuthController {
                 $stmt = $db->prepare("INSERT INTO otp_verifications (user_id, otp_code, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 10 MINUTE))");
                 $stmt->execute([$user['id'], $otp]);
 
-                // Log OTP to file for testing (in production, send via email)
-                file_put_contents(__DIR__ . '/../otp_log.txt', date('Y-m-d H:i:s') . " | OTP for {$user['email']}: {$otp}\n", FILE_APPEND);
+                // Send OTP to email
+                MailService::sendOTP($user['email'], $otp);
+
 
                 Response::success("Email verification required. An OTP has been sent to your email.", [
                     'user_id' => $user['id'],
@@ -281,8 +285,9 @@ class AuthController {
         $stmt = $db->prepare("INSERT INTO otp_verifications (user_id, otp_code, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 10 MINUTE))");
         $stmt->execute([$user['id'], $otp]);
 
-        // Log OTP to file for testing
-        file_put_contents(__DIR__ . '/../otp_log.txt', date('Y-m-d H:i:s') . " | Password Reset OTP for {$user['email']}: {$otp}\n", FILE_APPEND);
+        // Send OTP to email
+        MailService::sendOTP($user['email'], $otp);
+
 
         Response::success("OTP sent to your email. Please check your inbox (or otp_log.txt for testing).", [
             'user_id' => $user['id'],
