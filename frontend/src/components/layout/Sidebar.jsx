@@ -8,7 +8,8 @@ import {
     BookOpen, 
     Users, 
     Bell, 
-    ShieldAlert 
+    ShieldAlert,
+    User
 } from 'lucide-react';
 
 const Sidebar = () => {
@@ -60,6 +61,12 @@ const Sidebar = () => {
                     <NavLink to="/notifications" className="nav-link d-flex align-items-center gap-3">
                         <Bell size={20} />
                         Notifications
+                    </NavLink>
+                </li>
+                <li>
+                    <NavLink to="/profile" className="nav-link d-flex align-items-center gap-3">
+                        <User size={20} />
+                        Manage Profile
                     </NavLink>
                 </li>
                 

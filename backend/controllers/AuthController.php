@@ -162,6 +162,9 @@ class AuthController {
                     'id' => $user['id'],
                     'enrollment_no' => $user['enrollment_no'],
                     'email' => $user['email'],
+                    'phone_number' => $user['phone_number'],
+                    'lost_item_sms_notification' => $user['lost_item_sms_notification'],
+                    'has_seen_lost_item_popup' => $user['has_seen_lost_item_popup'],
                     'role' => $user['role']
                 ];
 
@@ -223,7 +226,7 @@ class AuthController {
             $userModel->markAsVerified($data['user_id']);
 
             // Get user details
-            $stmt = $db->prepare("SELECT id, enrollment_no, email, role FROM users WHERE id = ?");
+            $stmt = $db->prepare("SELECT id, enrollment_no, email, phone_number, lost_item_sms_notification, has_seen_lost_item_popup, role FROM users WHERE id = ?");
             $stmt->execute([$data['user_id']]);
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
