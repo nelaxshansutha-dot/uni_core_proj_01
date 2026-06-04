@@ -19,6 +19,7 @@ import Notifications from '../pages/notifications/Notifications';
 import Profile from '../pages/auth/Profile';
 import AdminPanel from '../pages/admin/AdminPanel';
 import Home from '../pages/home/Home';
+import Settings from '../pages/settings/Settings';
 
 const AppRoutes = () => {
     return (
@@ -40,7 +41,7 @@ const AppRoutes = () => {
                     <Route path="/notes" element={<Notes />} />
                     <Route path="/peer-learning" element={<PeerLearning />} />
                     <Route path="/notifications" element={<Notifications />} />
-                    <Route path="/profile" element={<Profile />} />
+                    <Route path="/settings" element={<Settings />} />
                     
                     {/* Admin Only Route */}
                     <Route element={<RoleBasedRoute allowedRoles={['admin']} />}>

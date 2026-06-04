@@ -7,6 +7,8 @@ import {
     ShoppingBag, 
     BookOpen, 
     Users, 
+    Settings, 
+    ShieldAlert 
     Bell, 
     ShieldAlert,
     User
@@ -58,9 +60,9 @@ const Sidebar = () => {
                     </NavLink>
                 </li>
                 <li>
-                    <NavLink to="/notifications" className="nav-link d-flex align-items-center gap-3">
-                        <Bell size={20} />
-                        Notifications
+                    <NavLink to="/settings" className="nav-link d-flex align-items-center gap-3">
+                        <Settings size={20} />
+                        Settings
                     </NavLink>
                 </li>
                 <li>

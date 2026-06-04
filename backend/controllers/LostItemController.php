@@ -84,7 +84,9 @@ class LostItemController {
         }
     }
 
+
     public function deleteItem($itemId, $userId) {
+
         $model = new LostItem();
         if ($model->delete($itemId, $userId)) {
             Response::success("Item deleted successfully.");
