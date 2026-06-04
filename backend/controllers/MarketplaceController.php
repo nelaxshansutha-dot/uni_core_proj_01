@@ -12,19 +12,31 @@ class MarketplaceController {
     }
 
     public function createItem($data, $user_id) {
-        $missing = Validator::required(['item_name', 'description', 'price'], $data);
+        $missing = Validator::required(['item_name', 'description', 'price', 'condition_type', 'location', 'phone_number'], $data);
         if (!empty($missing)) {
             Response::error("Missing fields: " . implode(', ', $missing));
         }
 
+        // Used condition requires usage_duration
+        if ($data['condition_type'] === 'used' && empty($data['usage_duration'])) {
+            Response::error("Please specify how long you have used this item.");
+        }
+
         $model = new Marketplace();
         $itemData = [
-            'seller_id' => $user_id,
-            'item_name' => $data['item_name'],
-            'description' => $data['description'],
-            'price' => $data['price'],
-            'image_url' => isset($data['image_url']) ? $data['image_url'] : null,
-            'status' => 'available'
+            'seller_id'      => $user_id,
+            'item_name'      => $data['item_name'],
+            'description'    => $data['description'],
+            'price'          => $data['price'],
+            'condition_type' => $data['condition_type'],
+            'location'       => $data['location'],
+            'phone_number'   => $data['phone_number'],
+            'usage_duration' => isset($data['usage_duration']) ? $data['usage_duration'] : null,
+            'image_url'      => isset($data['image_url'])  ? $data['image_url']  : null,
+            'image_url2'     => isset($data['image_url2']) ? $data['image_url2'] : null,
+            'image_url3'     => isset($data['image_url3']) ? $data['image_url3'] : null,
+            'image_url4'     => isset($data['image_url4']) ? $data['image_url4'] : null,
+            'status'         => 'available'
         ];
 
         if ($model->create($itemData)) {
@@ -45,6 +57,20 @@ class MarketplaceController {
             Response::success("Status updated.");
         } else {
             Response::error("Failed to update status. You may not own this item.", 403);
+        }
+    }
+
+    public function deleteItem($data, $user_id) {
+        $missing = Validator::required(['id'], $data);
+        if (!empty($missing)) {
+            Response::error("Missing item ID.");
+        }
+
+        $model = new Marketplace();
+        if ($model->delete($data['id'], $user_id)) {
+            Response::success("Item deleted successfully.");
+        } else {
+            Response::error("Failed to delete item. You may not own this item.", 403);
         }
     }
 }
