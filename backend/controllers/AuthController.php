@@ -140,16 +140,11 @@ class AuthController {
         $user = $userModel->findByEnrollment($data['enrollment_no']);
 
         if ($user && password_verify($data['password'], $user['password_hash'])) {
-
-            // Normal login (enrollment number + password) does NOT trigger OTP and directly allows access
             $db = (new Database())->getConnection();
             
             // Check if user is already verified
             if ($user['is_verified']) {
                 // Already verified — skip OTP, login directly
-                $db = (new Database())->getConnection();
-
-                // Fetch profile data based on role
                 $profile = null;
                 if ($user['role'] === 'student' || $user['role'] === 'rep') {
                     $stmt = $db->prepare("SELECT first_name, last_name, course, year FROM students WHERE user_id = ?");
@@ -175,7 +170,11 @@ class AuthController {
                     $userData = array_merge($userData, $profile);
                 }
 
-                $token = base64_encode(json_encode(['id' => $user['id'], 'role' => $user['role'], 'time' => time()]));
+                require_once __DIR__ . '/../utils/JWT.php';
+                $token = JWT::generate([
+                    'id' => $user['id'],
+                    'role' => $user['role']
+                ]);
 
                 Response::success("Login successful", [
                     'token' => $token,
@@ -185,43 +184,23 @@ class AuthController {
             } else {
                 // Not verified — generate OTP for first-time verification
                 $otp = rand(100000, 999999);
-                $db = (new Database())->getConnection();
 
+                // Delete old OTPs for user
+                $db->prepare("DELETE FROM otp_verifications WHERE user_id = ?")->execute([$user['id']]);
 
-            // Fetch profile data based on role
-            $profile = null;
-            if ($user['role'] === 'student' || $user['role'] === 'rep') {
-                $stmt = $db->prepare("SELECT first_name, last_name, course, year FROM students WHERE user_id = ?");
-                $stmt->execute([$user['id']]);
-                $profile = $stmt->fetch(PDO::FETCH_ASSOC);
-            } else if ($user['role'] === 'staff') {
-                $stmt = $db->prepare("SELECT first_name, last_name, department FROM staff WHERE user_id = ?");
-                $stmt->execute([$user['id']]);
-                $profile = $stmt->fetch(PDO::FETCH_ASSOC);
+                // Insert new OTP (10 min expiry)
+                $stmt = $db->prepare("INSERT INTO otp_verifications (user_id, otp_code, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 10 MINUTE))");
+                $stmt->execute([$user['id'], $otp]);
+
+                // Send OTP to email
+                MailService::sendOTP($user['email'], $otp);
+
+                Response::success("Email verification required. An OTP has been sent to your email.", [
+                    'user_id' => $user['id'],
+                    'email' => $user['email'],
+                    'verified' => false
+                ]);
             }
-
-            $userData = [
-                'id' => $user['id'],
-                'enrollment_no' => $user['enrollment_no'],
-                'email' => $user['email'],
-                'role' => $user['role']
-            ];
-
-            if ($profile) {
-                $userData = array_merge($userData, $profile);
-            }
-
-            require_once __DIR__ . '/../utils/JWT.php';
-            $token = JWT::generate([
-                'id' => $user['id'],
-                'role' => $user['role']
-            ]);
-
-            Response::success("Login successful", [
-                'token' => $token,
-                'user' => $userData,
-                'verified' => true
-            ]);
         } else {
             Response::error("Invalid enrollment number or password. Please check your credentials.", 401);
         }
