@@ -16,6 +16,7 @@ import Marketplace from '../pages/marketplace/Marketplace';
 import Notes from '../pages/notes/Notes';
 import PeerLearning from '../pages/peer-learning/PeerLearning';
 import Notifications from '../pages/notifications/Notifications';
+import Profile from '../pages/auth/Profile';
 import AdminPanel from '../pages/admin/AdminPanel';
 import Home from '../pages/home/Home';
 import Settings from '../pages/settings/Settings';

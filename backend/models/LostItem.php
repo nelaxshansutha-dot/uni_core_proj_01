@@ -10,25 +10,52 @@ class LostItem {
         $this->conn = $database->getConnection();
     }
 
-    public function create($data) {
-        $query = "INSERT INTO " . $this->table . " (user_id, title, description, image_url, status) VALUES (:user_id, :title, :description, :image_url, :status)";
-        $stmt = $this->conn->prepare($query);
+  public function create($data) {
+    $query = "INSERT INTO lost_items
+    (
+        user_id,
+        item_name,
+        description,
+        last_seen_datetime,
+        last_seen_place,
+        contact_number,
+        item_image
+    )
+    VALUES
+    (
+        :user_id,
+        :item_name,
+        :description,
+        :last_seen_datetime,
+        :last_seen_place,
+        :contact_number,
+        :item_image
+    )";
 
-        $stmt->bindParam(':user_id', $data['user_id']);
-        $stmt->bindParam(':title', $data['title']);
-        $stmt->bindParam(':description', $data['description']);
-        $stmt->bindParam(':image_url', $data['image_url']);
-        $stmt->bindParam(':status', $data['status']);
+    $stmt = $this->conn->prepare($query);
 
-        return $stmt->execute();
-    }
+    $stmt->bindParam(':user_id', $data['user_id']);
+    $stmt->bindParam(':item_name', $data['item_name']);
+    $stmt->bindParam(':description', $data['description']);
+    $stmt->bindParam(':last_seen_datetime', $data['last_seen_datetime']);
+    $stmt->bindParam(':last_seen_place', $data['last_seen_place']);
+    $stmt->bindParam(':contact_number', $data['contact_number']);
+    $stmt->bindParam(':item_image', $data['item_image']);
+
+    return $stmt->execute();
+}
 
     public function getAll() {
-        $query = "SELECT l.*, u.enrollment_no FROM " . $this->table . " l JOIN users u ON l.user_id = u.id ORDER BY l.created_at DESC";
-        $stmt = $this->conn->prepare($query);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
+    $query = "SELECT l.*, u.enrollment_no
+              FROM lost_items l
+              JOIN users u ON l.user_id = u.id
+              ORDER BY l.created_at DESC";
+
+    $stmt = $this->conn->prepare($query);
+    $stmt->execute();
+
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
     
     public function getByUser($user_id) {
         $query = "SELECT * FROM " . $this->table . " WHERE user_id = :user_id ORDER BY created_at DESC";
@@ -38,14 +65,7 @@ class LostItem {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function updateStatus($id, $user_id, $status) {
-        $query = "UPDATE " . $this->table . " SET status = :status WHERE id = :id AND user_id = :user_id";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':status', $status);
-        $stmt->bindParam(':id', $id);
-        $stmt->bindParam(':user_id', $user_id);
-        return $stmt->execute();
-    }
+   
     
     public function delete($id, $user_id) {
         $query = "DELETE FROM " . $this->table . " WHERE id = :id AND user_id = :user_id";

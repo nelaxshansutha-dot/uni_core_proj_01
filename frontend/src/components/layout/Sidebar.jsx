@@ -9,6 +9,9 @@ import {
     Users, 
     Settings, 
     ShieldAlert 
+    Bell, 
+    ShieldAlert,
+    User
 } from 'lucide-react';
 
 const Sidebar = () => {
@@ -60,6 +63,12 @@ const Sidebar = () => {
                     <NavLink to="/settings" className="nav-link d-flex align-items-center gap-3">
                         <Settings size={20} />
                         Settings
+                    </NavLink>
+                </li>
+                <li>
+                    <NavLink to="/profile" className="nav-link d-flex align-items-center gap-3">
+                        <User size={20} />
+                        Manage Profile
                     </NavLink>
                 </li>
                 

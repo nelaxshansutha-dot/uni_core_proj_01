@@ -76,5 +76,27 @@ class User {
         $stmt->bindParam(':id', $id);
         return $stmt->execute();
     }
+
+    public function updateNotificationSettings($id, $sms_preference, $popup_seen = null) {
+        if ($popup_seen !== null) {
+            $query = "UPDATE " . $this->table . " SET lost_item_sms_notification = :sms, has_seen_lost_item_popup = :popup WHERE id = :id";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(':popup', $popup_seen, PDO::PARAM_INT);
+        } else {
+            $query = "UPDATE " . $this->table . " SET lost_item_sms_notification = :sms WHERE id = :id";
+            $stmt = $this->conn->prepare($query);
+        }
+        $stmt->bindParam(':sms', $sms_preference, PDO::PARAM_INT);
+        $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+        return $stmt->execute();
+    }
+
+    public function updateProfileFields($id, $phone_number) {
+        $query = "UPDATE " . $this->table . " SET phone_number = :phone WHERE id = :id";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':phone', $phone_number);
+        $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+        return $stmt->execute();
+    }
 }
 ?>

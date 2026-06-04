@@ -140,8 +140,53 @@ class AuthController {
         $user = $userModel->findByEnrollment($data['enrollment_no']);
 
         if ($user && password_verify($data['password'], $user['password_hash'])) {
+
             // Normal login (enrollment number + password) does NOT trigger OTP and directly allows access
             $db = (new Database())->getConnection();
+            
+            // Check if user is already verified
+            if ($user['is_verified']) {
+                // Already verified — skip OTP, login directly
+                $db = (new Database())->getConnection();
+
+                // Fetch profile data based on role
+                $profile = null;
+                if ($user['role'] === 'student' || $user['role'] === 'rep') {
+                    $stmt = $db->prepare("SELECT first_name, last_name, course, year FROM students WHERE user_id = ?");
+                    $stmt->execute([$user['id']]);
+                    $profile = $stmt->fetch(PDO::FETCH_ASSOC);
+                } else if ($user['role'] === 'staff') {
+                    $stmt = $db->prepare("SELECT first_name, last_name, department FROM staff WHERE user_id = ?");
+                    $stmt->execute([$user['id']]);
+                    $profile = $stmt->fetch(PDO::FETCH_ASSOC);
+                }
+
+                $userData = [
+                    'id' => $user['id'],
+                    'enrollment_no' => $user['enrollment_no'],
+                    'email' => $user['email'],
+                    'phone_number' => $user['phone_number'],
+                    'lost_item_sms_notification' => $user['lost_item_sms_notification'],
+                    'has_seen_lost_item_popup' => $user['has_seen_lost_item_popup'],
+                    'role' => $user['role']
+                ];
+
+                if ($profile) {
+                    $userData = array_merge($userData, $profile);
+                }
+
+                $token = base64_encode(json_encode(['id' => $user['id'], 'role' => $user['role'], 'time' => time()]));
+
+                Response::success("Login successful", [
+                    'token' => $token,
+                    'user' => $userData,
+                    'verified' => true
+                ]);
+            } else {
+                // Not verified — generate OTP for first-time verification
+                $otp = rand(100000, 999999);
+                $db = (new Database())->getConnection();
+
 
             // Fetch profile data based on role
             $profile = null;
@@ -202,7 +247,7 @@ class AuthController {
             $userModel->markAsVerified($data['user_id']);
 
             // Get user details
-            $stmt = $db->prepare("SELECT id, enrollment_no, email, role FROM users WHERE id = ?");
+            $stmt = $db->prepare("SELECT id, enrollment_no, email, phone_number, lost_item_sms_notification, has_seen_lost_item_popup, role FROM users WHERE id = ?");
             $stmt->execute([$data['user_id']]);
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
