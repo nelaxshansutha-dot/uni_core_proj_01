@@ -4,8 +4,8 @@
   --primary-color: #5c2d53;
   --primary-hover: #7a3d70;
   --primary-light: rgba(92, 45, 83, 0.1);
-  --bg-color: #5c2d53;
-  --bg-gradient: linear-gradient(135deg, #5c2d53 0%, #3d1e38 50%, #2a1526 100%);
+  --bg-color: #ffffff;
+  --bg-gradient: #ffffff;
   --card-bg: rgba(255, 255, 255, 0.95);
   --card-bg-glass: rgba(255, 255, 255, 0.12);
   --text-dark: #1a0a17;
@@ -167,7 +167,7 @@ body {
 /* ===== SIDEBAR ===== */
 .sidebar {
   min-height: 100vh;
-  background: linear-gradient(180deg, #2a1526 0%, #3d1e38 50%, #5c2d53 100%);
+  background: #714267;
   color: #f5eaf3;
   box-shadow: 4px 0 20px rgba(42, 21, 38, 0.3);
 }
@@ -304,7 +304,7 @@ a.text-primary:hover {
 
 /* ===== PAGE CONTENT AREA ===== */
 .page-content {
-  background: linear-gradient(135deg, #f8f4f7 0%, #f0eaef 100%);
+  background: #ffffff;
   min-height: 100vh;
 }
 

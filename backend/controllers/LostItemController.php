@@ -32,8 +32,7 @@ class LostItemController {
             Response::error("Failed to report item.", 500);
         }
     }
-
-    public function updateStatus($data, $user_id) {
+  public function updateStatus($data, $user_id) {
         $missing = Validator::required(['id', 'status'], $data);
         if (!empty($missing)) {
             Response::error("Missing fields.");

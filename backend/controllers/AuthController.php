@@ -140,64 +140,43 @@ class AuthController {
         $user = $userModel->findByEnrollment($data['enrollment_no']);
 
         if ($user && password_verify($data['password'], $user['password_hash'])) {
-            
-            // Check if user is already verified
-            if ($user['is_verified']) {
-                // Already verified — skip OTP, login directly
-                $db = (new Database())->getConnection();
+            // Normal login (enrollment number + password) does NOT trigger OTP and directly allows access
+            $db = (new Database())->getConnection();
 
-                // Fetch profile data based on role
-                $profile = null;
-                if ($user['role'] === 'student' || $user['role'] === 'rep') {
-                    $stmt = $db->prepare("SELECT first_name, last_name, course, year FROM students WHERE user_id = ?");
-                    $stmt->execute([$user['id']]);
-                    $profile = $stmt->fetch(PDO::FETCH_ASSOC);
-                } else if ($user['role'] === 'staff') {
-                    $stmt = $db->prepare("SELECT first_name, last_name, department FROM staff WHERE user_id = ?");
-                    $stmt->execute([$user['id']]);
-                    $profile = $stmt->fetch(PDO::FETCH_ASSOC);
-                }
-
-                $userData = [
-                    'id' => $user['id'],
-                    'enrollment_no' => $user['enrollment_no'],
-                    'email' => $user['email'],
-                    'role' => $user['role']
-                ];
-
-                if ($profile) {
-                    $userData = array_merge($userData, $profile);
-                }
-
-                $token = base64_encode(json_encode(['id' => $user['id'], 'role' => $user['role'], 'time' => time()]));
-
-                Response::success("Login successful", [
-                    'token' => $token,
-                    'user' => $userData,
-                    'verified' => true
-                ]);
-            } else {
-                // Not verified — generate OTP for first-time verification
-                $otp = rand(100000, 999999);
-                $db = (new Database())->getConnection();
-
-                // Delete old OTPs for user
-                $db->prepare("DELETE FROM otp_verifications WHERE user_id = ?")->execute([$user['id']]);
-
-                // Insert new OTP (10 min expiry)
-                $stmt = $db->prepare("INSERT INTO otp_verifications (user_id, otp_code, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 10 MINUTE))");
-                $stmt->execute([$user['id'], $otp]);
-
-                // Send OTP to email
-                MailService::sendOTP($user['email'], $otp);
-
-
-                Response::success("Email verification required. An OTP has been sent to your email.", [
-                    'user_id' => $user['id'],
-                    'email' => $user['email'],
-                    'verified' => false
-                ]);
+            // Fetch profile data based on role
+            $profile = null;
+            if ($user['role'] === 'student' || $user['role'] === 'rep') {
+                $stmt = $db->prepare("SELECT first_name, last_name, course, year FROM students WHERE user_id = ?");
+                $stmt->execute([$user['id']]);
+                $profile = $stmt->fetch(PDO::FETCH_ASSOC);
+            } else if ($user['role'] === 'staff') {
+                $stmt = $db->prepare("SELECT first_name, last_name, department FROM staff WHERE user_id = ?");
+                $stmt->execute([$user['id']]);
+                $profile = $stmt->fetch(PDO::FETCH_ASSOC);
             }
+
+            $userData = [
+                'id' => $user['id'],
+                'enrollment_no' => $user['enrollment_no'],
+                'email' => $user['email'],
+                'role' => $user['role']
+            ];
+
+            if ($profile) {
+                $userData = array_merge($userData, $profile);
+            }
+
+            require_once __DIR__ . '/../utils/JWT.php';
+            $token = JWT::generate([
+                'id' => $user['id'],
+                'role' => $user['role']
+            ]);
+
+            Response::success("Login successful", [
+                'token' => $token,
+                'user' => $userData,
+                'verified' => true
+            ]);
         } else {
             Response::error("Invalid enrollment number or password. Please check your credentials.", 401);
         }
@@ -243,7 +222,11 @@ class AuthController {
                 $user = array_merge($user, $profile);
             }
 
-            $token = base64_encode(json_encode(['id' => $user['id'], 'role' => $user['role'], 'time' => time()]));
+            require_once __DIR__ . '/../utils/JWT.php';
+            $token = JWT::generate([
+                'id' => $user['id'],
+                'role' => $user['role']
+            ]);
 
             Response::success("Email verified successfully! Welcome to UniCore.", [
                 'token' => $token,
@@ -364,6 +347,127 @@ class AuthController {
         $userModel->updatePassword($data['user_id'], $newHash);
 
         Response::success("Password has been reset successfully! You can now log in with your new password.");
+    }
+
+    /**
+     * Update User Profile Details
+     */
+    public function updateProfile($data, $user_id) {
+        $required = ['first_name', 'last_name', 'email'];
+        $missing = Validator::required($required, $data);
+        if (!empty($missing)) {
+            Response::error("Missing fields: " . implode(', ', $missing));
+        }
+
+        if (!Validator::validateEmail($data['email'])) {
+            Response::error("Invalid email format.");
+        }
+
+        $db = (new Database())->getConnection();
+
+        // Fetch current user details
+        $userModel = new User();
+        $user = $userModel->findById($user_id);
+        if (!$user) {
+            Response::error("User not found.", 404);
+        }
+
+        // Validate email domain based on role
+        $emailError = $this->validateEmailDomain($data['email'], $user['role']);
+        if ($emailError) {
+            Response::error($emailError);
+        }
+
+        // Check if email is already taken by another user
+        $stmt = $db->prepare("SELECT id FROM users WHERE email = ? AND id != ? LIMIT 1");
+        $stmt->execute([$data['email'], $user_id]);
+        if ($stmt->fetch()) {
+            Response::error("This email is already in use by another account.");
+        }
+
+        // Handle password update if requested
+        $password_hash = $user['password_hash'];
+        if (!empty($data['new_password'])) {
+            if (empty($data['old_password'])) {
+                Response::error("Please enter your current password to change your password.");
+            }
+            if (!password_verify($data['old_password'], $user['password_hash'])) {
+                Response::error("Incorrect current password.");
+            }
+            if (strlen($data['new_password']) < 6) {
+                Response::error("New password must be at least 6 characters long.");
+            }
+            if ($data['new_password'] !== $data['confirm_password']) {
+                Response::error("New passwords do not match.");
+            }
+            $password_hash = password_hash($data['new_password'], PASSWORD_BCRYPT);
+        }
+
+        // Start Transaction
+        $db->beginTransaction();
+
+        try {
+            // Update users table
+            $phone = isset($data['phone_number']) ? $data['phone_number'] : null;
+            $stmt = $db->prepare("UPDATE users SET email = ?, phone_number = ?, password_hash = ? WHERE id = ?");
+            $stmt->execute([$data['email'], $phone, $password_hash, $user_id]);
+
+            // Update role-specific table
+            if ($user['role'] === 'student' || $user['role'] === 'rep') {
+                $course = isset($data['course']) ? $data['course'] : null;
+                $year = isset($data['year']) ? $data['year'] : null;
+                
+                $stmt = $db->prepare("UPDATE students SET first_name = ?, last_name = ?, course = ?, year = ? WHERE user_id = ?");
+                $stmt->execute([$data['first_name'], $data['last_name'], $course, $year, $user_id]);
+            } else if ($user['role'] === 'staff') {
+                $department = isset($data['department']) ? $data['department'] : '';
+                
+                $stmt = $db->prepare("UPDATE staff SET first_name = ?, last_name = ?, department = ? WHERE user_id = ?");
+                $stmt->execute([$data['first_name'], $data['last_name'], $department, $user_id]);
+            }
+
+            $db->commit();
+        } catch (Exception $e) {
+            $db->rollBack();
+            Response::error("Failed to update profile: " . $e->getMessage(), 500);
+        }
+
+        // Fetch updated profile
+        $updatedUser = $userModel->findById($user_id);
+        $profile = null;
+        if ($updatedUser['role'] === 'student' || $updatedUser['role'] === 'rep') {
+            $stmt = $db->prepare("SELECT first_name, last_name, course, year FROM students WHERE user_id = ?");
+            $stmt->execute([$user_id]);
+            $profile = $stmt->fetch(PDO::FETCH_ASSOC);
+        } else if ($updatedUser['role'] === 'staff') {
+            $stmt = $db->prepare("SELECT first_name, last_name, department FROM staff WHERE user_id = ?");
+            $stmt->execute([$user_id]);
+            $profile = $stmt->fetch(PDO::FETCH_ASSOC);
+        }
+
+        $userData = [
+            'id' => $updatedUser['id'],
+            'enrollment_no' => $updatedUser['enrollment_no'],
+            'email' => $updatedUser['email'],
+            'role' => $updatedUser['role'],
+            'phone_number' => $updatedUser['phone_number']
+        ];
+
+        if ($profile) {
+            $userData = array_merge($userData, $profile);
+        }
+
+        // Re-generate token
+        require_once __DIR__ . '/../utils/JWT.php';
+        $token = JWT::generate([
+            'id' => $updatedUser['id'],
+            'role' => $updatedUser['role']
+        ]);
+
+        Response::success("Profile updated successfully", [
+            'token' => $token,
+            'user' => $userData
+        ]);
     }
 }
 ?>

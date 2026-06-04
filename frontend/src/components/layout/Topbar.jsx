@@ -1,35 +1,94 @@
-import React, { useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useContext, useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
-import { LogOut, User } from 'lucide-react';
+import { LogOut, User, Bell } from 'lucide-react';
 
 const Topbar = () => {
     const { user, logout } = useContext(AuthContext);
     const navigate = useNavigate();
+    const [dropdownOpen, setDropdownOpen] = useState(false);
 
     const handleLogout = () => {
         logout();
         navigate('/login');
     };
 
+    const getInitials = () => {
+        if (!user) return '?';
+        const first = user.first_name ? user.first_name.charAt(0) : '';
+        const last = user.last_name ? user.last_name.charAt(0) : '';
+        return (first + last).toUpperCase() || user.enrollment_no.substring(0, 2);
+    };
+
     return (
-        <div className="topbar d-flex justify-content-between align-items-center px-4 py-3 sticky-top z-3">
-            <h5 className="m-0 text-muted fw-normal">Welcome back, {user?.first_name || 'User'}!</h5>
+        <div className="topbar d-flex justify-content-between align-items-center px-4 py-3 sticky-top z-3 bg-white border-bottom shadow-sm">
+            <h5 className="m-0 text-dark fw-semibold">Welcome back, {user?.first_name || 'User'}!</h5>
             
             <div className="d-flex align-items-center gap-3">
-                <div className="d-flex align-items-center bg-light rounded-pill px-3 py-2 border shadow-sm">
-                    <User size={18} className="text-secondary me-2" />
-                    <span className="fw-medium text-dark">{user?.enrollment_no}</span>
-                    <span className="badge bg-primary ms-2 rounded-pill text-capitalize">{user?.role}</span>
-                </div>
-                
+                {/* Bell Icon for Notifications */}
                 <button 
-                    onClick={handleLogout}
-                    className="btn btn-outline-danger d-flex align-items-center gap-2 rounded-pill px-3 py-2"
+                    onClick={() => navigate('/notifications')} 
+                    className="btn btn-light rounded-circle p-2 position-relative d-flex align-items-center justify-content-center"
+                    style={{ width: '40px', height: '40px' }}
+                    title="Notifications"
                 >
-                    <LogOut size={18} />
-                    Logout
+                    <Bell size={20} className="text-secondary" />
                 </button>
+
+                {/* Round Profile Icon with Dropdown */}
+                <div className="dropdown position-relative">
+                    <button 
+                        className="btn btn-light d-flex align-items-center gap-2 rounded-pill px-3 py-1 border shadow-sm"
+                        type="button"
+                        onClick={() => setDropdownOpen(!dropdownOpen)}
+                        style={{ height: '40px' }}
+                    >
+                        <div 
+                            className="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold text-xs" 
+                            style={{ width: '28px', height: '28px', fontSize: '0.78rem' }}
+                        >
+                            {getInitials()}
+                        </div>
+                        <span className="fw-medium text-dark d-none d-md-inline" style={{ fontSize: '0.85rem' }}>
+                            {user?.first_name || 'Profile'}
+                        </span>
+                    </button>
+                    
+                    {dropdownOpen && (
+                        <>
+                            <div 
+                                className="dropdown-backdrop position-fixed top-0 bottom-0 start-0 end-0 z-1" 
+                                style={{ background: 'transparent' }}
+                                onClick={() => setDropdownOpen(false)}
+                            ></div>
+                            <ul 
+                                className="dropdown-menu show dropdown-menu-end shadow border-0 mt-2 p-2 rounded-3 z-2 position-absolute" 
+                                style={{ right: 0, minWidth: '160px' }}
+                            >
+                                <li>
+                                    <Link 
+                                        to="/settings" 
+                                        className="dropdown-item d-flex align-items-center gap-2 rounded-2 py-2" 
+                                        onClick={() => setDropdownOpen(false)}
+                                    >
+                                        <User size={16} className="text-secondary" />
+                                        Manage Profile
+                                    </Link>
+                                </li>
+                                <li><hr className="dropdown-divider border-light" /></li>
+                                <li>
+                                    <button 
+                                        onClick={() => { setDropdownOpen(false); handleLogout(); }} 
+                                        className="dropdown-item d-flex align-items-center gap-2 text-danger rounded-2 py-2"
+                                    >
+                                        <LogOut size={16} />
+                                        Logout
+                                    </button>
+                                </li>
+                            </ul>
+                        </>
+                    )}
+                </div>
             </div>
         </div>
     );

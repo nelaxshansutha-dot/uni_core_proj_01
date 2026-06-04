@@ -25,6 +25,10 @@ if ($method === 'POST') {
         $controller->verifyResetOtp($data);
     } else if ($action === 'reset-password') {
         $controller->resetPassword($data);
+    } else if ($action === 'update-profile') {
+        require_once __DIR__ . '/../utils/AuthMiddleware.php';
+        $user = AuthMiddleware::authenticate();
+        $controller->updateProfile($data, $user['id']);
     } else {
         Response::error("Invalid action.", 404);
     }
