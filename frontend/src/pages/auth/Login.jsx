@@ -15,6 +15,7 @@ const Login = () => {
 
     // Show success message if redirected from registration or password reset
     const registrationSuccess = location.state?.registrationSuccess;
+    const verifiedSuccess = location.state?.verifiedSuccess;
     const passwordReset = location.state?.passwordReset;
 
     const handleSubmit = async (e) => {
@@ -70,6 +71,13 @@ const Login = () => {
                         <div className="alert alert-success py-2 small d-flex align-items-center gap-2">
                             <CheckCircle size={16} className="flex-shrink-0" />
                             <span>Account created successfully! Sign in to verify your email.</span>
+                        </div>
+                    )}
+
+                    {verifiedSuccess && (
+                        <div className="alert alert-success py-2 small d-flex align-items-center gap-2">
+                            <CheckCircle size={16} className="flex-shrink-0" />
+                            <span>Email verified successfully! Please sign in.</span>
                         </div>
                     )}
 

@@ -17,6 +17,7 @@ import Notes from '../pages/notes/Notes';
 import PeerLearning from '../pages/peer-learning/PeerLearning';
 import Notifications from '../pages/notifications/Notifications';
 import AdminPanel from '../pages/admin/AdminPanel';
+import Home from '../pages/home/Home';
 
 const AppRoutes = () => {
     return (
@@ -27,7 +28,7 @@ const AppRoutes = () => {
             <Route path="/otp" element={<OTPVerification />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="/" element={<Home />} />
 
             {/* Protected Routes inside Dashboard Layout */}
             <Route element={<ProtectedRoute />}>

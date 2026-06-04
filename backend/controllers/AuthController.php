@@ -108,7 +108,20 @@ class AuthController {
                     'department' => $data['department']
                 ]);
             }
-            Response::success("Registration successful! Please log in to verify your email.");
+
+            // Generate OTP for first-time verification
+            $otp = rand(100000, 999999);
+            $db = (new Database())->getConnection();
+            $stmt = $db->prepare("INSERT INTO otp_verifications (user_id, otp_code, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 10 MINUTE))");
+            $stmt->execute([$user_id, $otp]);
+
+            // Log OTP to file for testing
+            file_put_contents(__DIR__ . '/../otp_log.txt', date('Y-m-d H:i:s') . " | OTP for {$data['email']}: {$otp}\n", FILE_APPEND);
+
+            Response::success("Registration successful! An OTP has been sent to your email.", [
+                'user_id' => $user_id,
+                'email' => $data['email']
+            ]);
         } else {
             Response::error("Registration failed. Please try again later.", 500);
         }

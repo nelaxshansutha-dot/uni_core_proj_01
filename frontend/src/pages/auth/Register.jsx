@@ -61,7 +61,12 @@ const Register = () => {
         try {
             const response = await api.post('/auth.php?action=register', formData);
             if (response.data.status === 'success') {
-                navigate('/login', { state: { registrationSuccess: true } });
+                navigate('/otp', {
+                    state: {
+                        userId: response.data.data.user_id,
+                        email: response.data.data.email
+                    }
+                });
             } else {
                 setError(response.data.message);
             }

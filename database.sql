@@ -125,7 +125,7 @@ CREATE TABLE IF NOT EXISTS notification_recipients (
 CREATE TABLE IF NOT EXISTS otp_verifications (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
-    otp_code VARCHAR(6) NOT NULL,
+    otp_code VARCHAR(100) NOT NULL,
     expires_at DATETIME NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE

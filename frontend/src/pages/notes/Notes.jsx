@@ -127,7 +127,7 @@ const Notes = () => {
                                             <div className="text-secondary small">
                                                 By: {note.enrollment_no}
                                             </div>
-                                            <a href={`http://localhost/uni_core/backend/${note.file_url}`} target="_blank" rel="noreferrer" className="btn btn-sm btn-outline-primary rounded-pill d-flex align-items-center gap-1">
+                                            <a href={`http://localhost/uni_core_proj_01/backend/${note.file_url}`} target="_blank" rel="noreferrer" className="btn btn-sm btn-outline-primary rounded-pill d-flex align-items-center gap-1">
                                                 <Download size={14} /> Download
                                             </a>
                                         </div>

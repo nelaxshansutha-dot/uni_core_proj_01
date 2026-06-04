@@ -31,8 +31,7 @@ const OTPVerification = () => {
             });
 
             if (response.data.status === 'success') {
-                login(response.data.data.token, response.data.data.user);
-                navigate('/dashboard');
+                navigate('/login', { state: { verifiedSuccess: true } });
             } else {
                 setError(response.data.message);
             }
