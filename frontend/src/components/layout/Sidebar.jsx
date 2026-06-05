@@ -35,7 +35,7 @@ const Sidebar = () => {
                 <li>
                     <NavLink to="/lost-items" className="nav-link d-flex align-items-center gap-3">
                         <Search size={20} />
-                        Lost & Found
+                        Lost-Items
                     </NavLink>
                 </li>
                 <li>

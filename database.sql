@@ -12,6 +12,9 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash VARCHAR(255) NOT NULL,
     role ENUM('student', 'staff', 'rep', 'admin') NOT NULL DEFAULT 'student',
     is_verified BOOLEAN DEFAULT FALSE,
+    lost_item_sms_notification INT DEFAULT 0,
+    has_seen_lost_item_popup TINYINT DEFAULT 0,
+    peer_learning_app_notification TINYINT DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );

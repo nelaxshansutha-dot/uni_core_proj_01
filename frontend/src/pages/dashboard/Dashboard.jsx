@@ -39,7 +39,7 @@ const Dashboard = () => {
 
             <div className="row">
                 <DashboardCard 
-                    title="Lost & Found" 
+                    title="Lost-Items" 
                     icon={<Search size={28} />} 
                     color="primary" 
                     link="/lost-items"

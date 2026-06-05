@@ -45,6 +45,39 @@ class Notification {
         }
     }
 
+    public function createForUsers($userIds, $title, $message) {
+        if (empty($userIds)) return true;
+        $this->conn->beginTransaction();
+        try {
+            $query = "INSERT INTO " . $this->table_notifications . " (title, message) VALUES (:title, :message)";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(':title', $title);
+            $stmt->bindParam(':message', $message);
+            $stmt->execute();
+            
+            $notification_id = $this->conn->lastInsertId();
+
+            $queryRecip = "INSERT INTO " . $this->table_recipients . " (notification_id, user_id) VALUES (:notif_id, :user_id)";
+            $stmtRecip = $this->conn->prepare($queryRecip);
+
+            foreach($userIds as $userId) {
+                $stmtRecip->bindValue(':notif_id', $notification_id);
+                $stmtRecip->bindValue(':user_id', $userId);
+                $stmtRecip->execute();
+            }
+
+            $this->conn->commit();
+            return true;
+        } catch (Exception $e) {
+            $this->conn->rollBack();
+            return false;
+        }
+    }
+
+    public function createForUser($userId, $title, $message) {
+        return $this->createForUsers([$userId], $title, $message);
+    }
+
     public function getUserNotifications($user_id) {
         $query = "SELECT n.*, r.is_read, r.id as recipient_id FROM " . $this->table_notifications . " n 
                   JOIN " . $this->table_recipients . " r ON n.id = r.notification_id 
