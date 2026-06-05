@@ -11,6 +11,7 @@ const Profile = () => {
         phone_number: '',
         role: '',
         lost_item_sms_notification: 0,
+        peer_learning_app_notification: 1,
         course: '',
         year: '',
         department: ''
@@ -202,7 +203,7 @@ const Profile = () => {
                                     Preferences
                                 </h5>
 
-                                <div className="card bg-light border-0 p-3 mb-4">
+                                <div className="card bg-light border-0 p-3 mb-3">
                                     <div className="form-check form-switch d-flex align-items-center justify-content-between p-0">
                                         <div>
                                             <label className="form-check-label fw-bold text-dark" htmlFor="smsNotifSwitch">
@@ -218,6 +219,28 @@ const Profile = () => {
                                             id="smsNotifSwitch"
                                             name="lost_item_sms_notification"
                                             checked={profile.lost_item_sms_notification === 1}
+                                            onChange={handleChange}
+                                            style={{ width: '2.5em', height: '1.25em', cursor: 'pointer' }}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="card bg-light border-0 p-3 mb-4">
+                                    <div className="form-check form-switch d-flex align-items-center justify-content-between p-0">
+                                        <div>
+                                            <label className="form-check-label fw-bold text-dark" htmlFor="peerNotifSwitch">
+                                                Peer Learning Notifications
+                                            </label>
+                                            <div className="text-muted small">
+                                                Receive app notifications when peer learning requests are submitted/updated.
+                                            </div>
+                                        </div>
+                                        <input
+                                            className="form-check-input ms-0"
+                                            type="checkbox"
+                                            id="peerNotifSwitch"
+                                            name="peer_learning_app_notification"
+                                            checked={profile.peer_learning_app_notification === 1}
                                             onChange={handleChange}
                                             style={{ width: '2.5em', height: '1.25em', cursor: 'pointer' }}
                                         />

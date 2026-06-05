@@ -8,7 +8,7 @@ class ProfileController {
     public function getProfile($userId) {
         $db = (new Database())->getConnection();
         
-        $stmt = $db->prepare("SELECT id, enrollment_no, email, phone_number, lost_item_sms_notification, has_seen_lost_item_popup, role FROM users WHERE id = ?");
+        $stmt = $db->prepare("SELECT id, enrollment_no, email, phone_number, lost_item_sms_notification, peer_learning_app_notification, has_seen_lost_item_popup, role FROM users WHERE id = ?");
         $stmt->execute([$userId]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -40,11 +40,12 @@ class ProfileController {
 
         // Update phone number and notifications
         $smsPref = isset($data['lost_item_sms_notification']) ? (int)$data['lost_item_sms_notification'] : 0;
+        $peerPref = isset($data['peer_learning_app_notification']) ? (int)$data['peer_learning_app_notification'] : 0;
         $phoneNumber = isset($data['phone_number']) ? $data['phone_number'] : null;
 
         // Update main table
-        $stmt = $db->prepare("UPDATE users SET phone_number = ?, lost_item_sms_notification = ? WHERE id = ?");
-        $stmt->execute([$phoneNumber, $smsPref, $userId]);
+        $stmt = $db->prepare("UPDATE users SET phone_number = ?, lost_item_sms_notification = ?, peer_learning_app_notification = ? WHERE id = ?");
+        $stmt->execute([$phoneNumber, $smsPref, $peerPref, $userId]);
 
         // Update role specific details
         if (isset($data['first_name']) && isset($data['last_name'])) {

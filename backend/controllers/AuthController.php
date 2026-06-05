@@ -114,7 +114,7 @@ class AuthController {
             // Generate OTP for first-time verification
             $otp = rand(100000, 999999);
             $db = (new Database())->getConnection();
-            $stmt = $db->prepare("INSERT INTO otp_verifications (user_id, otp_code, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 10 MINUTE))");
+            $stmt = $db->prepare("INSERT INTO otp_verifications (user_id, otp_code, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 2 MINUTE))");
             $stmt->execute([$user_id, $otp]);
 
             // Send OTP to email
@@ -162,6 +162,7 @@ class AuthController {
                     'email' => $user['email'],
                     'phone_number' => $user['phone_number'],
                     'lost_item_sms_notification' => $user['lost_item_sms_notification'],
+                    'peer_learning_app_notification' => $user['peer_learning_app_notification'],
                     'has_seen_lost_item_popup' => $user['has_seen_lost_item_popup'],
                     'role' => $user['role']
                 ];
@@ -189,7 +190,7 @@ class AuthController {
                 $db->prepare("DELETE FROM otp_verifications WHERE user_id = ?")->execute([$user['id']]);
 
                 // Insert new OTP (10 min expiry)
-                $stmt = $db->prepare("INSERT INTO otp_verifications (user_id, otp_code, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 10 MINUTE))");
+                $stmt = $db->prepare("INSERT INTO otp_verifications (user_id, otp_code, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 2 MINUTE))");
                 $stmt->execute([$user['id'], $otp]);
 
                 // Send OTP to email
@@ -226,7 +227,7 @@ class AuthController {
             $userModel->markAsVerified($data['user_id']);
 
             // Get user details
-            $stmt = $db->prepare("SELECT id, enrollment_no, email, phone_number, lost_item_sms_notification, has_seen_lost_item_popup, role FROM users WHERE id = ?");
+            $stmt = $db->prepare("SELECT id, enrollment_no, email, phone_number, lost_item_sms_notification, peer_learning_app_notification, has_seen_lost_item_popup, role FROM users WHERE id = ?");
             $stmt->execute([$data['user_id']]);
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -288,8 +289,8 @@ class AuthController {
         // Delete old OTPs for user
         $db->prepare("DELETE FROM otp_verifications WHERE user_id = ?")->execute([$user['id']]);
 
-        // Insert new OTP (10 min expiry)
-        $stmt = $db->prepare("INSERT INTO otp_verifications (user_id, otp_code, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 10 MINUTE))");
+        // Insert new OTP (2 min expiry)
+        $stmt = $db->prepare("INSERT INTO otp_verifications (user_id, otp_code, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 2 MINUTE))");
         $stmt->execute([$user['id'], $otp]);
 
         // Send OTP to email
@@ -299,6 +300,49 @@ class AuthController {
         Response::success("OTP sent to your email. Please check your inbox (or otp_log.txt for testing).", [
             'user_id' => $user['id'],
             'email' => $user['email']
+        ]);
+    }
+
+    /**
+     * Resend OTP — delete old OTP and send a new one for email verification
+     */
+    public function resendOtp($data) {
+        $missing = Validator::required(['user_id'], $data);
+        if (!empty($missing)) {
+            Response::error("user_id is required.");
+        }
+
+        $db = (new Database())->getConnection();
+
+        // Check the user exists and is not already verified
+        $stmt = $db->prepare("SELECT id, email, is_verified FROM users WHERE id = ? LIMIT 1");
+        $stmt->execute([$data['user_id']]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$user) {
+            Response::error("User not found.", 404);
+        }
+
+        if ($user['is_verified']) {
+            Response::error("This account is already verified. Please log in.");
+        }
+
+        // Delete old OTPs for user
+        $db->prepare("DELETE FROM otp_verifications WHERE user_id = ?")->execute([$data['user_id']]);
+
+        // Generate new OTP
+        $otp = rand(100000, 999999);
+
+        // Insert new OTP (2 min expiry)
+        $stmt = $db->prepare("INSERT INTO otp_verifications (user_id, otp_code, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 2 MINUTE))");
+        $stmt->execute([$data['user_id'], $otp]);
+
+        // Send OTP to email
+        MailService::sendOTP($user['email'], $otp);
+
+        Response::success("A new OTP has been sent to your email. It is valid for 2 minutes.", [
+            'user_id' => $data['user_id'],
+            'email'   => $user['email']
         ]);
     }
 
@@ -432,9 +476,11 @@ class AuthController {
 
         try {
             // Update users table
+            $smsPref = isset($data['lost_item_sms_notification']) ? (int)$data['lost_item_sms_notification'] : 0;
+            $peerPref = isset($data['peer_learning_app_notification']) ? (int)$data['peer_learning_app_notification'] : 0;
             $phone = isset($data['phone_number']) ? $data['phone_number'] : null;
-            $stmt = $db->prepare("UPDATE users SET email = ?, phone_number = ?, password_hash = ? WHERE id = ?");
-            $stmt->execute([$data['email'], $phone, $password_hash, $user_id]);
+            $stmt = $db->prepare("UPDATE users SET email = ?, phone_number = ?, lost_item_sms_notification = ?, peer_learning_app_notification = ?, password_hash = ? WHERE id = ?");
+            $stmt->execute([$data['email'], $phone, $smsPref, $peerPref, $password_hash, $user_id]);
 
             // Update role-specific table
             if ($user['role'] === 'student' || $user['role'] === 'rep') {
@@ -474,7 +520,10 @@ class AuthController {
             'enrollment_no' => $updatedUser['enrollment_no'],
             'email' => $updatedUser['email'],
             'role' => $updatedUser['role'],
-            'phone_number' => $updatedUser['phone_number']
+            'phone_number' => $updatedUser['phone_number'],
+            'lost_item_sms_notification' => $updatedUser['lost_item_sms_notification'],
+            'peer_learning_app_notification' => $updatedUser['peer_learning_app_notification'],
+            'has_seen_lost_item_popup' => $updatedUser['has_seen_lost_item_popup']
         ];
 
         if ($profile) {
