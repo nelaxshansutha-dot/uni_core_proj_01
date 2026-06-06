@@ -54,6 +54,40 @@ class Marketplace {
         return $stmt->execute();
     }
 
+    public function update($data, $seller_id) {
+        $query = "UPDATE " . $this->table . " 
+            SET item_name = :item_name, 
+                description = :description, 
+                price = :price, 
+                condition_type = :condition_type, 
+                location = :location, 
+                phone_number = :phone_number, 
+                usage_duration = :usage_duration, 
+                image_url = :image_url, 
+                image_url2 = :image_url2, 
+                image_url3 = :image_url3, 
+                image_url4 = :image_url4
+            WHERE id = :id AND seller_id = :seller_id";
+        
+        $stmt = $this->conn->prepare($query);
+
+        $stmt->bindParam(':item_name',      $data['item_name']);
+        $stmt->bindParam(':description',    $data['description']);
+        $stmt->bindParam(':price',          $data['price']);
+        $stmt->bindParam(':condition_type', $data['condition_type']);
+        $stmt->bindParam(':location',       $data['location']);
+        $stmt->bindParam(':phone_number',   $data['phone_number']);
+        $stmt->bindParam(':usage_duration', $data['usage_duration']);
+        $stmt->bindParam(':image_url',      $data['image_url']);
+        $stmt->bindParam(':image_url2',     $data['image_url2']);
+        $stmt->bindParam(':image_url3',     $data['image_url3']);
+        $stmt->bindParam(':image_url4',     $data['image_url4']);
+        $stmt->bindParam(':id',             $data['id']);
+        $stmt->bindParam(':seller_id',      $seller_id);
+
+        return $stmt->execute();
+    }
+
     public function delete($id, $seller_id) {
         $query = "DELETE FROM " . $this->table . " WHERE id = :id AND seller_id = :seller_id";
         $stmt = $this->conn->prepare($query);
