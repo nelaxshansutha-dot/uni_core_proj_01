@@ -67,10 +67,10 @@ class LostItem {
 
    
     
-    public function delete($id, $user_id) {
-        $query = "DELETE FROM " . $this->table . " WHERE id = :id AND user_id = :user_id";
+    public function delete($lost_id, $user_id) {
+        $query = "DELETE FROM " . $this->table . " WHERE lost_id = :lost_id AND user_id = :user_id";
         $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':id', $id);
+        $stmt->bindParam(':lost_id', $lost_id);
         $stmt->bindParam(':user_id', $user_id);
         return $stmt->execute();
     }
