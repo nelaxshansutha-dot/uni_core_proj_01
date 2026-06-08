@@ -1,57 +1,306 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import api from '../../services/api';
-import { ShieldAlert, Search, UserCheck } from 'lucide-react';
+import { 
+    ShieldAlert, Search, UserCheck, Users, Activity, 
+    BookOpen, ShoppingBag, AlertTriangle, EyeOff, 
+    Trash2, RefreshCw, CheckCircle, UserPlus, Edit3, Shield, UserX
+} from 'lucide-react';
 
 const AdminPanel = () => {
-    const [searchQuery, setSearchQuery] = useState('');
-    const [students, setStudents] = useState([]);
+    const [searchParams, setSearchParams] = useSearchParams();
+    const activeTab = searchParams.get('tab') || 'overview';
+    
+    const setActiveTab = (tab) => {
+        setSearchParams({ tab });
+    };
+    
+    // Stats State
+    const [stats, setStats] = useState({
+        total_users: 0,
+        active_users: 0,
+        deactivated_users: 0,
+        total_reps: 0,
+        total_posts: 0,
+        active_posts: 0,
+        hidden_posts: 0,
+        recent_logs: []
+    });
+
+    // Users State
+    const [users, setUsers] = useState([]);
+    const [userSearch, setUserSearch] = useState('');
+    const [roleFilter, setRoleFilter] = useState('');
+    const [showUserModal, setShowUserModal] = useState(false);
+    const [editingUser, setEditingUser] = useState(null);
+    const [userForm, setUserForm] = useState({
+        enrollment_no: '',
+        email: '',
+        password: '',
+        role: 'student',
+        first_name: '',
+        last_name: '',
+        phone_number: '',
+        course: '',
+        year: '',
+        department: ''
+    });
+
+    // Rep Management State
+    const [repSearch, setRepSearch] = useState('');
+    const [repStudents, setRepStudents] = useState([]);
+    const [selectedStudent, setSelectedStudent] = useState(null);
+    const [repForm, setRepForm] = useState({
+        password: '',
+        course: '',
+        year: '1'
+    });
+
+    // Content Moderation State
+    const [contentTab, setContentTab] = useState('lost_item');
+    const [content, setContent] = useState({
+        lost_items: [],
+        marketplace: [],
+        notes: []
+    });
+
+    // Reports State
+    const [reports, setReports] = useState([]);
+
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState({ type: '', text: '' });
 
-    const handleSearch = async (e) => {
-        e.preventDefault();
-        if (!searchQuery) return;
-        
+    // Fetch initial data based on active tab
+    useEffect(() => {
+        fetchTabData();
+    }, [activeTab, contentTab]);
+
+    const fetchTabData = async () => {
         setLoading(true);
         try {
-            const res = await api.get(`/admin.php?action=search-students&q=${searchQuery}`);
-            if (res.data.status === 'success') {
-                setStudents(res.data.data);
+            if (activeTab === 'overview') {
+                const res = await api.get('/admin.php?action=dashboard');
+                if (res.data.status === 'success') {
+                    setStats(res.data.data);
+                }
+            } else if (activeTab === 'users') {
+                const res = await api.get(`/admin.php?action=users&q=${userSearch}&role=${roleFilter}`);
+                if (res.data.status === 'success') {
+                    setUsers(res.data.data);
+                }
+            } else if (activeTab === 'content') {
+                const res = await api.get('/admin.php?action=content');
+                if (res.data.status === 'success') {
+                    setContent(res.data.data);
+                }
+            } else if (activeTab === 'reports') {
+                const res = await api.get('/admin.php?action=reports');
+                if (res.data.status === 'success') {
+                    setReports(res.data.data);
+                }
             }
         } catch (err) {
             console.error(err);
+            showFeedback('danger', 'Failed to fetch data.');
         } finally {
             setLoading(false);
         }
     };
 
-    const makeRep = async (userId) => {
-        if (!window.confirm("Are you sure you want to promote this student to Course Rep?")) return;
-        
+    const showFeedback = (type, text) => {
+        setMessage({ type, text });
+        setTimeout(() => setMessage({ type: '', text: '' }), 5000);
+    };
+
+    // User Operations
+    const handleUserSearchSubmit = (e) => {
+        e.preventDefault();
+        fetchTabData();
+    };
+
+    const handleSaveUser = async (e) => {
+        e.preventDefault();
         try {
-            const res = await api.post('/admin.php?action=assign-rep', { user_id: userId });
-            if (res.data.status === 'success') {
-                setMessage({ type: 'success', text: `Successfully assigned as Rep! Credentials sent via email. (Check log)` });
-                // Update local state
-                setStudents(students.map(s => s.id === userId ? { ...s, role: 'rep' } : s));
+            if (editingUser) {
+                // Update User
+                const res = await api.put(`/admin.php?action=users&id=${editingUser.id}`, userForm);
+                if (res.data.status === 'success') {
+                    showFeedback('success', 'User updated successfully.');
+                    setShowUserModal(false);
+                    fetchTabData();
+                } else {
+                    showFeedback('danger', res.data.message);
+                }
             } else {
-                setMessage({ type: 'danger', text: res.data.message });
+                // Create User
+                const res = await api.post('/admin.php?action=users', userForm);
+                if (res.data.status === 'success') {
+                    showFeedback('success', 'User created successfully.');
+                    setShowUserModal(false);
+                    fetchTabData();
+                } else {
+                    showFeedback('danger', res.data.message);
+                }
             }
         } catch (err) {
-            setMessage({ type: 'danger', text: 'Error assigning rep.' });
+            showFeedback('danger', err.response?.data?.message || 'Error saving user.');
+        }
+    };
+
+    const openEditModal = (user) => {
+        setEditingUser(user);
+        setUserForm({
+            enrollment_no: user.enrollment_no,
+            email: user.email,
+            password: '', // Do not populate password for edits
+            role: user.role,
+            first_name: user.first_name || '',
+            last_name: user.last_name || '',
+            phone_number: user.phone_number || '',
+            course: user.course || '',
+            year: user.year || '',
+            department: user.department || ''
+        });
+        setShowUserModal(true);
+    };
+
+    const openAddModal = () => {
+        setEditingUser(null);
+        setUserForm({
+            enrollment_no: '',
+            email: '',
+            password: '',
+            role: 'student',
+            first_name: '',
+            last_name: '',
+            phone_number: '',
+            course: '',
+            year: '',
+            department: ''
+        });
+        setShowUserModal(true);
+    };
+
+    const toggleUserActiveStatus = async (userId, currentStatus) => {
+        try {
+            const res = await api.patch(`/admin.php?action=users-status&id=${userId}`, { is_active: !currentStatus });
+            if (res.data.status === 'success') {
+                showFeedback('success', `User successfully ${!currentStatus ? 'activated' : 'deactivated'}.`);
+                fetchTabData();
+            }
+        } catch (err) {
+            showFeedback('danger', 'Error updating user status.');
+        }
+    };
+
+    // Course Rep Operations
+    const handleRepSearch = async (e) => {
+        e.preventDefault();
+        if (!repSearch) return;
+        setLoading(true);
+        try {
+            const res = await api.get(`/admin.php?action=search-students&q=${repSearch}`);
+            if (res.data.status === 'success') {
+                setRepStudents(res.data.data);
+            }
+        } catch (err) {
+            showFeedback('danger', 'Error searching students.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleAssignRep = async (e) => {
+        e.preventDefault();
+        if (!selectedStudent) return;
+        try {
+            const res = await api.post('/admin.php?action=assign-rep', {
+                user_id: selectedStudent.id,
+                password: repForm.password,
+                course: repForm.course,
+                year: repForm.year
+            });
+            if (res.data.status === 'success') {
+                showFeedback('success', 'Successfully promoted student to Course Rep!');
+                setSelectedStudent(null);
+                setRepStudents([]);
+                setRepSearch('');
+                setRepForm({ password: '', course: '', year: '1' });
+            } else {
+                showFeedback('danger', res.data.message);
+            }
+        } catch (err) {
+            showFeedback('danger', err.response?.data?.message || 'Error promoting student.');
+        }
+    };
+
+    // Content Moderation
+    const handleContentModeration = async (type, id, newStatus) => {
+        try {
+            const res = await api.patch('/admin.php?action=content-status', {
+                content_type: type,
+                content_id: id,
+                status: newStatus
+            });
+            if (res.data.status === 'success') {
+                showFeedback('success', `Content marked as ${newStatus}.`);
+                fetchTabData();
+            }
+        } catch (err) {
+            showFeedback('danger', 'Error updating content status.');
+        }
+    };
+
+    const handleContentFlag = async (type, id, flagState) => {
+        try {
+            const res = await api.patch('/admin.php?action=content-status', {
+                content_type: type,
+                content_id: id,
+                status: type === 'lost_item' ? 'lost' : (type === 'marketplace' ? 'available' : 'active'),
+                is_flagged: flagState
+            });
+            if (res.data.status === 'success') {
+                showFeedback('success', flagState ? 'Content flagged.' : 'Flag cleared.');
+                fetchTabData();
+            }
+        } catch (err) {
+            showFeedback('danger', 'Error updating flag status.');
+        }
+    };
+
+    // Report Operations
+    const handleReportAction = async (reportId, reportStatus) => {
+        try {
+            const res = await api.patch('/admin.php?action=reports-status', {
+                report_id: reportId,
+                status: reportStatus
+            });
+            if (res.data.status === 'success') {
+                showFeedback('success', `Report marked as ${reportStatus}.`);
+                fetchTabData();
+            }
+        } catch (err) {
+            showFeedback('danger', 'Error updating report.');
         }
     };
 
     return (
         <div>
-            <div className="mb-4">
-                <h3 className="fw-bold text-dark mb-1 d-flex align-items-center gap-2">
-                    <ShieldAlert className="text-warning" />
-                    Admin Panel
-                </h3>
-                <p className="text-muted m-0">Manage system settings and roles</p>
+            {/* Header */}
+            <div className="mb-4 d-flex justify-content-between align-items-center">
+                <div>
+                    <h3 className="fw-bold text-dark mb-1 d-flex align-items-center gap-2">
+                        <ShieldAlert className="text-warning" />
+                        Admin Dashboard
+                    </h3>
+                    <p className="text-muted m-0">Platform Overview, Content Moderation, and User Roles</p>
+                </div>
+                <button className="btn btn-outline-secondary btn-sm d-flex align-items-center gap-2" onClick={fetchTabData}>
+                    <RefreshCw size={14} className={loading ? 'spin-animation' : ''} /> Refresh Data
+                </button>
             </div>
 
+            {/* Notification message */}
             {message.text && (
                 <div className={`alert alert-${message.type} alert-dismissible fade show`} role="alert">
                     {message.text}
@@ -59,73 +308,705 @@ const AdminPanel = () => {
                 </div>
             )}
 
-            <div className="card border-0 shadow-sm mb-4">
-                <div className="card-header bg-white border-bottom p-4">
-                    <h5 className="fw-bold m-0">Assign Course Representative</h5>
-                </div>
-                <div className="card-body p-4">
-                    <form onSubmit={handleSearch} className="d-flex gap-2 mb-4">
-                        <div className="flex-grow-1 position-relative">
-                            <Search className="position-absolute top-50 translate-middle-y text-muted ms-3" size={18} />
-                            <input 
-                                type="text" 
-                                className="form-control form-control-lg ps-5" 
-                                placeholder="Search student by Name or Enrollment No..." 
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                            />
-                        </div>
-                        <button type="submit" className="btn btn-primary px-4" disabled={loading}>
-                            {loading ? 'Searching...' : 'Search'}
-                        </button>
-                    </form>
+            {/* Navigation Tabs */}
+            <ul className="nav nav-tabs mb-4 border-bottom">
+                <li className="nav-item">
+                    <button className={`nav-link border-0 fw-semibold px-4 py-2 ${activeTab === 'overview' ? 'active text-primary border-bottom border-primary border-3' : 'text-muted'}`} onClick={() => setActiveTab('overview')}>
+                        Overview
+                    </button>
+                </li>
+                <li className="nav-item">
+                    <button className={`nav-link border-0 fw-semibold px-4 py-2 ${activeTab === 'users' ? 'active text-primary border-bottom border-primary border-3' : 'text-muted'}`} onClick={() => setActiveTab('users')}>
+                        User Management
+                    </button>
+                </li>
+                <li className="nav-item">
+                    <button className={`nav-link border-0 fw-semibold px-4 py-2 ${activeTab === 'course-rep' ? 'active text-primary border-bottom border-primary border-3' : 'text-muted'}`} onClick={() => setActiveTab('course-rep')}>
+                        Course Representatives
+                    </button>
+                </li>
+                <li className="nav-item">
+                    <button className={`nav-link border-0 fw-semibold px-4 py-2 ${activeTab === 'content' ? 'active text-primary border-bottom border-primary border-3' : 'text-muted'}`} onClick={() => setActiveTab('content')}>
+                        Content Moderation
+                    </button>
+                </li>
+                <li className="nav-item">
+                    <button className={`nav-link border-0 fw-semibold px-4 py-2 ${activeTab === 'reports' ? 'active text-primary border-bottom border-primary border-3' : 'text-muted'}`} onClick={() => setActiveTab('reports')}>
+                        Reports & Complaints
+                    </button>
+                </li>
+            </ul>
 
-                    {students.length > 0 && (
-                        <div className="table-responsive">
-                            <table className="table align-middle table-hover">
-                                <thead className="table-light">
-                                    <tr>
-                                        <th>Enrollment No</th>
-                                        <th>Name</th>
-                                        <th>Course</th>
-                                        <th>Role</th>
-                                        <th className="text-end">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {students.map(student => (
-                                        <tr key={student.id}>
-                                            <td className="fw-medium">{student.enrollment_no}</td>
-                                            <td>{student.first_name} {student.last_name}</td>
-                                            <td>{student.course} (Year {student.year})</td>
-                                            <td>
-                                                <span className={`badge ${student.role === 'rep' ? 'bg-success' : 'bg-secondary'}`}>
-                                                    {student.role.toUpperCase()}
-                                                </span>
-                                            </td>
-                                            <td className="text-end">
-                                                {student.role === 'student' ? (
-                                                    <button 
-                                                        className="btn btn-sm btn-outline-success rounded-pill d-inline-flex align-items-center gap-1"
-                                                        onClick={() => makeRep(student.id)}
-                                                    >
-                                                        <UserCheck size={14} /> Promote to Rep
-                                                    </button>
-                                                ) : (
-                                                    <span className="text-success small fw-bold">Current Rep</span>
-                                                )}
-                                            </td>
-                                        </tr>
+            {/* TAB CONTENT: OVERVIEW */}
+            {activeTab === 'overview' && (
+                <div>
+                    {/* Stats Grid */}
+                    <div className="row g-4 mb-4">
+                        <div className="col-md-3">
+                            <div className="card border-0 shadow-sm p-4 d-flex align-items-center gap-3">
+                                <div className="p-3 rounded-circle bg-primary bg-opacity-10 text-primary">
+                                    <Users size={24} />
+                                </div>
+                                <div>
+                                    <h4 className="fw-bold mb-1">{stats.total_users}</h4>
+                                    <p className="text-muted small mb-0">Total Users</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="col-md-3">
+                            <div className="card border-0 shadow-sm p-4 d-flex align-items-center gap-3">
+                                <div className="p-3 rounded-circle bg-success bg-opacity-10 text-success">
+                                    <Activity size={24} />
+                                </div>
+                                <div>
+                                    <h4 className="fw-bold mb-1">{stats.active_users}</h4>
+                                    <p className="text-muted small mb-0">Active Users</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="col-md-3">
+                            <div className="card border-0 shadow-sm p-4 d-flex align-items-center gap-3">
+                                <div className="p-3 rounded-circle bg-warning bg-opacity-10 text-warning">
+                                    <Shield size={24} />
+                                </div>
+                                <div>
+                                    <h4 className="fw-bold mb-1">{stats.total_reps}</h4>
+                                    <p className="text-muted small mb-0">Course Reps</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="col-md-3">
+                            <div className="card border-0 shadow-sm p-4 d-flex align-items-center gap-3">
+                                <div className="p-3 rounded-circle bg-info bg-opacity-10 text-info">
+                                    <BookOpen size={24} />
+                                </div>
+                                <div>
+                                    <h4 className="fw-bold mb-1">{stats.total_posts}</h4>
+                                    <p className="text-muted small mb-0">Total Posts ({stats.hidden_posts} hidden)</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Recent Activities Log */}
+                    <div className="card border-0 shadow-sm">
+                        <div className="card-header bg-white border-bottom p-4">
+                            <h5 className="fw-bold m-0">Recent Admin Action Logs</h5>
+                        </div>
+                        <div className="card-body p-4">
+                            {stats.recent_logs.length > 0 ? (
+                                <ul className="list-group list-group-flush">
+                                    {stats.recent_logs.map(log => (
+                                        <li key={log.id} className="list-group-item px-0 py-3 d-flex justify-content-between align-items-start">
+                                            <div>
+                                                <div className="fw-semibold text-dark">{log.action}</div>
+                                                <small className="text-muted">Target: {log.target_type} (ID: {log.target_id}) {log.details && `| Details: ${log.details}`}</small>
+                                            </div>
+                                            <div className="text-end">
+                                                <span className="badge bg-light text-dark">{log.admin_name}</span>
+                                                <div className="text-muted small mt-1">{new Date(log.created_at).toLocaleString()}</div>
+                                            </div>
+                                        </li>
                                     ))}
-                                </tbody>
-                            </table>
+                                </ul>
+                            ) : (
+                                <div className="text-center text-muted py-5">No logs available. Actions you perform will appear here.</div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* TAB CONTENT: USER MANAGEMENT */}
+            {activeTab === 'users' && (
+                <div>
+                    <div className="card border-0 shadow-sm mb-4">
+                        <div className="card-body p-4">
+                            <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+                                <form onSubmit={handleUserSearchSubmit} className="d-flex gap-2 flex-grow-1">
+                                    <div className="position-relative flex-grow-1">
+                                        <Search className="position-absolute top-50 translate-middle-y text-muted ms-3" size={18} />
+                                        <input 
+                                            type="text" 
+                                            className="form-control ps-5" 
+                                            placeholder="Search by Name, Email or Enrollment No..." 
+                                            value={userSearch}
+                                            onChange={(e) => setUserSearch(e.target.value)}
+                                        />
+                                    </div>
+                                    <select className="form-select w-auto" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
+                                        <option value="">All Roles</option>
+                                        <option value="student">Student</option>
+                                        <option value="rep">Course Representative</option>
+                                        <option value="staff">Staff</option>
+                                        <option value="admin">Admin</option>
+                                    </select>
+                                    <button type="submit" className="btn btn-primary px-4">Search</button>
+                                </form>
+                                <button className="btn btn-success d-flex align-items-center gap-2" onClick={openAddModal}>
+                                    <UserPlus size={18} /> Add New User
+                                </button>
+                            </div>
+
+                            <div className="table-responsive">
+                                <table className="table align-middle table-hover">
+                                    <thead className="table-light">
+                                        <tr>
+                                            <th>Enrollment No</th>
+                                            <th>Name</th>
+                                            <th>Email</th>
+                                            <th>Role</th>
+                                            <th>Status</th>
+                                            <th className="text-end">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {users.map(u => (
+                                            <tr key={u.id}>
+                                                <td className="fw-semibold">{u.enrollment_no}</td>
+                                                <td>{u.first_name} {u.last_name}</td>
+                                                <td>{u.email}</td>
+                                                <td>
+                                                    <span className={`badge ${u.role === 'admin' ? 'bg-danger' : (u.role === 'rep' ? 'bg-warning text-dark' : (u.role === 'staff' ? 'bg-info text-dark' : 'bg-secondary'))}`}>
+                                                        {u.role.toUpperCase()}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span className={`badge ${u.is_active ? 'bg-success' : 'bg-danger'}`}>
+                                                        {u.is_active ? 'Active' : 'Inactive'}
+                                                    </span>
+                                                </td>
+                                                <td className="text-end">
+                                                    <div className="d-flex justify-content-end gap-2">
+                                                        <button className="btn btn-sm btn-outline-primary" onClick={() => openEditModal(u)}>
+                                                            <Edit3 size={14} />
+                                                        </button>
+                                                        <button 
+                                                            className={`btn btn-sm ${u.is_active ? 'btn-outline-danger' : 'btn-outline-success'}`}
+                                                            onClick={() => toggleUserActiveStatus(u.id, u.is_active)}
+                                                        >
+                                                            {u.is_active ? <UserX size={14} /> : <UserCheck size={14} />}
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* MODAL FOR ADD/EDIT USER */}
+                    {showUserModal && (
+                        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                            <div className="modal-dialog modal-dialog-centered">
+                                <div className="modal-content">
+                                    <div className="modal-header">
+                                        <h5 className="modal-title fw-bold">{editingUser ? 'Edit User Details' : 'Add New User'}</h5>
+                                        <button type="button" className="btn-close" onClick={() => setShowUserModal(false)}></button>
+                                    </div>
+                                    <form onSubmit={handleSaveUser}>
+                                        <div className="modal-body">
+                                            <div className="row g-3">
+                                                <div className="col-md-6">
+                                                    <label className="form-label">Enrollment No / User ID</label>
+                                                    <input 
+                                                        type="text" 
+                                                        className="form-control" 
+                                                        value={userForm.enrollment_no}
+                                                        onChange={(e) => setUserForm({ ...userForm, enrollment_no: e.target.value })}
+                                                        required 
+                                                        disabled={!!editingUser} 
+                                                    />
+                                                </div>
+                                                <div className="col-md-6">
+                                                    <label className="form-label">Email Address</label>
+                                                    <input 
+                                                        type="email" 
+                                                        className="form-control" 
+                                                        value={userForm.email}
+                                                        onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                                                        required 
+                                                    />
+                                                </div>
+                                                {!editingUser && (
+                                                    <div className="col-12">
+                                                        <label className="form-label">Password</label>
+                                                        <input 
+                                                            type="password" 
+                                                            className="form-control" 
+                                                            value={userForm.password}
+                                                            onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
+                                                            required 
+                                                        />
+                                                    </div>
+                                                )}
+                                                <div className="col-md-6">
+                                                    <label className="form-label">First Name</label>
+                                                    <input 
+                                                        type="text" 
+                                                        className="form-control" 
+                                                        value={userForm.first_name}
+                                                        onChange={(e) => setUserForm({ ...userForm, first_name: e.target.value })}
+                                                        required 
+                                                    />
+                                                </div>
+                                                <div className="col-md-6">
+                                                    <label className="form-label">Last Name</label>
+                                                    <input 
+                                                        type="text" 
+                                                        className="form-control" 
+                                                        value={userForm.last_name}
+                                                        onChange={(e) => setUserForm({ ...userForm, last_name: e.target.value })}
+                                                        required 
+                                                    />
+                                                </div>
+                                                <div className="col-md-6">
+                                                    <label className="form-label">Role</label>
+                                                    <select 
+                                                        className="form-select" 
+                                                        value={userForm.role}
+                                                        onChange={(e) => setUserForm({ ...userForm, role: e.target.value })}
+                                                        disabled={!!editingUser}
+                                                    >
+                                                        <option value="student">Student</option>
+                                                        <option value="rep">Course Representative</option>
+                                                        <option value="staff">Staff</option>
+                                                        <option value="admin">Admin</option>
+                                                    </select>
+                                                </div>
+                                                <div className="col-md-6">
+                                                    <label className="form-label">Phone Number</label>
+                                                    <input 
+                                                        type="text" 
+                                                        className="form-control" 
+                                                        value={userForm.phone_number}
+                                                        onChange={(e) => setUserForm({ ...userForm, phone_number: e.target.value })}
+                                                    />
+                                                </div>
+
+                                                {/* Role-Specific Fields */}
+                                                {(userForm.role === 'student' || userForm.role === 'rep') && (
+                                                    <>
+                                                        <div className="col-md-6">
+                                                            <label className="form-label">Course</label>
+                                                            <input 
+                                                                type="text" 
+                                                                className="form-control" 
+                                                                value={userForm.course}
+                                                                onChange={(e) => setUserForm({ ...userForm, course: e.target.value })}
+                                                            />
+                                                        </div>
+                                                        <div className="col-md-6">
+                                                            <label className="form-label">Year</label>
+                                                            <input 
+                                                                type="number" 
+                                                                className="form-control" 
+                                                                value={userForm.year}
+                                                                onChange={(e) => setUserForm({ ...userForm, year: e.target.value })}
+                                                            />
+                                                        </div>
+                                                    </>
+                                                )}
+                                                {userForm.role === 'staff' && (
+                                                    <div className="col-12">
+                                                        <label className="form-label">Department</label>
+                                                        <input 
+                                                            type="text" 
+                                                            className="form-control" 
+                                                            value={userForm.department}
+                                                            onChange={(e) => setUserForm({ ...userForm, department: e.target.value })}
+                                                        />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="modal-footer">
+                                            <button type="button" className="btn btn-light" onClick={() => setShowUserModal(false)}>Cancel</button>
+                                            <button type="submit" className="btn btn-primary">Save User</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
                         </div>
                     )}
-                    {students.length === 0 && searchQuery && !loading && (
-                        <div className="text-center text-muted py-3">No students found.</div>
-                    )}
                 </div>
-            </div>
+            )}
+
+            {/* TAB CONTENT: COURSE REPRESENTATIVE */}
+            {activeTab === 'course-rep' && (
+                <div>
+                    <div className="row g-4">
+                        {/* Search column */}
+                        <div className="col-md-6">
+                            <div className="card border-0 shadow-sm h-100">
+                                <div className="card-header bg-white border-bottom p-4">
+                                    <h5 className="fw-bold m-0">1. Search Student to Promote</h5>
+                                </div>
+                                <div className="card-body p-4">
+                                    <form onSubmit={handleRepSearch} className="d-flex gap-2 mb-4">
+                                        <div className="flex-grow-1 position-relative">
+                                            <Search className="position-absolute top-50 translate-middle-y text-muted ms-3" size={18} />
+                                            <input 
+                                                type="text" 
+                                                className="form-control" 
+                                                placeholder="Enrollment No, First or Last Name..." 
+                                                value={repSearch}
+                                                onChange={(e) => setRepSearch(e.target.value)}
+                                            />
+                                        </div>
+                                        <button type="submit" className="btn btn-primary px-4">Search</button>
+                                    </form>
+
+                                    {repStudents.length > 0 ? (
+                                        <div className="list-group">
+                                            {repStudents.map(student => (
+                                                <button 
+                                                    key={student.id} 
+                                                    className={`list-group-item list-group-item-action p-3 d-flex justify-content-between align-items-center ${selectedStudent?.id === student.id ? 'active' : ''}`}
+                                                    onClick={() => {
+                                                        setSelectedStudent(student);
+                                                        setRepForm({
+                                                            ...repForm,
+                                                            course: student.course || '',
+                                                            year: student.year || '1'
+                                                        });
+                                                    }}
+                                                >
+                                                    <div>
+                                                        <div className="fw-semibold">{student.first_name} {student.last_name}</div>
+                                                        <small className={selectedStudent?.id === student.id ? 'text-white-50' : 'text-muted'}>{student.enrollment_no}</small>
+                                                    </div>
+                                                    <span className={`badge ${student.role === 'rep' ? 'bg-success' : 'bg-secondary'}`}>
+                                                        {student.role.toUpperCase()}
+                                                    </span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    ) : repSearch && (
+                                        <div className="text-center text-muted py-3">No students found.</div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Promotion detail column */}
+                        <div className="col-md-6">
+                            <div className="card border-0 shadow-sm h-100">
+                                <div className="card-header bg-white border-bottom p-4">
+                                    <h5 className="fw-bold m-0">2. Assign Credentials & Details</h5>
+                                </div>
+                                <div className="card-body p-4">
+                                    {selectedStudent ? (
+                                        <form onSubmit={handleAssignRep}>
+                                            <div className="alert alert-info py-2 small mb-4">
+                                                Promoting <strong>{selectedStudent.first_name} {selectedStudent.last_name}</strong> ({selectedStudent.enrollment_no}) to Course Representative.
+                                            </div>
+
+                                            <div className="mb-3">
+                                                <label className="form-label">Course / Program</label>
+                                                <input 
+                                                    type="text" 
+                                                    className="form-control" 
+                                                    value={repForm.course}
+                                                    onChange={(e) => setRepForm({ ...repForm, course: e.target.value })}
+                                                    placeholder="e.g. Computer Science"
+                                                    required 
+                                                />
+                                            </div>
+
+                                            <div className="mb-3">
+                                                <label className="form-label">Academic Year</label>
+                                                <select 
+                                                    className="form-select" 
+                                                    value={repForm.year} 
+                                                    onChange={(e) => setRepForm({ ...repForm, year: e.target.value })}
+                                                >
+                                                    <option value="1">Year 1</option>
+                                                    <option value="2">Year 2</option>
+                                                    <option value="3">Year 3</option>
+                                                    <option value="4">Year 4</option>
+                                                </select>
+                                            </div>
+
+                                            <div className="mb-4">
+                                                <label className="form-label">Set Password Manually</label>
+                                                <input 
+                                                    type="password" 
+                                                    className="form-control" 
+                                                    value={repForm.password}
+                                                    onChange={(e) => setRepForm({ ...repForm, password: e.target.value })}
+                                                    placeholder="Set login password for Course Rep..."
+                                                    required 
+                                                />
+                                                <div className="form-text small">Credential PDF will be generated and emailed to the student.</div>
+                                            </div>
+
+                                            <button type="submit" className="btn btn-warning w-100 py-2 fw-semibold d-flex align-items-center justify-content-center gap-2">
+                                                <UserCheck size={18} /> Assign & Generate PDF
+                                            </button>
+                                        </form>
+                                    ) : (
+                                        <div className="text-center text-muted py-5">Select a student from the search list to proceed with promotion.</div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* TAB CONTENT: CONTENT MODERATION */}
+            {activeTab === 'content' && (
+                <div>
+                    {/* Inner content switcher */}
+                    <div className="btn-group mb-4" role="group">
+                        <button type="button" className={`btn ${contentTab === 'lost_item' ? 'btn-primary' : 'btn-light'}`} onClick={() => setContentTab('lost_item')}>
+                            <Search size={16} className="me-2" /> Lost & Found
+                        </button>
+                        <button type="button" className={`btn ${contentTab === 'marketplace' ? 'btn-primary' : 'btn-light'}`} onClick={() => setContentTab('marketplace')}>
+                            <ShoppingBag size={16} className="me-2" /> Marketplace
+                        </button>
+                        <button type="button" className={`btn ${contentTab === 'notes' ? 'btn-primary' : 'btn-light'}`} onClick={() => setContentTab('notes')}>
+                            <BookOpen size={16} className="me-2" /> Shared Notes
+                        </button>
+                    </div>
+
+                    <div className="card border-0 shadow-sm">
+                        <div className="card-body p-4">
+                            <div className="table-responsive">
+                                <table className="table align-middle table-hover">
+                                    <thead className="table-light">
+                                        <tr>
+                                            <th>Item / Title</th>
+                                            <th>User / Email</th>
+                                            <th>Status</th>
+                                            <th>Flagged</th>
+                                            <th>Created At</th>
+                                            <th className="text-end">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {/* Lost Items Render */}
+                                        {contentTab === 'lost_item' && content.lost_items.map(item => (
+                                            <tr key={item.lost_id}>
+                                                <td className="fw-semibold">{item.item_name}</td>
+                                                <td>{item.email}</td>
+                                                <td>
+                                                    <span className={`badge ${item.status === 'hidden' ? 'bg-warning text-dark' : (item.status === 'removed' ? 'bg-danger' : 'bg-success')}`}>
+                                                        {item.status.toUpperCase()}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    {item.is_flagged ? (
+                                                        <span className="text-danger d-flex align-items-center gap-1 small fw-bold">
+                                                            <AlertTriangle size={14} /> FLAGGED
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-muted small">No</span>
+                                                    )}
+                                                </td>
+                                                <td>{new Date(item.created_at).toLocaleDateString()}</td>
+                                                <td className="text-end">
+                                                    <div className="d-flex justify-content-end gap-2">
+                                                        <button 
+                                                            className={`btn btn-sm ${item.is_flagged ? 'btn-outline-success' : 'btn-outline-warning'}`}
+                                                            onClick={() => handleContentFlag('lost_item', item.lost_id, !item.is_flagged)}
+                                                            title={item.is_flagged ? 'Clear Flag' : 'Flag Content'}
+                                                        >
+                                                            <AlertTriangle size={14} />
+                                                        </button>
+                                                        {item.status !== 'hidden' ? (
+                                                            <button className="btn btn-sm btn-outline-warning" onClick={() => handleContentModeration('lost_item', item.lost_id, 'hidden')} title="Hide Content">
+                                                                <EyeOff size={14} />
+                                                            </button>
+                                                        ) : (
+                                                            <button className="btn btn-sm btn-outline-success" onClick={() => handleContentModeration('lost_item', item.lost_id, 'lost')} title="Restore Content">
+                                                                <CheckCircle size={14} />
+                                                            </button>
+                                                        )}
+                                                        {item.status !== 'removed' && (
+                                                            <button className="btn btn-sm btn-outline-danger" onClick={() => handleContentModeration('lost_item', item.lost_id, 'removed')} title="Soft Delete">
+                                                                <Trash2 size={14} />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+
+                                        {/* Marketplace Render */}
+                                        {contentTab === 'marketplace' && content.marketplace.map(item => (
+                                            <tr key={item.id}>
+                                                <td className="fw-semibold">
+                                                    <div>{item.item_name}</div>
+                                                    <small className="text-muted">${item.price}</small>
+                                                </td>
+                                                <td>{item.email}</td>
+                                                <td>
+                                                    <span className={`badge ${item.status === 'hidden' ? 'bg-warning text-dark' : (item.status === 'removed' ? 'bg-danger' : 'bg-success')}`}>
+                                                        {item.status.toUpperCase()}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    {item.is_flagged ? (
+                                                        <span className="text-danger d-flex align-items-center gap-1 small fw-bold">
+                                                            <AlertTriangle size={14} /> FLAGGED
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-muted small">No</span>
+                                                    )}
+                                                </td>
+                                                <td>{new Date(item.created_at).toLocaleDateString()}</td>
+                                                <td className="text-end">
+                                                    <div className="d-flex justify-content-end gap-2">
+                                                        <button 
+                                                            className={`btn btn-sm ${item.is_flagged ? 'btn-outline-success' : 'btn-outline-warning'}`}
+                                                            onClick={() => handleContentFlag('marketplace', item.id, !item.is_flagged)}
+                                                            title={item.is_flagged ? 'Clear Flag' : 'Flag Content'}
+                                                        >
+                                                            <AlertTriangle size={14} />
+                                                        </button>
+                                                        {item.status !== 'hidden' ? (
+                                                            <button className="btn btn-sm btn-outline-warning" onClick={() => handleContentModeration('marketplace', item.id, 'hidden')} title="Hide Content">
+                                                                <EyeOff size={14} />
+                                                            </button>
+                                                        ) : (
+                                                            <button className="btn btn-sm btn-outline-success" onClick={() => handleContentModeration('marketplace', item.id, 'available')} title="Restore Content">
+                                                                <CheckCircle size={14} />
+                                                            </button>
+                                                        )}
+                                                        {item.status !== 'removed' && (
+                                                            <button className="btn btn-sm btn-outline-danger" onClick={() => handleContentModeration('marketplace', item.id, 'removed')} title="Soft Delete">
+                                                                <Trash2 size={14} />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+
+                                        {/* Notes Render */}
+                                        {contentTab === 'notes' && content.notes.map(note => (
+                                            <tr key={note.id}>
+                                                <td className="fw-semibold">
+                                                    <div>{note.title}</div>
+                                                    <small className="text-muted">{note.course_code}</small>
+                                                </td>
+                                                <td>{note.email}</td>
+                                                <td>
+                                                    <span className={`badge ${note.status === 'hidden' ? 'bg-warning text-dark' : (note.status === 'removed' ? 'bg-danger' : 'bg-success')}`}>
+                                                        {note.status.toUpperCase()}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    {note.is_flagged ? (
+                                                        <span className="text-danger d-flex align-items-center gap-1 small fw-bold">
+                                                            <AlertTriangle size={14} /> FLAGGED
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-muted small">No</span>
+                                                    )}
+                                                </td>
+                                                <td>{new Date(note.created_at).toLocaleDateString()}</td>
+                                                <td className="text-end">
+                                                    <div className="d-flex justify-content-end gap-2">
+                                                        <button 
+                                                            className={`btn btn-sm ${note.is_flagged ? 'btn-outline-success' : 'btn-outline-warning'}`}
+                                                            onClick={() => handleContentFlag('notes', note.id, !note.is_flagged)}
+                                                            title={note.is_flagged ? 'Clear Flag' : 'Flag Content'}
+                                                        >
+                                                            <AlertTriangle size={14} />
+                                                        </button>
+                                                        {note.status !== 'hidden' ? (
+                                                            <button className="btn btn-sm btn-outline-warning" onClick={() => handleContentModeration('notes', note.id, 'hidden')} title="Hide Content">
+                                                                <EyeOff size={14} />
+                                                            </button>
+                                                        ) : (
+                                                            <button className="btn btn-sm btn-outline-success" onClick={() => handleContentModeration('notes', note.id, 'active')} title="Restore Content">
+                                                                <CheckCircle size={14} />
+                                                            </button>
+                                                        )}
+                                                        {note.status !== 'removed' && (
+                                                            <button className="btn btn-sm btn-outline-danger" onClick={() => handleContentModeration('notes', note.id, 'removed')} title="Soft Delete">
+                                                                <Trash2 size={14} />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* TAB CONTENT: REPORTS */}
+            {activeTab === 'reports' && (
+                <div>
+                    <div className="card border-0 shadow-sm">
+                        <div className="card-body p-4">
+                            <div className="table-responsive">
+                                <table className="table align-middle table-hover">
+                                    <thead className="table-light">
+                                        <tr>
+                                            <th>Reporter</th>
+                                            <th>Content Type</th>
+                                            <th>Content ID</th>
+                                            <th>Reason</th>
+                                            <th>Status</th>
+                                            <th>Reported Date</th>
+                                            <th className="text-end">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {reports.map(report => (
+                                            <tr key={report.id}>
+                                                <td className="fw-semibold">
+                                                    <div>{report.reporter_name}</div>
+                                                    <small className="text-muted">{report.reporter_email}</small>
+                                                </td>
+                                                <td>{report.content_type.toUpperCase()}</td>
+                                                <td>{report.content_id}</td>
+                                                <td>{report.reason}</td>
+                                                <td>
+                                                    <span className={`badge ${report.status === 'pending' ? 'bg-warning text-dark' : (report.status === 'resolved' ? 'bg-success' : 'bg-secondary')}`}>
+                                                        {report.status.toUpperCase()}
+                                                    </span>
+                                                </td>
+                                                <td>{new Date(report.created_at).toLocaleDateString()}</td>
+                                                <td className="text-end">
+                                                    {report.status === 'pending' ? (
+                                                        <div className="d-flex justify-content-end gap-2">
+                                                            <button className="btn btn-sm btn-success d-flex align-items-center gap-1" onClick={() => handleReportAction(report.id, 'resolved')}>
+                                                                <CheckCircle size={12} /> Resolve
+                                                            </button>
+                                                            <button className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1" onClick={() => handleReportAction(report.id, 'ignored')}>
+                                                                Ignore
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-muted small">Closed</span>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        {reports.length === 0 && (
+                                            <tr>
+                                                <td colSpan="7" className="text-center text-muted py-5">No reports or complaints filed.</td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

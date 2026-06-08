@@ -60,7 +60,10 @@ const Settings = () => {
         setSuccess('');
 
         // Basic validations
-        if (!formData.first_name || !formData.last_name || !formData.email) {
+        const isEmailEmpty = !formData.email;
+        const isNameEmpty = user?.role !== 'admin' && (!formData.first_name || !formData.last_name);
+
+        if (isEmailEmpty || isNameEmpty) {
             setError('Please fill in Name and Email fields.');
             setLoading(false);
             return;
@@ -86,15 +89,15 @@ const Settings = () => {
 
         try {
             const response = await api.post('/auth.php?action=update-profile', {
-                first_name: formData.first_name,
-                last_name: formData.last_name,
+                first_name: user?.role === 'admin' ? 'Admin' : formData.first_name,
+                last_name: user?.role === 'admin' ? 'Admin' : formData.last_name,
                 email: formData.email,
-                phone_number: formData.phone_number,
-                course: formData.course,
-                year: formData.year,
-                department: formData.department,
-                lost_item_sms_notification: formData.lost_item_sms_notification,
-                peer_learning_app_notification: formData.peer_learning_app_notification,
+                phone_number: user?.role === 'admin' ? '' : formData.phone_number,
+                course: user?.role === 'admin' ? '' : formData.course,
+                year: user?.role === 'admin' ? '' : formData.year,
+                department: user?.role === 'admin' ? '' : formData.department,
+                lost_item_sms_notification: user?.role === 'admin' ? 0 : formData.lost_item_sms_notification,
+                peer_learning_app_notification: user?.role === 'admin' ? 0 : formData.peer_learning_app_notification,
                 old_password: formData.old_password,
                 new_password: formData.new_password,
                 confirm_password: formData.confirm_password
@@ -174,154 +177,173 @@ const Settings = () => {
                                 />
                             </div>
 
-                            {/* First Name */}
-                            <div className="col-md-6">
-                                <label className="form-label text-dark fw-semibold">First Name</label>
-                                <input
-                                    type="text"
-                                    className="form-control"
-                                    name="first_name"
-                                    value={formData.first_name}
-                                    onChange={handleChange}
-                                    required
-                                />
-                            </div>
-
-                            {/* Last Name */}
-                            <div className="col-md-6">
-                                <label className="form-label text-dark fw-semibold">Last Name</label>
-                                <input
-                                    type="text"
-                                    className="form-control"
-                                    name="last_name"
-                                    value={formData.last_name}
-                                    onChange={handleChange}
-                                    required
-                                />
-                            </div>
-
-                            {/* Email */}
-                            <div className="col-md-6">
-                                <label className="form-label text-dark fw-semibold">Email Address</label>
-                                <input
-                                    type="email"
-                                    className="form-control"
-                                    name="email"
-                                    value={formData.email}
-                                    onChange={handleChange}
-                                    required
-                                />
-                            </div>
-
-                            {/* Phone Number */}
-                            <div className="col-md-6">
-                                <label className="form-label text-dark fw-semibold">Phone Number</label>
-                                <input
-                                    type="text"
-                                    className="form-control"
-                                    name="phone_number"
-                                    value={formData.phone_number}
-                                    onChange={handleChange}
-                                />
-                            </div>
-
-                            {/* Student Fields */}
-                            {(user?.role === 'student' || user?.role === 'rep') && (
+                            {user?.role === 'admin' ? (
                                 <>
-                                    <div className="col-md-6">
-                                        <label className="form-label text-dark fw-semibold">Course</label>
+                                    {/* Email */}
+                                    <div className="col-md-12">
+                                        <label className="form-label text-dark fw-semibold">Email Address</label>
                                         <input
-                                            type="text"
+                                            type="email"
                                             className="form-control"
-                                            name="course"
-                                            placeholder="e.g. Computer Science & Technology"
-                                            value={formData.course}
+                                            name="email"
+                                            value={formData.email}
                                             onChange={handleChange}
-                                        />
-                                    </div>
-                                    <div className="col-md-6">
-                                        <label className="form-label text-dark fw-semibold">Academic Year</label>
-                                        <input
-                                            type="number"
-                                            className="form-control"
-                                            name="year"
-                                            placeholder="e.g. 1, 2, 3, 4"
-                                            value={formData.year}
-                                            onChange={handleChange}
+                                            required
                                         />
                                     </div>
                                 </>
-                            )}
-
-                            {/* Staff Fields */}
-                            {user?.role === 'staff' && (
-                                <div className="col-12">
-                                    <label className="form-label text-dark fw-semibold">Department</label>
-                                    <input
-                                        type="text"
-                                        className="form-control"
-                                        name="department"
-                                        placeholder="e.g. Department of Computer Science"
-                                        value={formData.department}
-                                        onChange={handleChange}
-                                    />
-                                </div>
-                            )}
-
-                            <hr className="my-4 border-light" />
-                            
-                            <h5 className="text-dark fw-bold mb-3 d-flex align-items-center gap-2">
-                                <Bell size={18} className="text-primary" />
-                                <span>Notification Preferences</span>
-                            </h5>
-
-                            <div className="col-md-6">
-                                <div className="card bg-light border-0 p-3 h-100">
-                                    <div className="form-check form-switch d-flex align-items-center justify-content-between p-0">
-                                        <div>
-                                            <label className="form-check-label fw-bold text-dark" htmlFor="smsNotifSwitch">
-                                                SMS Notifications
-                                            </label>
-                                            <div className="text-muted small">
-                                                Receive text message alerts when new lost items are reported.
-                                            </div>
-                                        </div>
+                            ) : (
+                                <>
+                                    {/* First Name */}
+                                    <div className="col-md-6">
+                                        <label className="form-label text-dark fw-semibold">First Name</label>
                                         <input
-                                            className="form-check-input ms-0"
-                                            type="checkbox"
-                                            id="smsNotifSwitch"
-                                            name="lost_item_sms_notification"
-                                            checked={formData.lost_item_sms_notification === 1}
+                                            type="text"
+                                            className="form-control"
+                                            name="first_name"
+                                            value={formData.first_name}
                                             onChange={handleChange}
-                                            style={{ width: '2.5em', height: '1.25em', cursor: 'pointer' }}
+                                            required
                                         />
                                     </div>
-                                </div>
-                            </div>
 
-                            <div className="col-md-6">
-                                <div className="card bg-light border-0 p-3 h-100">
-                                    <div className="form-check form-switch d-flex align-items-center justify-content-between p-0">
-                                        <div>
-                                            <label className="form-check-label fw-bold text-dark" htmlFor="peerNotifSwitch">
-                                                Peer Learning Notifications
-                                            </label>
-                                            <div className="text-muted small">
-                                                Receive app notifications when peer learning requests are submitted/updated.
-                                            </div>
-                                        </div>
+                                    {/* Last Name */}
+                                    <div className="col-md-6">
+                                        <label className="form-label text-dark fw-semibold">Last Name</label>
                                         <input
-                                            className="form-check-input ms-0"
-                                            type="checkbox"
-                                            id="peerNotifSwitch"
-                                            name="peer_learning_app_notification"
-                                            checked={formData.peer_learning_app_notification === 1}
+                                            type="text"
+                                            className="form-control"
+                                            name="last_name"
+                                            value={formData.last_name}
                                             onChange={handleChange}
-                                            style={{ width: '2.5em', height: '1.25em', cursor: 'pointer' }}
+                                            required
                                         />
                                     </div>
-                                </div>
-                            </div>
+
+                                    {/* Email */}
+                                    <div className="col-md-6">
+                                        <label className="form-label text-dark fw-semibold">Email Address</label>
+                                        <input
+                                            type="email"
+                                            className="form-control"
+                                            name="email"
+                                            value={formData.email}
+                                            onChange={handleChange}
+                                            required
+                                        />
+                                    </div>
+
+                                    {/* Phone Number */}
+                                    <div className="col-md-6">
+                                        <label className="form-label text-dark fw-semibold">Phone Number</label>
+                                        <input
+                                            type="text"
+                                            className="form-control"
+                                            name="phone_number"
+                                            value={formData.phone_number}
+                                            onChange={handleChange}
+                                        />
+                                    </div>
+
+                                    {/* Student Fields */}
+                                    {(user?.role === 'student' || user?.role === 'rep') && (
+                                        <>
+                                            <div className="col-md-6">
+                                                <label className="form-label text-dark fw-semibold">Course</label>
+                                                <input
+                                                    type="text"
+                                                    className="form-control"
+                                                    name="course"
+                                                    placeholder="e.g. Computer Science & Technology"
+                                                    value={formData.course}
+                                                    onChange={handleChange}
+                                                />
+                                            </div>
+                                            <div className="col-md-6">
+                                                <label className="form-label text-dark fw-semibold">Academic Year</label>
+                                                <input
+                                                    type="number"
+                                                    className="form-control"
+                                                    name="year"
+                                                    placeholder="e.g. 1, 2, 3, 4"
+                                                    value={formData.year}
+                                                    onChange={handleChange}
+                                                />
+                                            </div>
+                                        </>
+                                    )}
+
+                                    {/* Staff Fields */}
+                                    {user?.role === 'staff' && (
+                                        <div className="col-12">
+                                            <label className="form-label text-dark fw-semibold">Department</label>
+                                            <input
+                                                type="text"
+                                                className="form-control"
+                                                name="department"
+                                                placeholder="e.g. Department of Computer Science"
+                                                value={formData.department}
+                                                onChange={handleChange}
+                                            />
+                                        </div>
+                                    )}
+
+                                    <hr className="my-4 border-light" />
+                                    
+                                    <h5 className="text-dark fw-bold mb-3 d-flex align-items-center gap-2">
+                                        <Bell size={18} className="text-primary" />
+                                        <span>Notification Preferences</span>
+                                    </h5>
+
+                                    <div className="col-md-6">
+                                        <div className="card bg-light border-0 p-3 h-100">
+                                            <div className="form-check form-switch d-flex align-items-center justify-content-between p-0">
+                                                <div>
+                                                    <label className="form-check-label fw-bold text-dark" htmlFor="smsNotifSwitch">
+                                                        SMS Notifications
+                                                    </label>
+                                                    <div className="text-muted small">
+                                                        Receive text message alerts when new lost items are reported.
+                                                    </div>
+                                                </div>
+                                                <input
+                                                    className="form-check-input ms-0"
+                                                    type="checkbox"
+                                                    id="smsNotifSwitch"
+                                                    name="lost_item_sms_notification"
+                                                    checked={formData.lost_item_sms_notification === 1}
+                                                    onChange={handleChange}
+                                                    style={{ width: '2.5em', height: '1.25em', cursor: 'pointer' }}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="col-md-6">
+                                        <div className="card bg-light border-0 p-3 h-100">
+                                            <div className="form-check form-switch d-flex align-items-center justify-content-between p-0">
+                                                <div>
+                                                    <label className="form-check-label fw-bold text-dark" htmlFor="peerNotifSwitch">
+                                                        Peer Learning Notifications
+                                                    </label>
+                                                    <div className="text-muted small">
+                                                        Receive app notifications when peer learning requests are submitted/updated.
+                                                    </div>
+                                                </div>
+                                                <input
+                                                    className="form-check-input ms-0"
+                                                    type="checkbox"
+                                                    id="peerNotifSwitch"
+                                                    name="peer_learning_app_notification"
+                                                    checked={formData.peer_learning_app_notification === 1}
+                                                    onChange={handleChange}
+                                                    style={{ width: '2.5em', height: '1.25em', cursor: 'pointer' }}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
 
                             <hr className="my-4 border-light" />
                             
