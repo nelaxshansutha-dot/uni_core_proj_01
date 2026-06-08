@@ -3,6 +3,9 @@ import api from '../../services/api';
 import { AuthContext } from '../../context/AuthContext';
 import { Plus, Search, MapPin, Trash2, BellRing } from 'lucide-react';
 
+
+console.log("LostItems loaded"); 
+
 const LostItems = () => {
     const { user } = useContext(AuthContext);
     const [items, setItems] = useState([]);
@@ -69,17 +72,26 @@ const LostItems = () => {
         }
     };
 
-    const handleDelete = async (lostId) => {
-        if (!window.confirm("Are you sure you want to delete this post?")) return;
-        try {
-            const res = await api.delete(`/lost-items.php?id=${lostId}`);
-            if (res.data.status === 'success') {
-                fetchItems();
-            }
-        } catch (err) {
-            console.error("Failed to delete post", err);
+   const [showDeleteModal, setShowDeleteModal] = useState(false);
+const [selectedItemId, setSelectedItemId] = useState(null);
+
+const handleDelete = async () => {
+    try {
+        const res = await api.delete(
+            `/lost-items.php?id=${selectedItemId}`
+        );
+
+        if (res.data.status === 'success') {
+            fetchItems();
         }
-    };
+
+        setShowDeleteModal(false);
+        setSelectedItemId(null);
+
+    } catch (err) {
+        console.error("Failed to delete post", err);
+    }
+};
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -202,12 +214,15 @@ const LostItems = () => {
                                     </div>
                                     {item.user_id === user?.id && (
                                         <div className="card-footer bg-white border-0 pt-0 pb-3 px-3">
-                                            <button 
-                                                className="btn btn-outline-danger btn-sm w-100 d-flex align-items-center justify-content-center gap-2"
-                                                onClick={() => handleDelete(item.lost_id)}
-                                            >
-                                                <Trash2 size={16} /> Delete Post
-                                            </button>
+                                            <button
+    className="btn btn-danger"
+    onClick={() => {
+        setSelectedItemId(item.lost_id);
+        setShowDeleteModal(true);
+    }}
+>
+    Delete Post
+</button>
                                         </div>
                                     )}
                                 </div>
@@ -375,6 +390,43 @@ const LostItems = () => {
                                 </form>
                             </div>
 
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* DELETE CONFIRMATION MODAL */}
+            {showDeleteModal && (
+                <div
+                    className="modal show d-block"
+                    style={{ backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 1060 }}
+                >
+                    <div className="modal-dialog modal-dialog-centered">
+                        <div className="modal-content border-0 shadow-lg">
+                            <div className="modal-body text-center px-4 py-4">
+                                <div className="text-danger mb-3">
+                                    <Trash2 size={48} />
+                                </div>
+                                <h5 className="mb-4">Are you sure want to delete this post?</h5>
+                                <div className="d-flex gap-3 justify-content-center">
+                                    <button
+                                        type="button"
+                                        className="btn btn-danger px-4"
+                                        onClick={handleDelete}
+                                    >
+                                        Yes
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="btn btn-secondary px-4"
+                                        onClick={() => {
+                                            setShowDeleteModal(false);
+                                            setSelectedItemId(null);
+                                        }}
+                                    >
+                                        No
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
