@@ -35,7 +35,11 @@ const Login = () => {
                 if (verified) {
                     // User is already verified — login directly, no OTP needed
                     login(response.data.data.token, response.data.data.user);
-                    navigate('/dashboard');
+                    if (response.data.data.user.role === 'admin') {
+                        navigate('/admin');
+                    } else {
+                        navigate('/dashboard');
+                    }
                 } else {
                     // First-time login — redirect to OTP verification
                     navigate('/otp', {

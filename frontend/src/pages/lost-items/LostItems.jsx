@@ -124,7 +124,7 @@ const LostItems = () => {
 
     return (
         <div>
-            {/* HEADER */}
+            {/*Header*/}
             <div className="d-flex justify-content-between align-items-center mb-4">
                 <div>
                     <h3 className="fw-bold">Lost & Found</h3>

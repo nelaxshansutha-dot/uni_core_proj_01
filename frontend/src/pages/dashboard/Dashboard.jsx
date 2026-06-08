@@ -6,7 +6,7 @@ import {
     ShoppingBag, 
     Users 
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 
 const DashboardCard = ({ title, icon, color, link, description }) => (
     <div className="col-md-6 col-lg-3 mb-4">
@@ -27,6 +27,10 @@ const DashboardCard = ({ title, icon, color, link, description }) => (
 
 const Dashboard = () => {
     const { user } = useContext(AuthContext);
+
+    if (user?.role === 'admin') {
+        return <Navigate to="/admin" replace />;
+    }
 
     return (
         <div>
