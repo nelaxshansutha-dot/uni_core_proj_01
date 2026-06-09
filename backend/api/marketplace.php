@@ -20,7 +20,11 @@ if ($method === 'GET') {
     if ($method === 'POST') {
         $controller->createItem($data, $user['id']);
     } else if ($method === 'PUT') {
-        $controller->updateStatus($data, $user['id']);
+        if (isset($data['status']) && !isset($data['item_name'])) {
+            $controller->updateStatus($data, $user['id']);
+        } else {
+            $controller->updateListing($data, $user['id']);
+        }
     } else if ($method === 'DELETE') {
         $controller->deleteItem($data, $user['id']);
     } else {
