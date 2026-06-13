@@ -5,6 +5,7 @@ import { AuthContext } from '../../context/AuthContext';
 import { LogIn, XCircle, CheckCircle } from 'lucide-react';
 
 const Login = () => {
+    const [role, setRole] = useState('student');
     const [enrollmentNo, setEnrollmentNo] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -18,6 +19,26 @@ const Login = () => {
     const verifiedSuccess = location.state?.verifiedSuccess;
     const passwordReset = location.state?.passwordReset;
 
+    const getIdLabel = () => {
+        switch (role) {
+            case 'admin': return 'Admin ID';
+            case 'staff': return 'Staff ID';
+            case 'rep': return 'Rep ID';
+            case 'student':
+            default: return 'Enrollment Number';
+        }
+    };
+
+    const getIdPlaceholder = () => {
+        switch (role) {
+            case 'admin': return 'e.g. ADMIN001';
+            case 'staff': return 'e.g. STF001';
+            case 'rep': return 'e.g. UWU/CST/21/0042';
+            case 'student':
+            default: return 'e.g. UWU/CST/21/0042';
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
@@ -25,7 +46,7 @@ const Login = () => {
 
         try {
             const response = await api.post('/auth.php?action=login', {
-                enrollment_no: enrollmentNo,
+                enrollment_no: enrollmentNo, // Backend checks this against all IDs
                 password
             });
 
@@ -101,11 +122,24 @@ const Login = () => {
 
                     <form onSubmit={handleSubmit}>
                         <div className="mb-3">
-                            <label className="form-label">Enrollment Number</label>
+                            <label className="form-label">I am a</label>
+                            <select 
+                                className="form-select form-select-lg"
+                                value={role}
+                                onChange={(e) => setRole(e.target.value)}
+                            >
+                                <option value="student">Student</option>
+                                <option value="staff">Staff Member</option>
+                                <option value="rep">Course Representative</option>
+                                <option value="admin">Administrator</option>
+                            </select>
+                        </div>
+                        <div className="mb-3">
+                            <label className="form-label">{getIdLabel()}</label>
                             <input
                                 type="text"
                                 className="form-control form-control-lg"
-                                placeholder="e.g. UWU/CST/21/0042"
+                                placeholder={getIdPlaceholder()}
                                 value={enrollmentNo}
                                 onChange={(e) => { setEnrollmentNo(e.target.value); setError(''); }}
                                 required
