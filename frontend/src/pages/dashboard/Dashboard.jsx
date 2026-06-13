@@ -56,20 +56,24 @@ const Dashboard = () => {
                     link="/marketplace"
                     description="Buy, sell, or exchange academic materials."
                 />
-                <DashboardCard 
-                    title="Notes Sharing" 
-                    icon={<BookOpen size={28} />} 
-                    color="warning" 
-                    link="/notes"
-                    description="Access or upload course notes and PDFs."
-                />
-                <DashboardCard 
-                    title="Peer Learning" 
-                    icon={<Users size={28} />} 
-                    color="info" 
-                    link="/peer-learning"
-                    description="Request help or assist peers in your courses."
-                />
+                {user?.role !== 'staff' && (
+                    <>
+                        <DashboardCard 
+                            title="Notes Sharing" 
+                            icon={<BookOpen size={28} />} 
+                            color="warning" 
+                            link="/notes"
+                            description="Access or upload course notes and PDFs."
+                        />
+                        <DashboardCard 
+                            title="Peer Learning" 
+                            icon={<Users size={28} />} 
+                            color="info" 
+                            link="/peer-learning"
+                            description="Request help or assist peers in your courses."
+                        />
+                    </>
+                )}
             </div>
 
             <div className="card border-0 shadow-sm mt-4">

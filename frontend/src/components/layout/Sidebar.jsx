@@ -117,18 +117,22 @@ const Sidebar = () => {
                                 Marketplace
                             </NavLink>
                         </li>
-                        <li>
-                            <NavLink to="/notes" className="nav-link d-flex align-items-center gap-3">
-                                <BookOpen size={20} />
-                                Notes Sharing
-                            </NavLink>
-                        </li>
-                        <li>
-                            <NavLink to="/peer-learning" className="nav-link d-flex align-items-center gap-3">
-                                <Users size={20} />
-                                Peer Learning
-                            </NavLink>
-                        </li>
+                        {user?.role !== 'staff' && (
+                            <>
+                                <li>
+                                    <NavLink to="/notes" className="nav-link d-flex align-items-center gap-3">
+                                        <BookOpen size={20} />
+                                        Notes Sharing
+                                    </NavLink>
+                                </li>
+                                <li>
+                                    <NavLink to="/peer-learning" className="nav-link d-flex align-items-center gap-3">
+                                        <Users size={20} />
+                                        Peer Learning
+                                    </NavLink>
+                                </li>
+                            </>
+                        )}
                         <li>
                             <NavLink to="/settings" className="nav-link d-flex align-items-center gap-3">
                                 <Settings size={20} />
