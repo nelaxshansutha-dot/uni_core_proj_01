@@ -48,9 +48,8 @@ const Login = () => {
 
         try {
             const response = await api.post('/auth.php?action=login', {
-                enrollment_no: enrollmentNo,
-                password,
-                role // optionally pass role if backend needs it, though backend currently finds by enrollment_no
+                enrollment_no: enrollmentNo, // Backend checks this against all IDs
+                password
             });
 
             if (response.data.status === 'success') {
@@ -131,6 +130,10 @@ const Login = () => {
 
                     <form onSubmit={handleSubmit}>
                         <div className="mb-3">
+                            <label className="form-label">I am a</label>
+                            <select 
+                                className="form-select form-select-lg"
+                                value={role}
                             <label className="form-label">Role</label>
                             <select 
                                 className="form-select form-control-lg" 
@@ -139,6 +142,8 @@ const Login = () => {
                             >
                                 <option value="student">Student</option>
                                 <option value="staff">Staff Member</option>
+                                <option value="rep">Course Representative</option>
+                                <option value="admin">Administrator</option>
                                 <option value="rep">Representative</option>
                                 <option value="admin">Admin</option>
                             </select>
