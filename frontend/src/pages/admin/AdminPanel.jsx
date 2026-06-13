@@ -287,16 +287,16 @@ const AdminPanel = () => {
     return (
         <div>
             {/* Header */}
-            <div className="mb-4 d-flex justify-content-between align-items-center">
-                <div>
-                    <h3 className="fw-bold text-dark mb-1 d-flex align-items-center gap-2">
-                        <ShieldAlert className="text-warning" />
+            <div className="admin-hero-banner mb-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                <div style={{ position: 'relative', zIndex: 1 }}>
+                    <h2 className="fw-bold text-white mb-1 d-flex align-items-center gap-2">
+                        <ShieldAlert className="text-warning" size={32} />
                         Admin Dashboard
-                    </h3>
-                    <p className="text-muted m-0">Platform Overview, Content Moderation, and User Roles</p>
+                    </h2>
+                    <p className="text-white-50 m-0 fs-6">Platform Overview, Content Moderation, and User Roles</p>
                 </div>
-                <button className="btn btn-outline-secondary btn-sm d-flex align-items-center gap-2" onClick={fetchTabData}>
-                    <RefreshCw size={14} className={loading ? 'spin-animation' : ''} /> Refresh Data
+                <button className="btn btn-light btn-sm d-flex align-items-center gap-2 px-3 py-2 fw-semibold" style={{ position: 'relative', zIndex: 1 }} onClick={fetchTabData}>
+                    <RefreshCw size={16} className={loading ? 'spin-animation' : ''} /> Refresh Data
                 </button>
             </div>
 
@@ -309,33 +309,23 @@ const AdminPanel = () => {
             )}
 
             {/* Navigation Tabs */}
-            <ul className="nav nav-tabs mb-4 border-bottom">
-                <li className="nav-item">
-                    <button className={`nav-link border-0 fw-semibold px-4 py-2 ${activeTab === 'overview' ? 'active text-primary border-bottom border-primary border-3' : 'text-muted'}`} onClick={() => setActiveTab('overview')}>
-                        Overview
-                    </button>
-                </li>
-                <li className="nav-item">
-                    <button className={`nav-link border-0 fw-semibold px-4 py-2 ${activeTab === 'users' ? 'active text-primary border-bottom border-primary border-3' : 'text-muted'}`} onClick={() => setActiveTab('users')}>
-                        User Management
-                    </button>
-                </li>
-                <li className="nav-item">
-                    <button className={`nav-link border-0 fw-semibold px-4 py-2 ${activeTab === 'course-rep' ? 'active text-primary border-bottom border-primary border-3' : 'text-muted'}`} onClick={() => setActiveTab('course-rep')}>
-                        Course Representatives
-                    </button>
-                </li>
-                <li className="nav-item">
-                    <button className={`nav-link border-0 fw-semibold px-4 py-2 ${activeTab === 'content' ? 'active text-primary border-bottom border-primary border-3' : 'text-muted'}`} onClick={() => setActiveTab('content')}>
-                        Content Moderation
-                    </button>
-                </li>
-                <li className="nav-item">
-                    <button className={`nav-link border-0 fw-semibold px-4 py-2 ${activeTab === 'reports' ? 'active text-primary border-bottom border-primary border-3' : 'text-muted'}`} onClick={() => setActiveTab('reports')}>
-                        Reports & Complaints
-                    </button>
-                </li>
-            </ul>
+            <div className="admin-nav-pills mb-4">
+                <button className={`admin-nav-link ${activeTab === 'overview' ? 'active' : ''}`} onClick={() => setActiveTab('overview')}>
+                    Overview
+                </button>
+                <button className={`admin-nav-link ${activeTab === 'users' ? 'active' : ''}`} onClick={() => setActiveTab('users')}>
+                    User Management
+                </button>
+                <button className={`admin-nav-link ${activeTab === 'course-rep' ? 'active' : ''}`} onClick={() => setActiveTab('course-rep')}>
+                    Course Representatives
+                </button>
+                <button className={`admin-nav-link ${activeTab === 'content' ? 'active' : ''}`} onClick={() => setActiveTab('content')}>
+                    Content Moderation
+                </button>
+                <button className={`admin-nav-link ${activeTab === 'reports' ? 'active' : ''}`} onClick={() => setActiveTab('reports')}>
+                    Reports & Complaints
+                </button>
+            </div>
 
             {/* TAB CONTENT: OVERVIEW */}
             {activeTab === 'overview' && (
@@ -343,46 +333,50 @@ const AdminPanel = () => {
                     {/* Stats Grid */}
                     <div className="row g-4 mb-4">
                         <div className="col-md-3">
-                            <div className="card border-0 shadow-sm p-4 d-flex align-items-center gap-3">
-                                <div className="p-3 rounded-circle bg-primary bg-opacity-10 text-primary">
+                            <div className="admin-stat-card stat-users d-flex align-items-center gap-3">
+                                <Users size={60} className="admin-stat-icon-bg" />
+                                <div className="p-3 rounded-circle bg-white bg-opacity-10 text-white">
                                     <Users size={24} />
                                 </div>
                                 <div>
-                                    <h4 className="fw-bold mb-1">{stats.total_users}</h4>
-                                    <p className="text-muted small mb-0">Total Users</p>
+                                    <h3 className="fw-bold mb-0 text-white">{stats.total_users}</h3>
+                                    <p className="text-white-50 small mb-0 fw-semibold">Total Users</p>
                                 </div>
                             </div>
                         </div>
                         <div className="col-md-3">
-                            <div className="card border-0 shadow-sm p-4 d-flex align-items-center gap-3">
-                                <div className="p-3 rounded-circle bg-success bg-opacity-10 text-success">
+                            <div className="admin-stat-card stat-active d-flex align-items-center gap-3">
+                                <Activity size={60} className="admin-stat-icon-bg" />
+                                <div className="p-3 rounded-circle bg-white bg-opacity-10 text-white">
                                     <Activity size={24} />
                                 </div>
                                 <div>
-                                    <h4 className="fw-bold mb-1">{stats.active_users}</h4>
-                                    <p className="text-muted small mb-0">Active Users</p>
+                                    <h3 className="fw-bold mb-0 text-white">{stats.active_users}</h3>
+                                    <p className="text-white-50 small mb-0 fw-semibold">Active Users</p>
                                 </div>
                             </div>
                         </div>
                         <div className="col-md-3">
-                            <div className="card border-0 shadow-sm p-4 d-flex align-items-center gap-3">
-                                <div className="p-3 rounded-circle bg-warning bg-opacity-10 text-warning">
+                            <div className="admin-stat-card stat-reps d-flex align-items-center gap-3">
+                                <Shield size={60} className="admin-stat-icon-bg" />
+                                <div className="p-3 rounded-circle bg-white bg-opacity-10 text-white">
                                     <Shield size={24} />
                                 </div>
                                 <div>
-                                    <h4 className="fw-bold mb-1">{stats.total_reps}</h4>
-                                    <p className="text-muted small mb-0">Course Reps</p>
+                                    <h3 className="fw-bold mb-0 text-white">{stats.total_reps}</h3>
+                                    <p className="text-white-50 small mb-0 fw-semibold">Course Reps</p>
                                 </div>
                             </div>
                         </div>
                         <div className="col-md-3">
-                            <div className="card border-0 shadow-sm p-4 d-flex align-items-center gap-3">
-                                <div className="p-3 rounded-circle bg-info bg-opacity-10 text-info">
+                            <div className="admin-stat-card stat-posts d-flex align-items-center gap-3">
+                                <BookOpen size={60} className="admin-stat-icon-bg" />
+                                <div className="p-3 rounded-circle bg-white bg-opacity-10 text-white">
                                     <BookOpen size={24} />
                                 </div>
                                 <div>
-                                    <h4 className="fw-bold mb-1">{stats.total_posts}</h4>
-                                    <p className="text-muted small mb-0">Total Posts ({stats.hidden_posts} hidden)</p>
+                                    <h3 className="fw-bold mb-0 text-white">{stats.total_posts}</h3>
+                                    <p className="text-white-50 small mb-0 fw-semibold">Posts ({stats.hidden_posts} hidden)</p>
                                 </div>
                             </div>
                         </div>
