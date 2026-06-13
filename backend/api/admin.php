@@ -3,7 +3,7 @@ require_once __DIR__ . '/../config/Cors.php';
 require_once __DIR__ . '/../controllers/AdminController.php';
 require_once __DIR__ . '/../utils/AuthMiddleware.php';
 require_once __DIR__ . '/../utils/Response.php';
-
+//pass123
 Cors::enable();
 
 $method = $_SERVER['REQUEST_METHOD'];

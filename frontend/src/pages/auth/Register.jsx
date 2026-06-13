@@ -2,6 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../../services/api';
 import { UserPlus, CheckCircle, XCircle, Eye, EyeOff } from 'lucide-react';
+import authImage from '../../assets/auth_side_image.png';
+import logo from '../../assets/logo.jpg';
 
 const Register = () => {
     const [formData, setFormData] = useState({
@@ -79,12 +81,19 @@ const Register = () => {
 
     return (
         <div className="auth-bg">
-            <div className="auth-card" style={{ maxWidth: '520px', width: '100%' }}>
-                <div className="card-body p-5">
+            <div className="auth-card d-flex flex-column flex-md-row" style={{ maxWidth: '1000px', width: '100%', overflow: 'hidden', padding: 0 }}>
+                {/* Image Side */}
+                <div className="auth-side-image d-none d-md-flex align-items-end" style={{ flex: '1 1 45%', backgroundImage: `url(${authImage})` }}>
+                    <div className="auth-side-content w-100 text-center">
+                        <h4 className="fw-bold text-white mb-2">Join Our Community</h4>
+                        <p className="text-white-50 small mb-0">Empowering students and staff with smart digital tools.</p>
+                    </div>
+                </div>
+
+                {/* Form Side */}
+                <div className="card-body p-4 p-sm-5 d-flex flex-column justify-content-center" style={{ flex: '1 1 55%' }}>
                     <div className="text-center mb-4">
-                        <div className="icon-badge primary">
-                            <UserPlus size={30} />
-                        </div>
+                        <img src={logo} alt="UniCore Logo" style={{ height: '80px', marginBottom: '1rem', objectFit: 'contain' }} />
                         <h3 className="fw-bold text-dark mb-1">Create an Account</h3>
                         <p className="text-muted small">Join the UniCore university platform</p>
                     </div>
