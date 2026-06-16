@@ -49,7 +49,8 @@ const Login = () => {
         try {
             const response = await api.post('/auth.php?action=login', {
                 enrollment_no: enrollmentNo, // Backend checks this against all IDs
-                password
+                password,
+                role: role // Send the selected role
             });
 
             if (response.data.status === 'success') {
@@ -134,18 +135,12 @@ const Login = () => {
                             <select 
                                 className="form-select form-select-lg"
                                 value={role}
-                            <label className="form-label">Role</label>
-                            <select 
-                                className="form-select form-control-lg" 
-                                value={role} 
                                 onChange={(e) => setRole(e.target.value)}
                             >
                                 <option value="student">Student</option>
                                 <option value="staff">Staff Member</option>
                                 <option value="rep">Course Representative</option>
                                 <option value="admin">Administrator</option>
-                                <option value="rep">Representative</option>
-                                <option value="admin">Admin</option>
                             </select>
                         </div>
                         <div className="mb-3">

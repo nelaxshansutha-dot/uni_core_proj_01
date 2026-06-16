@@ -51,6 +51,11 @@ const AdminPanel = () => {
     const [repStudents, setRepStudents] = useState([]);
     const [selectedStudent, setSelectedStudent] = useState(null);
     const [repForm, setRepForm] = useState({
+        fname: '',
+        lname: '',
+        phone: '',
+        email: '',
+        rep_id: '',
         password: '',
         course: '',
         year: '1'
@@ -216,6 +221,11 @@ const AdminPanel = () => {
         try {
             const res = await api.post('/admin.php?action=assign-rep', {
                 user_id: selectedStudent.id,
+                fname: repForm.fname,
+                lname: repForm.lname,
+                phone: repForm.phone,
+                email: repForm.email,
+                rep_id: repForm.rep_id,
                 password: repForm.password,
                 course: repForm.course,
                 year: repForm.year
@@ -225,7 +235,7 @@ const AdminPanel = () => {
                 setSelectedStudent(null);
                 setRepStudents([]);
                 setRepSearch('');
-                setRepForm({ password: '', course: '', year: '1' });
+                setRepForm({ fname: '', lname: '', phone: '', email: '', rep_id: '', password: '', course: '', year: '1' });
             } else {
                 showFeedback('danger', res.data.message);
             }
@@ -663,6 +673,11 @@ const AdminPanel = () => {
                                                         setSelectedStudent(student);
                                                         setRepForm({
                                                             ...repForm,
+                                                            fname: student.first_name || '',
+                                                            lname: student.last_name || '',
+                                                            phone: student.phone_number || '',
+                                                            email: student.email || '',
+                                                            rep_id: 'REP_' + student.enrollment_no,
                                                             course: student.course || '',
                                                             year: student.year || '1'
                                                         });
@@ -698,6 +713,51 @@ const AdminPanel = () => {
                                                 Promoting <strong>{selectedStudent.first_name} {selectedStudent.last_name}</strong> ({selectedStudent.enrollment_no}) to Course Representative.
                                             </div>
 
+                                            <div className="mb-3 row">
+                                                <div className="col-md-6">
+                                                    <label className="form-label">First Name</label>
+                                                    <input 
+                                                        type="text" 
+                                                        className="form-control" 
+                                                        value={repForm.fname}
+                                                        onChange={(e) => setRepForm({ ...repForm, fname: e.target.value })}
+                                                        required 
+                                                    />
+                                                </div>
+                                                <div className="col-md-6">
+                                                    <label className="form-label">Last Name</label>
+                                                    <input 
+                                                        type="text" 
+                                                        className="form-control" 
+                                                        value={repForm.lname}
+                                                        onChange={(e) => setRepForm({ ...repForm, lname: e.target.value })}
+                                                        required 
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className="mb-3 row">
+                                                <div className="col-md-6">
+                                                    <label className="form-label">Phone Number</label>
+                                                    <input 
+                                                        type="text" 
+                                                        className="form-control" 
+                                                        value={repForm.phone}
+                                                        onChange={(e) => setRepForm({ ...repForm, phone: e.target.value })}
+                                                    />
+                                                </div>
+                                                <div className="col-md-6">
+                                                    <label className="form-label">Personal Email</label>
+                                                    <input 
+                                                        type="email" 
+                                                        className="form-control" 
+                                                        value={repForm.email}
+                                                        onChange={(e) => setRepForm({ ...repForm, email: e.target.value })}
+                                                        required 
+                                                    />
+                                                </div>
+                                            </div>
+
                                             <div className="mb-3">
                                                 <label className="form-label">Course / Program</label>
                                                 <input 
@@ -724,14 +784,25 @@ const AdminPanel = () => {
                                                 </select>
                                             </div>
 
+                                            <div className="mb-3">
+                                                <label className="form-label">Rep ID</label>
+                                                <input 
+                                                    type="text" 
+                                                    className="form-control" 
+                                                    value={repForm.rep_id}
+                                                    onChange={(e) => setRepForm({ ...repForm, rep_id: e.target.value })}
+                                                    required 
+                                                />
+                                            </div>
+
                                             <div className="mb-4">
-                                                <label className="form-label">Set Password Manually</label>
+                                                <label className="form-label">Rep Login Password</label>
                                                 <input 
                                                     type="password" 
                                                     className="form-control" 
                                                     value={repForm.password}
                                                     onChange={(e) => setRepForm({ ...repForm, password: e.target.value })}
-                                                    placeholder="Set login password for Course Rep..."
+                                                    placeholder="Set a dedicated password for the Rep dashboard..."
                                                     required 
                                                 />
                                                 <div className="form-text small">Credential PDF will be generated and emailed to the student.</div>
