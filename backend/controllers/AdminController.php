@@ -2,9 +2,13 @@
 require_once __DIR__ . '/../models/User.php';
 require_once __DIR__ . '/../models/Student.php';
 require_once __DIR__ . '/../models/Staff.php';
+require_once __DIR__ . '/../models/CourseRep.php';
 require_once __DIR__ . '/../utils/Response.php';
 require_once __DIR__ . '/../utils/Validator.php';
+require_once __DIR__ . '/../utils/MailService.php';
 require_once __DIR__ . '/../config/Database.php';
+require_once __DIR__ . '/../vendor/autoload.php';
+use Dompdf\Dompdf;
 
 class AdminController {
 
@@ -169,7 +173,7 @@ class AdminController {
     public function searchStudents($query) {
         $db = (new Database())->getConnection();
         $q = "%" . $query . "%";
-        $sql = "SELECT u.userID as id, u.enrollment_no, u.role, u.fname as first_name, u.lname as last_name, s.courseID as course, s.std_year as year 
+        $sql = "SELECT u.userID as id, u.enrollment_no, u.email, u.phoneNum as phone_number, u.role, u.fname as first_name, u.lname as last_name, s.courseID as course, s.std_year as year 
                 FROM Users u 
                 JOIN Student s ON u.userID = s.userID 
                 WHERE (u.enrollment_no LIKE :q OR u.fname LIKE :q OR u.lname LIKE :q) 
@@ -182,7 +186,7 @@ class AdminController {
     }
 
     public function assignRep($data, $adminId) {
-        $missing = Validator::required(['user_id', 'password', 'course', 'year'], $data);
+        $missing = Validator::required(['user_id', 'fname', 'lname', 'email', 'rep_id', 'password', 'course', 'year'], $data);
         if (!empty($missing)) {
             Response::error("Missing fields: " . implode(', ', $missing));
         }
@@ -198,23 +202,102 @@ class AdminController {
         }
 
         $hashed = password_hash($data['password'], PASSWORD_BCRYPT);
-        $rep_id = "REP_" . $user['enrollmentNo']; // Create a rep ID based on enrollment
+        $phone = isset($data['phone']) ? $data['phone'] : null;
 
         $db->beginTransaction();
         try {
-            $stmt = $db->prepare("UPDATE Users SET role = 'rep', rep_id = ?, hash_password = ? WHERE userID = ?");
-            $stmt->execute([$rep_id, $hashed, $data['user_id']]);
+            // Resolve Course ID from String/Int
+            $courseId = null;
+            if (!empty($data['course'])) {
+                if (is_numeric($data['course'])) {
+                    $courseId = (int)$data['course'];
+                } else {
+                    $stmt = $db->prepare("SELECT courseID FROM Course WHERE courseName = ? LIMIT 1");
+                    $stmt->execute([$data['course']]);
+                    $c = $stmt->fetch(PDO::FETCH_ASSOC);
+                    if ($c) {
+                        $courseId = $c['courseID'];
+                    } else {
+                        $stmt = $db->prepare("INSERT INTO Course (courseName) VALUES (?)");
+                        $stmt->execute([$data['course']]);
+                        $courseId = $db->lastInsertId();
+                    }
+                }
+            }
 
+            // Update User details
+            $stmt = $db->prepare("UPDATE Users SET role = 'rep', rep_id = ?, fname = ?, lname = ?, phoneNum = ?, email = ? WHERE userID = ?");
+            $stmt->execute([$data['rep_id'], $data['fname'], $data['lname'], $phone, $data['email'], $data['user_id']]);
+
+            // Update Student details
             $stmt = $db->prepare("UPDATE Student SET courseID = ?, std_year = ? WHERE userID = ?");
-            $stmt->execute([$data['course'], (int)$data['year'], $data['user_id']]);
+            $stmt->execute([$courseId, (int)$data['year'], $data['user_id']]);
 
+            // Create Course Rep record
             $stmt = $db->prepare("INSERT INTO Course_representative (userID, enrollmentNo, courseID, hash_password) VALUES (?, ?, ?, ?)");
-            $stmt->execute([$data['user_id'], $user['enrollmentNo'], $data['course'], $hashed]);
+            $stmt->execute([$data['user_id'], $user['enrollmentNo'], $courseId, $hashed]);
 
             $db->commit();
-            Response::success("Successfully assigned student as Course Representative.");
-        } catch (Exception $e) {
+
+            // Generate PDF
+            $html = "
+                <div style='font-family: Arial, sans-serif; padding: 20px;'>
+                    <h1 style='color: #6a0dad; border-bottom: 2px solid #6a0dad; padding-bottom: 10px;'>UniCore Course Representative Appointment</h1>
+                    <p>Dear {$data['fname']} {$data['lname']},</p>
+                    <p>Congratulations! You have been officially appointed as a Course Representative.</p>
+                    <p>Below are your exclusive Rep Dashboard login credentials:</p>
+                    <div style='background: #f4f6f9; padding: 15px; border-radius: 5px; margin: 20px 0;'>
+                        <p><strong>Rep ID:</strong> {$data['rep_id']}</p>
+                        <p><strong>Temporary Password:</strong> {$data['password']}</p>
+                    </div>
+                    <p><em>Note: Your standard student login (Enrollment Number) remains active for accessing the Student Dashboard.</em></p>
+                    <br/>
+                    <p>Best Regards,</p>
+                    <p><strong>The UniCore Admin Team</strong></p>
+                </div>
+            ";
+
+            $dompdf = new Dompdf();
+            $dompdf->loadHtml($html);
+            $dompdf->setPaper('A4', 'portrait');
+            $dompdf->render();
+            $output = $dompdf->output();
+            
+            $pdfPath = __DIR__ . '/../temp_rep_letter.pdf';
+            file_put_contents($pdfPath, $output);
+
+            // Send Email (We can update MailService later, but for now we'll do it inline since PHPMailer is loaded)
+            $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
+            try {
+                $mail->isSMTP();
+                $mail->Host = 'smtp.gmail.com';
+                $mail->SMTPAuth = true;
+                $mail->Username = 'nelanelaxshan@gmail.com';
+                $mail->Password = 'yqyflurcewldkwix';
+                $mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+                $mail->Port = 587;
+
+                $mail->setFrom('nelanelaxshan@gmail.com', 'UniCore Admin');
+                $mail->addAddress($data['email'], $data['fname']);
+
+                $mail->isHTML(true);
+                $mail->Subject = 'Official Course Representative Appointment';
+                $mail->Body    = 'Congratulations on your appointment as a Course Representative! Please find your official credential letter attached.';
+                
+                $mail->addAttachment($pdfPath, 'Appointment_Letter.pdf');
+                $mail->send();
+            } catch (Exception $e) {
+                // Log email failure but don't fail the whole request
+                file_put_contents(__DIR__ . '/../admin_log.txt', "Failed to send PDF email to {$data['email']}: {$mail->ErrorInfo}\n", FILE_APPEND);
+            }
+            
+            // Clean up temp file
+            if (file_exists($pdfPath)) unlink($pdfPath);
+
+            Response::success("Successfully assigned student as Course Representative and sent credential PDF.");
+        } catch (Throwable $e) {
             $db->rollBack();
+            file_put_contents(__DIR__ . '/../admin_log.txt', "AssignRep Exception: " . $e->getMessage() . "\n", FILE_APPEND);
             Response::error("Failed to assign Rep: " . $e->getMessage(), 500);
         }
     }

@@ -1,23 +1,14 @@
 <?php
-/**
- * JWT.php
- * Secure utility class for generating and verifying JSON Web Tokens (JWT) natively in PHP.
- * Uses HMAC-SHA256 signature, constant-time verification, and checks expiration.
- */
+
 class JWT {
-    // Secret key for signing the tokens. In production, load this from environment variables.
+  
     private static $secret = "uni_core_proj_01_secure_secret_key_123456_!@#";
 
-    /**
-     * Encode data to Base64URL format
-     */
+    
     private static function base64UrlEncode($data) {
         return str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($data));
     }
 
-    /**
-     * Decode data from Base64URL format
-     */
     private static function base64UrlDecode($data) {
         $remainder = strlen($data) % 4;
         if ($remainder) {
@@ -27,12 +18,6 @@ class JWT {
         return base64_decode(str_replace(['-', '_'], ['+', '/'], $data));
     }
 
-    /**
-     * Generate a new signature-verified JWT token
-     * @param array $payload Key-value pairs to store in the token
-     * @param int $expiryDuration Seconds until expiration (default 24 hours)
-     * @return string Signed JWT token (header.payload.signature)
-     */
     public static function generate($payload, $expiryDuration = 86400) {
         $header = json_encode(['alg' => 'HS256', 'typ' => 'JWT']);
         
@@ -49,11 +34,6 @@ class JWT {
         return $base64UrlHeader . "." . $base64UrlPayload . "." . $base64UrlSignature;
     }
 
-    /**
-     * Verify token signature and expiration
-     * @param string $token Signed JWT token
-     * @return array|false The decoded payload, or false if token is invalid or expired
-     */
     public static function verify($token) {
         $parts = explode('.', $token);
         if (count($parts) !== 3) {

@@ -166,9 +166,9 @@ SET FOREIGN_KEY_CHECKS = 1;
 -- ==========================================
 -- 6. DEFAULT DATA
 -- ==========================================
--- Insert Default Admin (Password: password)
-INSERT INTO Users (fname, lname, email, hash_password, role, is_verified) 
-VALUES ('Super', 'Admin', 'admin@unicore.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', TRUE);
+-- Insert Default Admin (ID: ADMIN001, Password: PASSWORD)
+INSERT INTO Users (staff_id, fname, lname, email, hash_password, role, is_verified) 
+VALUES ('ADMIN001', 'Super', 'Admin', 'admin@unicore.com', '$2y$10$ANYPk2UCXkPfgEhdWDlHceI2h5VcIQ9K7uOqZiEffB8IpEMvnPdqq', 'admin', TRUE);
 
 -- Link default admin to Admin table
 INSERT INTO Admin (userID) VALUES (LAST_INSERT_ID());

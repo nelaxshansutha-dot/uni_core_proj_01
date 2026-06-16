@@ -126,69 +126,100 @@ class AuthController {
 
         $userModel = new User();
         $user = $userModel->findByEnrollment($data['enrollment_no']);
+        
+        $requestedRole = isset($data['role']) ? $data['role'] : 'student';
 
-        if ($user && password_verify($data['password'], $user['hash_password'])) {
-            $userModel->updateLoginTime($user['userID']);
-
-            $db = (new Database())->getConnection();
+        if ($user) {
+            $isAuthenticated = false;
             
-            if ($user['is_verified']) {
-                $profile = null;
-                if ($user['role'] === 'student' || $user['role'] === 'rep') {
-                    $stmt = $db->prepare("SELECT courseID, std_year as year FROM Student WHERE userID = ?");
+            // If logging in as a rep, verify against Course_representative password
+            if ($requestedRole === 'rep') {
+                if ($user['role'] === 'rep') {
+                    $db = (new Database())->getConnection();
+                    $stmt = $db->prepare("SELECT hash_password FROM Course_representative WHERE userID = ?");
                     $stmt->execute([$user['userID']]);
-                    $profile = $stmt->fetch(PDO::FETCH_ASSOC);
-                } else if ($user['role'] === 'staff') {
-                    $stmt = $db->prepare("SELECT dept as department FROM Staff WHERE userID = ?");
-                    $stmt->execute([$user['userID']]);
-                    $profile = $stmt->fetch(PDO::FETCH_ASSOC);
+                    $repData = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if ($repData && password_verify($data['password'], $repData['hash_password'])) {
+                        $isAuthenticated = true;
+                    }
                 }
-
-                $userData = [
-                    'id' => $user['userID'],
-                    'enrollment_no' => $user['enrollment_no'] ?? $user['staff_id'] ?? $user['rep_id'],
-                    'email' => $user['email'],
-                    'first_name' => $user['fname'],
-                    'last_name' => $user['lname'],
-                    'phone_number' => $user['phoneNum'],
-                    'lost_item_sms_notification' => 0,
-                    'peer_learning_app_notification' => 1,
-                    'has_seen_lost_item_popup' => 0,
-                    'role' => $user['role']
-                ];
-
-                if ($profile) {
-                    $userData = array_merge($userData, $profile);
-                }
-
-                require_once __DIR__ . '/../utils/JWT.php';
-                $token = JWT::generate([
-                    'id' => $user['userID'],
-                    'role' => $user['role']
-                ]);
-
-                Response::success("Login successful", [
-                    'token' => $token,
-                    'user' => $userData,
-                    'verified' => true
-                ]);
             } else {
-                $otp = rand(100000, 999999);
-                $db->prepare("DELETE FROM OTP_verification WHERE userID = ?")->execute([$user['userID']]);
+                // Check the primary Users table password
+                if (password_verify($data['password'], $user['hash_password'])) {
+                    // Prevent a staff member from logging in as student etc
+                    if ($requestedRole === 'staff' && $user['role'] !== 'staff') {
+                        $isAuthenticated = false;
+                    } else if ($requestedRole === 'admin' && $user['role'] !== 'admin') {
+                        $isAuthenticated = false;
+                    } else {
+                        $isAuthenticated = true;
+                    }
+                }
+            }
 
-                $stmt = $db->prepare("INSERT INTO OTP_verification (userID, otp_code, expired_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 2 MINUTE))");
-                $stmt->execute([$user['userID'], $otp]);
+            if ($isAuthenticated) {
+                $userModel->updateLoginTime($user['userID']);
+                $db = (new Database())->getConnection();
+            
+                if ($user['is_verified']) {
+                    $profile = null;
+                    if ($user['role'] === 'student' || $user['role'] === 'rep') {
+                        $stmt = $db->prepare("SELECT courseID, std_year as year FROM Student WHERE userID = ?");
+                        $stmt->execute([$user['userID']]);
+                        $profile = $stmt->fetch(PDO::FETCH_ASSOC);
+                    } else if ($user['role'] === 'staff') {
+                        $stmt = $db->prepare("SELECT dept as department FROM Staff WHERE userID = ?");
+                        $stmt->execute([$user['userID']]);
+                        $profile = $stmt->fetch(PDO::FETCH_ASSOC);
+                    }
 
-                MailService::sendOTP($user['email'], $otp);
+                    $userData = [
+                        'id' => $user['userID'],
+                        'enrollment_no' => $user['enrollment_no'] ?? $user['staff_id'] ?? $user['rep_id'],
+                        'email' => $user['email'],
+                        'first_name' => $user['fname'],
+                        'last_name' => $user['lname'],
+                        'phone_number' => $user['phoneNum'],
+                        'lost_item_sms_notification' => 0,
+                        'peer_learning_app_notification' => 1,
+                        'has_seen_lost_item_popup' => 0,
+                        'role' => $requestedRole // Grant the role they successfully logged in as
+                    ];
 
-                Response::success("Email verification required. An OTP has been sent to your email.", [
-                    'user_id' => $user['userID'],
-                    'email' => $user['email'],
-                    'verified' => false
-                ]);
+                    if ($profile) {
+                        $userData = array_merge($userData, $profile);
+                    }
+
+                    require_once __DIR__ . '/../utils/JWT.php';
+                    $token = JWT::generate([
+                        'id' => $user['userID'],
+                        'role' => $requestedRole
+                    ]);
+
+                    Response::success("Login successful", [
+                        'token' => $token,
+                        'user' => $userData,
+                        'verified' => true
+                    ]);
+                } else {
+                    $otp = rand(100000, 999999);
+                    $stmt = $db->prepare("INSERT INTO OTP_verification (userID, otp_code, expired_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 2 MINUTE))");
+                    $stmt->execute([$user['userID'], $otp]);
+
+                    MailService::sendOTP($user['email'], $otp);
+
+                    Response::error("Account not verified. A new OTP has been sent to your email.", 403, [
+                        'user_id' => $user['userID'],
+                        'email' => $user['email'],
+                        'needs_verification' => true
+                    ]);
+                }
+            } else {
+                Response::error("Invalid ID or password.", 401);
             }
         } else {
-            Response::error("Invalid ID or password. Please check your credentials.", 401);
+            Response::error("Invalid ID or password.", 401);
         }
     }
 
