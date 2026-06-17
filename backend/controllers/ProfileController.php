@@ -8,7 +8,7 @@ class ProfileController {
     public function getProfile($userId) {
         $db = (new Database())->getConnection();
         
-        $stmt = $db->prepare("SELECT id, enrollment_no, email, phone_number, lost_item_sms_notification, peer_learning_app_notification, has_seen_lost_item_popup, role FROM users WHERE id = ?");
+        $stmt = $db->prepare("SELECT userID as id, enrollment_no, fname as first_name, lname as last_name, email, phoneNum as phone_number, lost_item_sms_notification, peer_learning_app_notification, has_seen_lost_item_popup, role FROM Users WHERE userID = ?");
         $stmt->execute([$userId]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -19,11 +19,11 @@ class ProfileController {
         // Fetch profile data based on role
         $profile = null;
         if ($user['role'] === 'student' || $user['role'] === 'rep') {
-            $stmt = $db->prepare("SELECT first_name, last_name, course, year FROM students WHERE user_id = ?");
+            $stmt = $db->prepare("SELECT courseID, std_year as year FROM Student WHERE userID = ?");
             $stmt->execute([$userId]);
             $profile = $stmt->fetch(PDO::FETCH_ASSOC);
         } else if ($user['role'] === 'staff') {
-            $stmt = $db->prepare("SELECT first_name, last_name, department FROM staff WHERE user_id = ?");
+            $stmt = $db->prepare("SELECT dept as department FROM Staff WHERE userID = ?");
             $stmt->execute([$userId]);
             $profile = $stmt->fetch(PDO::FETCH_ASSOC);
         }
@@ -44,7 +44,7 @@ class ProfileController {
         $phoneNumber = isset($data['phone_number']) ? $data['phone_number'] : null;
 
         // Update main table
-        $stmt = $db->prepare("UPDATE users SET phone_number = ?, lost_item_sms_notification = ?, peer_learning_app_notification = ? WHERE id = ?");
+        $stmt = $db->prepare("UPDATE Users SET phoneNum = ?, lost_item_sms_notification = ?, peer_learning_app_notification = ? WHERE userID = ?");
         $stmt->execute([$phoneNumber, $smsPref, $peerPref, $userId]);
 
         // Update role specific details
@@ -52,19 +52,22 @@ class ProfileController {
             $firstName = $data['first_name'];
             $lastName = $data['last_name'];
             
-            $stmtRole = $db->prepare("SELECT role FROM users WHERE id = ?");
+            $stmt = $db->prepare("UPDATE Users SET fname = ?, lname = ? WHERE userID = ?");
+            $stmt->execute([$firstName, $lastName, $userId]);
+            
+            $stmtRole = $db->prepare("SELECT role FROM Users WHERE userID = ?");
             $stmtRole->execute([$userId]);
             $user = $stmtRole->fetch(PDO::FETCH_ASSOC);
 
             if ($user['role'] === 'student' || $user['role'] === 'rep') {
                 $course = isset($data['course']) ? $data['course'] : null;
                 $year = isset($data['year']) ? (int)$data['year'] : null;
-                $stmt = $db->prepare("UPDATE students SET first_name = ?, last_name = ?, course = ?, year = ? WHERE user_id = ?");
-                $stmt->execute([$firstName, $lastName, $course, $year, $userId]);
+                $stmt = $db->prepare("UPDATE Student SET courseID = ?, std_year = ? WHERE userID = ?");
+                $stmt->execute([$course, $year, $userId]);
             } else if ($user['role'] === 'staff') {
                 $dept = isset($data['department']) ? $data['department'] : '';
-                $stmt = $db->prepare("UPDATE staff SET first_name = ?, last_name = ?, department = ? WHERE user_id = ?");
-                $stmt->execute([$firstName, $lastName, $dept, $userId]);
+                $stmt = $db->prepare("UPDATE Staff SET dept = ? WHERE userID = ?");
+                $stmt->execute([$dept, $userId]);
             }
         }
 
