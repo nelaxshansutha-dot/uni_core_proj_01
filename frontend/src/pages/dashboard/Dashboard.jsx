@@ -6,7 +6,7 @@ import {
     ShoppingBag, 
     Users 
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 
 const DashboardCard = ({ title, icon, color, link, description }) => (
     <div className="col-md-6 col-lg-3 mb-4">
@@ -28,6 +28,10 @@ const DashboardCard = ({ title, icon, color, link, description }) => (
 const Dashboard = () => {
     const { user } = useContext(AuthContext);
 
+    if (user?.role === 'admin') {
+        return <Navigate to="/admin" replace />;
+    }
+
     return (
         <div>
             <div className="d-flex justify-content-between align-items-center mb-4">
@@ -39,7 +43,7 @@ const Dashboard = () => {
 
             <div className="row">
                 <DashboardCard 
-                    title="Lost & Found" 
+                    title="Lost-Items" 
                     icon={<Search size={28} />} 
                     color="primary" 
                     link="/lost-items"
@@ -52,20 +56,24 @@ const Dashboard = () => {
                     link="/marketplace"
                     description="Buy, sell, or exchange academic materials."
                 />
-                <DashboardCard 
-                    title="Notes Sharing" 
-                    icon={<BookOpen size={28} />} 
-                    color="warning" 
-                    link="/notes"
-                    description="Access or upload course notes and PDFs."
-                />
-                <DashboardCard 
-                    title="Peer Learning" 
-                    icon={<Users size={28} />} 
-                    color="info" 
-                    link="/peer-learning"
-                    description="Request help or assist peers in your courses."
-                />
+                {user?.role !== 'staff' && (
+                    <>
+                        <DashboardCard 
+                            title="Notes Sharing" 
+                            icon={<BookOpen size={28} />} 
+                            color="warning" 
+                            link="/notes"
+                            description="Access or upload course notes and PDFs."
+                        />
+                        <DashboardCard 
+                            title="Peer Learning" 
+                            icon={<Users size={28} />} 
+                            color="info" 
+                            link="/peer-learning"
+                            description="Request help or assist peers in your courses."
+                        />
+                    </>
+                )}
             </div>
 
             <div className="card border-0 shadow-sm mt-4">

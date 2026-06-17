@@ -3,7 +3,7 @@ require_once __DIR__ . '/../config/Database.php';
 
 class Staff {
     private $conn;
-    private $table = "staff";
+    private $table = "Staff";
 
     public function __construct() {
         $database = new Database();
@@ -11,13 +11,11 @@ class Staff {
     }
 
     public function create($data) {
-        $query = "INSERT INTO " . $this->table . " (user_id, first_name, last_name, department) VALUES (:user_id, :first_name, :last_name, :department)";
+        $query = "INSERT INTO " . $this->table . " (userID, dept) VALUES (:userID, :dept)";
         $stmt = $this->conn->prepare($query);
 
-        $stmt->bindParam(':user_id', $data['user_id']);
-        $stmt->bindParam(':first_name', $data['first_name']);
-        $stmt->bindParam(':last_name', $data['last_name']);
-        $stmt->bindParam(':department', $data['department']);
+        $stmt->bindParam(':userID', $data['userID']);
+        $stmt->bindParam(':dept', $data['dept']);
 
         return $stmt->execute();
     }
