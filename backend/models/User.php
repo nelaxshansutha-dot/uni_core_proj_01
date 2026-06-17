@@ -10,15 +10,17 @@ class User {
         $this->conn = $database->getConnection();
     }
 
-    public function findByEnrollment($enrollment_no) {
-        $query = "SELECT * FROM " . $this->table . " WHERE enrollment_no = :id OR staff_id = :id OR rep_id = :id OR email = :id LIMIT 1";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':id', $enrollment_no);
-        $stmt->execute();
+    public function findByEnrollment($enrollment_no) //roles wise store enrollment,stfid,repid
+    {
+        $query = "SELECT * FROM " . $this->table . " WHERE enrollment_no = :id OR staff_id = :id OR rep_id = :id OR email = :id LIMIT 1";//limit 1 called once i found that data then donot scan all tables without that is scan all table that performance is low 
+        $stmt = $this->conn->prepare($query);//query ready
+        $stmt->bindParam(':id', $enrollment_no);//value link
+        $stmt->execute();//run and return
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
-    public function findByEmail($email) {
+    public function findByEmail($email)// forgot password
+     {
         $query = "SELECT * FROM " . $this->table . " WHERE email = :email LIMIT 1";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':email', $email);
@@ -26,7 +28,8 @@ class User {
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
-    public function findById($id) {
+    public function findById($id)//profile page
+     {
         $query = "SELECT * FROM " . $this->table . " WHERE userID = :id LIMIT 1";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':id', $id);
@@ -34,7 +37,9 @@ class User {
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
-    public function create($data) {
+    public function create($data) //new user insert
+    
+    {
         $query = "INSERT INTO " . $this->table . " (enrollment_no, staff_id, rep_id, fname, lname, email, phoneNum, hash_password, role, is_verified) 
                   VALUES (:enrollment_no, :staff_id, :rep_id, :fname, :lname, :email, :phoneNum, :hash_password, :role, FALSE)";
         $stmt = $this->conn->prepare($query);
@@ -56,14 +61,18 @@ class User {
         return false;
     }
 
-    public function markAsVerified($id) {
+    public function markAsVerified($id) // login
+    
+    {
         $query = "UPDATE " . $this->table . " SET is_verified = TRUE WHERE userID = :id";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':id', $id);
         return $stmt->execute();
     }
     
-    public function updatePassword($id, $new_hash) {
+    public function updatePassword($id, $new_hash) //forgot password/changepassword onnly hashpassword
+    
+    {
         $query = "UPDATE " . $this->table . " SET hash_password = :hash WHERE userID = :id";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':hash', $new_hash);
@@ -71,14 +80,18 @@ class User {
         return $stmt->execute();
     }
 
-    public function updateLoginTime($id) {
+    public function updateLoginTime($id) //Admin dashboard- last active time
+    
+    {
         $query = "UPDATE " . $this->table . " SET last_login = CURRENT_TIMESTAMP WHERE userID = :id";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':id', $id);
         return $stmt->execute();
     }
 
-    public function updateProfileFields($id, $phoneNum) {
+    public function updateProfileFields($id, $phoneNum) //upadte phone number in profile
+    
+    {
         $query = "UPDATE " . $this->table . " SET phoneNum = :phone WHERE userID = :id";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':phone', $phoneNum);
