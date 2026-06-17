@@ -63,7 +63,7 @@ class LostItemController {
             // Trigger SMS notifications for users who accepted SMS notifications
             try {
                 $db = (new Database())->getConnection();
-                $stmt = $db->prepare("SELECT phone_number FROM users WHERE lost_item_sms_notification = 1 AND phone_number IS NOT NULL AND phone_number != ''");
+                $stmt = $db->prepare("SELECT phoneNum FROM Users WHERE lost_item_sms_notification = 1 AND phoneNum IS NOT NULL AND phoneNum != ''");
                 $stmt->execute();
                 $subscribedUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -71,7 +71,7 @@ class LostItemController {
                     require_once __DIR__ . '/../utils/SMSService.php';
                     $smsMessage = "UniCore Alert: A new lost item '" . $data['item_name'] . "' has been reported at " . $data['last_seen_place'] . ". Contact: " . $data['contact_number'];
                     foreach ($subscribedUsers as $sub) {
-                        SMSService::sendSMS($sub['phone_number'], $smsMessage);
+                        SMSService::sendSMS($sub['phoneNum'], $smsMessage);
                     }
                 }
             } catch (Exception $e) {

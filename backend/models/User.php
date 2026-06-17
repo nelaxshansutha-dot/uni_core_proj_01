@@ -98,5 +98,14 @@ class User {
         $stmt->bindParam(':id', $id, PDO::PARAM_INT);
         return $stmt->execute();
     }
+
+    public function updateNotificationSettings($id, $smsPref, $popupSeen) {
+        $query = "UPDATE " . $this->table . " SET lost_item_sms_notification = :smsPref, has_seen_lost_item_popup = :popupSeen WHERE userID = :id";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':smsPref', $smsPref, PDO::PARAM_INT);
+        $stmt->bindParam(':popupSeen', $popupSeen, PDO::PARAM_INT);
+        $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+        return $stmt->execute();
+    }
 }
 ?>
