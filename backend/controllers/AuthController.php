@@ -181,9 +181,9 @@ class AuthController {
                         'first_name' => $user['fname'],
                         'last_name' => $user['lname'],
                         'phone_number' => $user['phoneNum'],
-                        'lost_item_sms_notification' => 0,
-                        'peer_learning_app_notification' => 1,
-                        'has_seen_lost_item_popup' => 0,
+                        'lost_item_sms_notification' => isset($user['lost_item_sms_notification']) ? (int)$user['lost_item_sms_notification'] : 0,
+                        'peer_learning_app_notification' => isset($user['peer_learning_app_notification']) ? (int)$user['peer_learning_app_notification'] : 1,
+                        'has_seen_lost_item_popup' => isset($user['has_seen_lost_item_popup']) ? (int)$user['has_seen_lost_item_popup'] : 0,
                         'role' => $requestedRole // Grant the role they successfully logged in as
                     ];
 
@@ -259,9 +259,9 @@ class AuthController {
                 'first_name' => $user['fname'],
                 'last_name' => $user['lname'],
                 'phone_number' => $user['phoneNum'],
-                'lost_item_sms_notification' => 0,
-                'peer_learning_app_notification' => 1,
-                'has_seen_lost_item_popup' => 0,
+                'lost_item_sms_notification' => isset($user['lost_item_sms_notification']) ? (int)$user['lost_item_sms_notification'] : 0,
+                'peer_learning_app_notification' => isset($user['peer_learning_app_notification']) ? (int)$user['peer_learning_app_notification'] : 1,
+                'has_seen_lost_item_popup' => isset($user['has_seen_lost_item_popup']) ? (int)$user['has_seen_lost_item_popup'] : 0,
                 'role' => $user['role']
             ];
 
@@ -441,8 +441,11 @@ class AuthController {
         $db->beginTransaction();
         try {
             $phone = isset($data['phone_number']) ? $data['phone_number'] : null;
-            $stmt = $db->prepare("UPDATE Users SET fname = ?, lname = ?, email = ?, phoneNum = ?, hash_password = ? WHERE userID = ?");
-            $stmt->execute([$data['first_name'], $data['last_name'], $data['email'], $phone, $password_hash, $user_id]);
+            $smsPref = isset($data['lost_item_sms_notification']) ? (int)$data['lost_item_sms_notification'] : 0;
+            $peerPref = isset($data['peer_learning_app_notification']) ? (int)$data['peer_learning_app_notification'] : 1;
+            
+            $stmt = $db->prepare("UPDATE Users SET fname = ?, lname = ?, email = ?, phoneNum = ?, hash_password = ?, lost_item_sms_notification = ?, peer_learning_app_notification = ? WHERE userID = ?");
+            $stmt->execute([$data['first_name'], $data['last_name'], $data['email'], $phone, $password_hash, $smsPref, $peerPref, $user_id]);
 
             if ($user['role'] === 'student' || $user['role'] === 'rep') {
                 $course = isset($data['course']) ? $data['course'] : null;
@@ -481,9 +484,9 @@ class AuthController {
             'last_name' => $updatedUser['lname'],
             'role' => $updatedUser['role'],
             'phone_number' => $updatedUser['phoneNum'],
-            'lost_item_sms_notification' => 0,
-            'peer_learning_app_notification' => 1,
-            'has_seen_lost_item_popup' => 0
+            'lost_item_sms_notification' => isset($updatedUser['lost_item_sms_notification']) ? (int)$updatedUser['lost_item_sms_notification'] : 0,
+            'peer_learning_app_notification' => isset($updatedUser['peer_learning_app_notification']) ? (int)$updatedUser['peer_learning_app_notification'] : 1,
+            'has_seen_lost_item_popup' => isset($updatedUser['has_seen_lost_item_popup']) ? (int)$updatedUser['has_seen_lost_item_popup'] : 0
         ];
 
         if ($profile) {
