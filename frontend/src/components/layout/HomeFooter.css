@@ -1,0 +1,181 @@
+/* ===== HOME FOOTER ===== */
+.home-footer-wrapper {
+  background: #0e0610;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* Top Section */
+.footer-top {
+  padding: 64px 0 48px;
+}
+
+/* Brand */
+.footer-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.footer-logo-img {
+  height: 38px;
+  width: auto;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.footer-brand-name {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.02em;
+}
+
+.footer-tagline {
+  color: #8a6b87;
+  font-size: 0.9rem;
+  line-height: 1.65;
+  max-width: 320px;
+  margin-bottom: 20px;
+}
+
+.footer-social-row {
+  display: flex;
+  gap: 8px;
+}
+
+.footer-social-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(245, 234, 243, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s ease;
+  text-decoration: none;
+}
+
+.footer-social-btn:hover {
+  background: rgba(199, 130, 183, 0.15);
+  border-color: rgba(199, 130, 183, 0.35);
+  color: #ffb6f0;
+  transform: translateY(-2px);
+}
+
+/* Column headings */
+.footer-col-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(245, 234, 243, 0.9);
+  margin-bottom: 16px;
+}
+
+/* Link list */
+.footer-link-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.footer-link-list li a {
+  color: #8a6b87;
+  text-decoration: none;
+  font-size: 0.88rem;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.footer-link-list li a:hover {
+  color: #ffb6f0;
+}
+
+/* Contact list */
+.footer-contact-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.footer-contact-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: #8a6b87;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.contact-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: rgba(199, 130, 183, 0.1);
+  border: 1px solid rgba(199, 130, 183, 0.2);
+  color: #c782b7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* Bottom Bar */
+.footer-bottom {
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 18px 0;
+}
+
+.footer-bottom-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.footer-copy {
+  color: #6b4d67;
+  font-size: 0.82rem;
+  margin: 0;
+}
+
+.footer-legal-links {
+  display: flex;
+  gap: 20px;
+}
+
+.footer-legal-links a {
+  color: #6b4d67;
+  font-size: 0.82rem;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.footer-legal-links a:hover {
+  color: #c782b7;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .footer-top {
+    padding: 48px 0 32px;
+  }
+
+  .footer-bottom-inner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+}
