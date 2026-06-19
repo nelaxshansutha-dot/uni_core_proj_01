@@ -27,6 +27,8 @@ if ($method === 'POST') {
         $controller->resetPassword($data);
     } else if ($action === 'resend-otp') {
         $controller->resendOtp($data);
+    } else if ($action === 'force-change-rep-password') {
+        $controller->forceChangeRepPassword($data);
     } else if ($action === 'update-profile') {
         require_once __DIR__ . '/../utils/AuthMiddleware.php';
         $user = AuthMiddleware::authenticate();

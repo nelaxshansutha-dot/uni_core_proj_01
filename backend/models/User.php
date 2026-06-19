@@ -10,13 +10,24 @@ class User {
         $this->conn = $database->getConnection();
     }
 
-    public function findByEnrollment($enrollment_no) //roles wise store enrollment,stfid,repid
+    public function findByEnrollment($enrollment_no)
     {
-        $query = "SELECT * FROM " . $this->table . " WHERE enrollment_no = :id OR staff_id = :id OR rep_id = :id OR email = :id LIMIT 1";//limit 1 called once i found that data then donot scan all tables without that is scan all table that performance is low 
-        $stmt = $this->conn->prepare($query);//query ready
-        $stmt->bindParam(':id', $enrollment_no);//value link
-        $stmt->execute();//run and return
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        $query = "SELECT u.*, s.enrollmentNo as std_enrollment, cr.enrollmentNo as rep_enrollment 
+                  FROM " . $this->table . " u
+                  LEFT JOIN Student s ON u.userID = s.userID
+                  LEFT JOIN Course_representative cr ON u.userID = cr.userID
+                  WHERE s.enrollmentNo = :id 
+                     OR cr.enrollmentNo = :id 
+                     OR u.email = :id LIMIT 1";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':id', $enrollment_no);
+        $stmt->execute();
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($result) {
+            $result['enrollment_no'] = $result['std_enrollment'] ?? $result['rep_enrollment'] ?? null;
+            return $result;
+        }
+        return false;
     }
 
     public function findByEmail($email)// forgot password
@@ -40,13 +51,10 @@ class User {
     public function create($data) //new user insert
     
     {
-        $query = "INSERT INTO " . $this->table . " (enrollment_no, staff_id, rep_id, fname, lname, email, phoneNum, hash_password, role, is_verified) 
-                  VALUES (:enrollment_no, :staff_id, :rep_id, :fname, :lname, :email, :phoneNum, :hash_password, :role, FALSE)";
+        $query = "INSERT INTO " . $this->table . " (fname, lname, email, phoneNum, hash_password, role, is_verified) 
+                  VALUES (:fname, :lname, :email, :phoneNum, :hash_password, :role, FALSE)";
         $stmt = $this->conn->prepare($query);
 
-        $stmt->bindParam(':enrollment_no', $data['enrollment_no']);
-        $stmt->bindParam(':staff_id', $data['staff_id']);
-        $stmt->bindParam(':rep_id', $data['rep_id']);
         $stmt->bindParam(':fname', $data['fname']);
         $stmt->bindParam(':lname', $data['lname']);
         $stmt->bindParam(':email', $data['email']);

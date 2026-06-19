@@ -46,9 +46,10 @@ class LostItem {
 }
 
     public function getAll() {
-    $query = "SELECT l.*, l.lostID as lost_id, l.userID as user_id, u.enrollment_no
+    $query = "SELECT l.*, l.lostID as lost_id, l.userID as user_id, s.enrollmentNo as enrollment_no
               FROM Lost_items l
               JOIN Users u ON l.userID = u.userID
+              LEFT JOIN Student s ON u.userID = s.userID
               ORDER BY l.created_at DESC";
 
     $stmt = $this->conn->prepare($query);

@@ -19,7 +19,8 @@ const LostItems = () => {
         last_seen_datetime: '',
         last_seen_place: '',
         contact_number: '',
-        item_image: null
+        item_image: null,
+        send_sms_alert: false
     });
 
     useEffect(() => {
@@ -103,6 +104,7 @@ const handleDelete = async () => {
         data.append('last_seen_datetime', formData.last_seen_datetime);
         data.append('last_seen_place', formData.last_seen_place);
         data.append('contact_number', formData.contact_number);
+        data.append('send_sms_alert', formData.send_sms_alert);
 
         if (formData.item_image) {
             data.append('item_image', formData.item_image);
@@ -124,7 +126,8 @@ const handleDelete = async () => {
                     last_seen_datetime: '',
                     last_seen_place: '',
                     contact_number: '',
-                    item_image: null
+                    item_image: null,
+                    send_sms_alert: false
                 });
 
                 fetchItems();
@@ -368,6 +371,19 @@ const handleDelete = async () => {
                                             })
                                         }
                                     />
+
+                                    <div className="form-check mb-4">
+                                        <input
+                                            className="form-check-input"
+                                            type="checkbox"
+                                            id="sendSmsAlert"
+                                            checked={formData.send_sms_alert}
+                                            onChange={(e) => setFormData({ ...formData, send_sms_alert: e.target.checked })}
+                                        />
+                                        <label className="form-check-label text-muted small" htmlFor="sendSmsAlert">
+                                            Send SMS notification to subscribed users
+                                        </label>
+                                    </div>
 
                                     {/* ✅ BUTTON FIXED HERE */}
                                     <div className="d-flex justify-content-end gap-2">

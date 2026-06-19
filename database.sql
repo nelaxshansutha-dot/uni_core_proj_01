@@ -9,9 +9,6 @@ USE unicore_db;
 -- ==========================================
 CREATE TABLE Users (
     userID INT AUTO_INCREMENT PRIMARY KEY,
-    enrollment_no VARCHAR(50) UNIQUE NULL,
-    staff_id VARCHAR(50) UNIQUE NULL,
-    rep_id VARCHAR(50) UNIQUE NULL,
     fname VARCHAR(50) NOT NULL,
     lname VARCHAR(50) NOT NULL,
     phoneNum VARCHAR(20),
@@ -71,6 +68,7 @@ CREATE TABLE Course_representative (
     enrollmentNo VARCHAR(50) NOT NULL,
     courseID INT NULL,
     hash_password VARCHAR(255),
+    is_first_login TINYINT(1) DEFAULT 1,
     FOREIGN KEY (userID) REFERENCES Users(userID) ON DELETE CASCADE,
     FOREIGN KEY (enrollmentNo) REFERENCES Student(enrollmentNo) ON DELETE CASCADE,
     FOREIGN KEY (courseID) REFERENCES Course(courseID) ON DELETE SET NULL
@@ -166,9 +164,9 @@ SET FOREIGN_KEY_CHECKS = 1;
 -- ==========================================
 -- 6. DEFAULT DATA
 -- ==========================================
--- Insert Default Admin (ID: ADMIN001, Password: PASSWORD)
-INSERT INTO Users (staff_id, fname, lname, email, hash_password, role, is_verified) 
-VALUES ('ADMIN001', 'Super', 'Admin', 'admin@unicore.com', '$2y$10$ANYPk2UCXkPfgEhdWDlHceI2h5VcIQ9K7uOqZiEffB8IpEMvnPdqq', 'admin', TRUE);
+-- Insert Default Admin (Password: PASSWORD)
+INSERT INTO Users (fname, lname, email, hash_password, role, is_verified) 
+VALUES ('Super', 'Admin', 'admin@unicore.com', '$2y$10$ANYPk2UCXkPfgEhdWDlHceI2h5VcIQ9K7uOqZiEffB8IpEMvnPdqq', 'admin', TRUE);
 
 -- Link default admin to Admin table
 INSERT INTO Admin (userID) VALUES (LAST_INSERT_ID());

@@ -25,7 +25,7 @@ class Student {
     }
     
     public function getProfile($user_id) {
-        $query = "SELECT s.*, u.email, u.enrollment_no, u.role, u.fname, u.lname, u.phoneNum FROM " . $this->table . " s JOIN Users u ON s.userID = u.userID WHERE s.userID = :userID LIMIT 1";
+        $query = "SELECT s.*, u.email, u.role, u.fname, u.lname, u.phoneNum FROM " . $this->table . " s JOIN Users u ON s.userID = u.userID WHERE s.userID = :userID LIMIT 1";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':userID', $user_id);
         $stmt->execute();

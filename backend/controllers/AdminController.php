@@ -43,7 +43,7 @@ class AdminController {
         $db = (new Database())->getConnection();
         
         $sql = "SELECT u.userID as id, 
-                       COALESCE(u.enrollment_no, u.staff_id, u.rep_id) as enrollment_no, 
+                       s.enrollmentNo as enrollment_no, 
                        u.email, u.phoneNum as phone_number, u.role, u.is_verified, 
                        1 as is_active, u.created_at, 
                        u.fname as first_name, u.lname as last_name,
@@ -61,7 +61,7 @@ class AdminController {
         }
 
         if (!empty($query)) {
-            $sql .= " AND (u.enrollment_no LIKE :q OR u.staff_id LIKE :q OR u.rep_id LIKE :q OR u.email LIKE :q OR u.fname LIKE :q OR u.lname LIKE :q)";
+            $sql .= " AND (s.enrollmentNo LIKE :q OR u.email LIKE :q OR u.fname LIKE :q OR u.lname LIKE :q)";
             $params[':q'] = "%" . $query . "%";
         }
 
@@ -84,14 +84,7 @@ class AdminController {
             Response::error("Enrollment number or email is already registered.");
         }
 
-        $enrollment = ($data['role'] === 'student') ? $data['enrollment_no'] : null;
-        $staff = ($data['role'] === 'staff') ? $data['enrollment_no'] : null;
-        $rep = ($data['role'] === 'rep') ? $data['enrollment_no'] : null;
-
         $userData = [
-            'enrollment_no' => $enrollment,
-            'staff_id' => $staff,
-            'rep_id' => $rep,
             'fname' => $data['first_name'],
             'lname' => $data['last_name'],
             'email' => $data['email'],
@@ -173,10 +166,10 @@ class AdminController {
     public function searchStudents($query) {
         $db = (new Database())->getConnection();
         $q = "%" . $query . "%";
-        $sql = "SELECT u.userID as id, u.enrollment_no, u.email, u.phoneNum as phone_number, u.role, u.fname as first_name, u.lname as last_name, s.courseID as course, s.std_year as year 
+        $sql = "SELECT u.userID as id, s.enrollmentNo as enrollment_no, u.email, u.phoneNum as phone_number, u.role, u.fname as first_name, u.lname as last_name, s.courseID as course, s.std_year as year 
                 FROM Users u 
                 JOIN Student s ON u.userID = s.userID 
-                WHERE (u.enrollment_no LIKE :q OR u.fname LIKE :q OR u.lname LIKE :q) 
+                WHERE (s.enrollmentNo LIKE :q OR u.fname LIKE :q OR u.lname LIKE :q) 
                 AND u.role IN ('student', 'rep')";
         $stmt = $db->prepare($sql);
         $stmt->bindParam(':q', $q);
@@ -226,15 +219,20 @@ class AdminController {
             }
 
             // Update User details
-            $stmt = $db->prepare("UPDATE Users SET role = 'rep', rep_id = ?, fname = ?, lname = ?, phoneNum = ?, email = ? WHERE userID = ?");
-            $stmt->execute([$data['rep_id'], $data['fname'], $data['lname'], $phone, $data['email'], $data['user_id']]);
+            $stmt = $db->prepare("UPDATE Users SET role = 'rep', fname = ?, lname = ?, phoneNum = ?, email = ? WHERE userID = ?");
+            $stmt->execute([$data['fname'], $data['lname'], $phone, $data['email'], $data['user_id']]);
 
             // Update Student details
             $stmt = $db->prepare("UPDATE Student SET courseID = ?, std_year = ? WHERE userID = ?");
             $stmt->execute([$courseId, (int)$data['year'], $data['user_id']]);
 
-            // Create Course Rep record
-            $stmt = $db->prepare("INSERT INTO Course_representative (userID, enrollmentNo, courseID, hash_password) VALUES (?, ?, ?, ?)");
+            // Create Course Rep record or Update if exists
+            $stmt = $db->prepare("INSERT INTO Course_representative (userID, enrollmentNo, courseID, hash_password, is_first_login) 
+                                  VALUES (?, ?, ?, ?, 1)
+                                  ON DUPLICATE KEY UPDATE 
+                                  courseID = VALUES(courseID), 
+                                  hash_password = VALUES(hash_password), 
+                                  is_first_login = 1");
             $stmt->execute([$data['user_id'], $user['enrollmentNo'], $courseId, $hashed]);
 
             $db->commit();
@@ -257,16 +255,7 @@ class AdminController {
                 </div>
             ";
 
-            $dompdf = new Dompdf();
-            $dompdf->loadHtml($html);
-            $dompdf->setPaper('A4', 'portrait');
-            $dompdf->render();
-            $output = $dompdf->output();
-            
-            $pdfPath = __DIR__ . '/../temp_rep_letter.pdf';
-            file_put_contents($pdfPath, $output);
-
-            // Send Email (We can update MailService later, but for now we'll do it inline since PHPMailer is loaded)
+            // Send Email directly as HTML
             $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
             try {
                 $mail->isSMTP();
@@ -282,19 +271,15 @@ class AdminController {
 
                 $mail->isHTML(true);
                 $mail->Subject = 'Official Course Representative Appointment';
-                $mail->Body    = 'Congratulations on your appointment as a Course Representative! Please find your official credential letter attached.';
+                $mail->Body    = $html;
                 
-                $mail->addAttachment($pdfPath, 'Appointment_Letter.pdf');
                 $mail->send();
             } catch (Exception $e) {
                 // Log email failure but don't fail the whole request
-                file_put_contents(__DIR__ . '/../admin_log.txt', "Failed to send PDF email to {$data['email']}: {$mail->ErrorInfo}\n", FILE_APPEND);
+                file_put_contents(__DIR__ . '/../admin_log.txt', "Failed to send email to {$data['email']}: {$mail->ErrorInfo}\n", FILE_APPEND);
             }
-            
-            // Clean up temp file
-            if (file_exists($pdfPath)) unlink($pdfPath);
 
-            Response::success("Successfully assigned student as Course Representative and sent credential PDF.");
+            Response::success("Successfully assigned student as Course Representative and sent credential email.");
         } catch (Throwable $e) {
             $db->rollBack();
             file_put_contents(__DIR__ . '/../admin_log.txt', "AssignRep Exception: " . $e->getMessage() . "\n", FILE_APPEND);
@@ -310,23 +295,25 @@ class AdminController {
         $notes = [];
 
         if (empty($type) || $type === 'lost_item') {
-            $stmt = $db->query("SELECT l.lostID as lost_id, l.item_name, l.last_seen_date, l.last_seen_time, l.item_image, l.contact_no, l.created_at, u.email, COALESCE(u.enrollment_no, u.staff_id) as enrollment_no
+            $stmt = $db->query("SELECT l.lostID as lost_id, l.item_name, l.last_seen_date, l.last_seen_time, l.item_image, l.contact_no, l.created_at, u.email, s.enrollmentNo as enrollment_no
                                 FROM Lost_items l 
                                 JOIN Users u ON l.userID = u.userID 
+                                LEFT JOIN Student s ON u.userID = s.userID
                                 ORDER BY l.lostID DESC");
             $lostItems = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
 
         if (empty($type) || $type === 'marketplace') {
-            $stmt = $db->query("SELECT m.productID as id, m.product_name as title, m.price, m.location, m.product_image, m.contact_no, m.created_at, u.email, COALESCE(u.enrollment_no, u.staff_id) as enrollment_no
+            $stmt = $db->query("SELECT m.productID as id, m.product_name as title, m.price, m.location, m.product_image, m.contact_no, m.created_at, u.email, s.enrollmentNo as enrollment_no
                                 FROM marketplace m 
                                 JOIN Users u ON m.userID = u.userID 
+                                LEFT JOIN Student s ON u.userID = s.userID
                                 ORDER BY m.productID DESC");
             $marketplace = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
 
         if (empty($type) || $type === 'notes') {
-            $stmt = $db->query("SELECT n.noteID as id, n.title, n.courseCode, n.file_url, n.created_at, u.email, u.enrollment_no
+            $stmt = $db->query("SELECT n.noteID as id, n.title, n.courseCode, n.file_url, n.created_at, u.email, s.enrollmentNo as enrollment_no
                                 FROM Notes n 
                                 JOIN Student s ON n.enrollmentNo = s.enrollmentNo
                                 JOIN Users u ON s.userID = u.userID 

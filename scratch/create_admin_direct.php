@@ -12,21 +12,20 @@ try {
     $hashedPassword = password_hash($plainPassword, PASSWORD_BCRYPT);
     
     // Check if user already exists
-    $stmt = $conn->prepare("SELECT userID FROM Users WHERE staff_id = ? OR email = ?");
-    $stmt->execute([$adminId, $adminEmail]);
+    $stmt = $conn->prepare("SELECT userID FROM Users WHERE email = ?");
+    $stmt->execute([$adminEmail]);
     
     if ($stmt->rowCount() > 0) {
         // Delete existing to start fresh
-        $conn->prepare("DELETE FROM Users WHERE staff_id = ? OR email = ?")->execute([$adminId, $adminEmail]);
+        $conn->prepare("DELETE FROM Users WHERE email = ?")->execute([$adminEmail]);
         echo "Deleted existing admin account to recreate it.\n";
     }
     
     // Insert into Users table
-    $sql1 = "INSERT INTO Users (staff_id, fname, lname, email, hash_password, role, is_verified) 
-             VALUES (:staff_id, 'System', 'Admin', :email, :hash_password, 'admin', TRUE)";
+    $sql1 = "INSERT INTO Users (fname, lname, email, hash_password, role, is_verified) 
+             VALUES ('System', 'Admin', :email, :hash_password, 'admin', TRUE)";
              
     $stmt1 = $conn->prepare($sql1);
-    $stmt1->bindParam(':staff_id', $adminId);
     $stmt1->bindParam(':email', $adminEmail);
     $stmt1->bindParam(':hash_password', $hashedPassword);
     

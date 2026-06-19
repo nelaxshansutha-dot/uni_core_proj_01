@@ -8,7 +8,7 @@ class ProfileController {
     public function getProfile($userId) {
         $db = (new Database())->getConnection();
         
-        $stmt = $db->prepare("SELECT userID as id, enrollment_no, fname as first_name, lname as last_name, email, phoneNum as phone_number, lost_item_sms_notification, peer_learning_app_notification, has_seen_lost_item_popup, role FROM Users WHERE userID = ?");
+        $stmt = $db->prepare("SELECT u.userID as id, s.enrollmentNo as enrollment_no, u.fname as first_name, u.lname as last_name, u.email, u.phoneNum as phone_number, u.lost_item_sms_notification, u.peer_learning_app_notification, u.has_seen_lost_item_popup, u.role FROM Users u LEFT JOIN Student s ON u.userID = s.userID WHERE u.userID = ?");
         $stmt->execute([$userId]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 

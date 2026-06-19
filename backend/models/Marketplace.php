@@ -34,10 +34,11 @@ class Marketplace {
     }
 
     public function getAll() {
-        $query = "SELECT m.*, u.enrollment_no, 
+        $query = "SELECT m.*, s.enrollmentNo as enrollment_no, 
                          CONCAT(u.fname, ' ', u.lname) AS seller_name
                   FROM " . $this->table . " m 
                   JOIN Users u ON m.seller_id = u.userID
+                  LEFT JOIN Student s ON u.userID = s.userID
                   ORDER BY m.created_at DESC";
         $stmt = $this->conn->prepare($query);
         $stmt->execute();
