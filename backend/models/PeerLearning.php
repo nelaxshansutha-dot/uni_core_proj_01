@@ -41,8 +41,9 @@ class PeerLearning {
     }
 
     public function getRequestsByCourse($course_code) {
-        $query = "SELECT p.*, u.enrollment_no as student_enrollment FROM " . $this->table . " p 
+        $query = "SELECT p.*, s.enrollmentNo as student_enrollment FROM " . $this->table . " p 
                   JOIN users u ON p.student_id = u.id 
+                  LEFT JOIN Student s ON u.id = s.userID
                   WHERE p.course_code = :course_code ORDER BY p.created_at DESC";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':course_code', $course_code);
@@ -51,8 +52,9 @@ class PeerLearning {
     }
     
     public function getStudentRequests($student_id) {
-        $query = "SELECT p.*, r.enrollment_no as rep_enrollment FROM " . $this->table . " p 
-                  LEFT JOIN users r ON p.rep_id = r.id 
+        $query = "SELECT p.*, r.enrollmentNo as rep_enrollment FROM " . $this->table . " p 
+                  LEFT JOIN users u_rep ON p.rep_id = u_rep.id 
+                  LEFT JOIN Student r ON u_rep.id = r.userID
                   WHERE p.student_id = :student_id ORDER BY p.created_at DESC";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':student_id', $student_id);

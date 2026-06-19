@@ -67,14 +67,7 @@ class AuthController {
             Response::error("This email address is already registered. Try logging in or use a different email.");
         }
 
-        $enrollment = ($data['role'] === 'student') ? $data['enrollment_no'] : null;
-        $staff = ($data['role'] === 'staff') ? $data['enrollment_no'] : null;
-        $rep = null; // Admin registers reps
-
         $userData = [
-            'enrollment_no' => $enrollment,
-            'staff_id' => $staff,
-            'rep_id' => $rep,
             'fname' => $data['first_name'],
             'lname' => $data['last_name'],
             'email' => $data['email'],
@@ -136,11 +129,17 @@ class AuthController {
             if ($requestedRole === 'rep') {
                 if ($user['role'] === 'rep') {
                     $db = (new Database())->getConnection();
-                    $stmt = $db->prepare("SELECT hash_password FROM Course_representative WHERE userID = ?");
+                    $stmt = $db->prepare("SELECT hash_password, is_first_login FROM Course_representative WHERE userID = ?");
                     $stmt->execute([$user['userID']]);
                     $repData = $stmt->fetch(PDO::FETCH_ASSOC);
                     
                     if ($repData && password_verify($data['password'], $repData['hash_password'])) {
+                        if (isset($repData['is_first_login']) && $repData['is_first_login'] == 1) {
+                            Response::success("First login password change required", [
+                                "action" => "force_reset", 
+                                "user_id" => $user['userID']
+                            ]);
+                        }
                         $isAuthenticated = true;
                     }
                 }
@@ -176,7 +175,7 @@ class AuthController {
 
                     $userData = [
                         'id' => $user['userID'],
-                        'enrollment_no' => $user['enrollment_no'] ?? $user['staff_id'] ?? $user['rep_id'],
+                        'enrollment_no' => $user['enrollment_no'] ?? null,
                         'email' => $user['email'],
                         'first_name' => $user['fname'],
                         'last_name' => $user['lname'],
@@ -200,7 +199,9 @@ class AuthController {
                     Response::success("Login successful", [
                         'token' => $token,
                         'user' => $userData,
-                        'verified' => true
+                        'verified' => true,
+                        'action' => 'dashboard',
+                        'redirect' => $requestedRole === 'rep' ? 'rep_dashboard' : 'student_dashboard'
                     ]);
                 } else {
                     $otp = rand(100000, 999999);
@@ -254,7 +255,7 @@ class AuthController {
 
             $userData = [
                 'id' => $user['userID'],
-                'enrollment_no' => $user['enrollment_no'] ?? $user['staff_id'] ?? $user['rep_id'],
+                'enrollment_no' => $user['enrollment_no'] ?? null,
                 'email' => $user['email'],
                 'first_name' => $user['fname'],
                 'last_name' => $user['lname'],
@@ -478,7 +479,7 @@ class AuthController {
 
         $userData = [
             'id' => $updatedUser['userID'],
-            'enrollment_no' => $updatedUser['enrollment_no'] ?? $updatedUser['staff_id'] ?? $updatedUser['rep_id'],
+            'enrollment_no' => $updatedUser['enrollment_no'] ?? null,
             'email' => $updatedUser['email'],
             'first_name' => $updatedUser['fname'],
             'last_name' => $updatedUser['lname'],
@@ -503,6 +504,27 @@ class AuthController {
             'token' => $token,
             'user' => $userData
         ]);
+    }
+
+    public function forceChangeRepPassword($data) {
+        $missing = Validator::required(['user_id', 'new_password'], $data);
+        if (!empty($missing)) {
+            Response::error("Missing fields: " . implode(', ', $missing));
+        }
+
+        if (strlen($data['new_password']) < 6) {
+            Response::error("Password must be at least 6 characters long.");
+        }
+
+        $db = (new Database())->getConnection();
+        $hashed = password_hash($data['new_password'], PASSWORD_BCRYPT);
+
+        $stmt = $db->prepare("UPDATE Course_representative SET hash_password = ?, is_first_login = 0 WHERE userID = ?");
+        if ($stmt->execute([$hashed, $data['user_id']])) {
+            Response::success("Password updated successfully. Please log in with your new password.");
+        } else {
+            Response::error("Failed to update password.", 500);
+        }
     }
 }
 ?>

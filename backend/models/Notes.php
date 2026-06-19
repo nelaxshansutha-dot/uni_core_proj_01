@@ -26,8 +26,9 @@ class Notes {
     }
 
     public function getAll($filters = []) {
-        $query = "SELECT n.*, u.enrollment_no, c.course_name FROM " . $this->table . " n 
+        $query = "SELECT n.*, s.enrollmentNo as enrollment_no, c.course_name FROM " . $this->table . " n 
                   JOIN users u ON n.uploader_id = u.id 
+                  LEFT JOIN Student s ON u.id = s.userID
                   JOIN courses c ON n.course_code = c.course_code 
                   WHERE 1=1";
         

@@ -9,6 +9,7 @@ import Register from '../pages/auth/Register';
 import OTPVerification from '../pages/auth/OTPVerification';
 import ForgotPassword from '../pages/auth/ForgotPassword';
 import ResetPassword from '../pages/auth/ResetPassword';
+import ChangeRepPassword from '../pages/auth/ChangeRepPassword';
 
 import Dashboard from '../pages/dashboard/Dashboard';
 import LostItems from '../pages/lost-items/LostItems';
@@ -30,6 +31,7 @@ const AppRoutes = () => {
             <Route path="/otp" element={<OTPVerification />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/change-rep-password" element={<ChangeRepPassword />} />
             <Route path="/" element={<Home />} />
 
             {/* Protected Routes inside Dashboard Layout */}

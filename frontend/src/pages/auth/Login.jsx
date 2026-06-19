@@ -23,8 +23,8 @@ const Login = () => {
 
     const getIdLabel = () => {
         switch (role) {
-            case 'admin': return 'Admin ID';
-            case 'staff': return 'Staff ID';
+            case 'admin': return 'Admin Email';
+            case 'staff': return 'Staff Email';
             case 'rep': return 'Rep ID';
             case 'student':
             default: return 'Enrollment Number';
@@ -33,8 +33,8 @@ const Login = () => {
 
     const getIdPlaceholder = () => {
         switch (role) {
-            case 'admin': return 'e.g. ADMIN001';
-            case 'staff': return 'e.g. STF001';
+            case 'admin': return 'e.g. admin@unicore.com';
+            case 'staff': return 'e.g. staff@unicore.com';
             case 'rep': return 'e.g. UWU/CST/21/0042';
             case 'student':
             default: return 'e.g. UWU/CST/21/0042';
@@ -54,6 +54,13 @@ const Login = () => {
             });
 
             if (response.data.status === 'success') {
+                if (response.data.data.action === 'force_reset') {
+                    navigate('/change-rep-password', {
+                        state: { userId: response.data.data.user_id }
+                    });
+                    return;
+                }
+
                 const { verified, user } = response.data.data;
 
                 // Optional: Validate that the logged-in user role matches the selected role

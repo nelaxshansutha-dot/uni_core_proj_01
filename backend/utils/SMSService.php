@@ -18,7 +18,7 @@ class SMSService {
         $apiToken = "4810|NgGYVtUHjSS98YTck7nLSlYG9NgjUiv5agw5Enje1071d5c9";
         
         // Target endpoint
-        $url = "https://app.text.lk/api/http/";
+        $url = "https://app.text.lk/api/v3/sms/send";
 
         $payload = [
             'recipient' => $phoneNumber,
