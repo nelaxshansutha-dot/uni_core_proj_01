@@ -97,6 +97,27 @@ const Sidebar = () => {
                             </NavLink>
                         </li>
                     </>
+                ) : user?.role === 'rep' ? (
+                    <>
+                        <li className="nav-item">
+                            <NavLink to="/rep-dashboard" className="nav-link d-flex align-items-center gap-3">
+                                <LayoutDashboard size={20} />
+                                Dashboard
+                            </NavLink>
+                        </li>
+                        <li>
+                            <NavLink to="/peer-learning" className="nav-link d-flex align-items-center gap-3">
+                                <Users size={20} />
+                                Peer Learning
+                            </NavLink>
+                        </li>
+                        <li>
+                            <NavLink to="/settings" className="nav-link d-flex align-items-center gap-3">
+                                <Settings size={20} />
+                                Manage Profile
+                            </NavLink>
+                        </li>
+                    </>
                 ) : (
                     <>
                         <li className="nav-item">

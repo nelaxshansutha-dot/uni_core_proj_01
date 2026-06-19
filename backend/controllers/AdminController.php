@@ -227,13 +227,14 @@ class AdminController {
             $stmt->execute([$courseId, (int)$data['year'], $data['user_id']]);
 
             // Create Course Rep record or Update if exists
-            $stmt = $db->prepare("INSERT INTO Course_representative (userID, enrollmentNo, courseID, hash_password, is_first_login) 
-                                  VALUES (?, ?, ?, ?, 1)
+            $stmt = $db->prepare("INSERT INTO Course_representative (userID, enrollmentNo, courseID, hash_password, is_first_login, rep_id_string) 
+                                  VALUES (?, ?, ?, ?, 1, ?)
                                   ON DUPLICATE KEY UPDATE 
                                   courseID = VALUES(courseID), 
                                   hash_password = VALUES(hash_password), 
-                                  is_first_login = 1");
-            $stmt->execute([$data['user_id'], $user['enrollmentNo'], $courseId, $hashed]);
+                                  is_first_login = 1,
+                                  rep_id_string = VALUES(rep_id_string)");
+            $stmt->execute([$data['user_id'], $user['enrollmentNo'], $courseId, $hashed, $data['rep_id']]);
 
             $db->commit();
 

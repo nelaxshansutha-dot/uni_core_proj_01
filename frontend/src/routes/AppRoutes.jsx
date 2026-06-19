@@ -12,6 +12,7 @@ import ResetPassword from '../pages/auth/ResetPassword';
 import ChangeRepPassword from '../pages/auth/ChangeRepPassword';
 
 import Dashboard from '../pages/dashboard/Dashboard';
+import RepDashboard from '../pages/dashboard/RepDashboard';
 import LostItems from '../pages/lost-items/LostItems';
 import Marketplace from '../pages/marketplace/Marketplace';
 import Notes from '../pages/notes/Notes';
@@ -38,6 +39,12 @@ const AppRoutes = () => {
             <Route element={<ProtectedRoute />}>
                 <Route element={<DashboardLayout />}>
                     <Route path="/dashboard" element={<Dashboard />} />
+                    
+                    {/* Course Rep Only Route */}
+                    <Route element={<RoleBasedRoute allowedRoles={['rep']} />}>
+                        <Route path="/rep-dashboard" element={<RepDashboard />} />
+                    </Route>
+
                     <Route path="/lost-items" element={<LostItems />} />
                     <Route path="/marketplace" element={<Marketplace />} />
                     <Route path="/notes" element={<Notes />} />

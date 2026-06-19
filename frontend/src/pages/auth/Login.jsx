@@ -35,7 +35,7 @@ const Login = () => {
         switch (role) {
             case 'admin': return 'e.g. admin@unicore.com';
             case 'staff': return 'e.g. staff@unicore.com';
-            case 'rep': return 'e.g. UWU/CST/21/0042';
+            case 'rep': return 'e.g. REP_UWU/CST/21/0042';
             case 'student':
             default: return 'e.g. UWU/CST/21/0042';
         }
@@ -75,6 +75,8 @@ const Login = () => {
                     login(response.data.data.token, response.data.data.user);
                     if (response.data.data.user.role === 'admin') {
                         navigate('/admin');
+                    } else if (response.data.data.user.role === 'rep') {
+                        navigate('/rep-dashboard');
                     } else {
                         navigate('/dashboard');
                     }
