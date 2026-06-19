@@ -18,6 +18,7 @@ class User {
                   LEFT JOIN Course_representative cr ON u.userID = cr.userID
                   WHERE s.enrollmentNo = :id 
                      OR cr.enrollmentNo = :id 
+                     OR cr.rep_id_string = :id
                      OR u.email = :id LIMIT 1";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':id', $enrollment_no);
