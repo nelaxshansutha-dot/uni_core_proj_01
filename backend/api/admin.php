@@ -9,6 +9,9 @@ Cors::enable();
 $method = $_SERVER['REQUEST_METHOD'];
 $controller = new AdminController();
 
+
+
+
 $user = AuthMiddleware::authenticate();
 AuthMiddleware::requireRole($user, ['admin']);
 
