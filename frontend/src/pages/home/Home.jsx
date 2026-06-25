@@ -104,7 +104,7 @@ const Home = () => {
 
           <div className="hero-actions">
             <Link to="/register" className="btn-cta-primary">
-              Get Started Free <ArrowRight size={17} />
+              Get Started  <ArrowRight size={17} />
             </Link>
             <a href="#features" onClick={scrollToFeatures} className="btn-cta-ghost">
               See Features
@@ -182,7 +182,7 @@ const Home = () => {
             </p>
             <div className="cta-actions">
               <Link to="/register" className="btn-cta-primary">
-                Sign Up Free <ArrowRight size={16} />
+                Sign Up  <ArrowRight size={16} />
               </Link>
               <Link to="/contact" className="btn-cta-ghost">
                 Contact Us

@@ -453,7 +453,7 @@ const Marketplace = () => {
                                             <div className="col-12">
                                                 <label className="form-label fw-semibold text-dark">
                                                     <Clock size={14} className="me-1 text-warning" />
-                                                    Duration of Use <span className="text-danger">*</span>
+                                                    Used Duration <span className="text-danger">*</span>
                                                 </label>
                                                 <input
                                                     type="text"
@@ -624,7 +624,7 @@ const Marketplace = () => {
                                                 {selectedItem.condition_type === 'used' && selectedItem.usage_duration && (
                                                     <div className="d-flex align-items-center gap-2 text-secondary small">
                                                         <Clock size={15} className="text-warning" />
-                                                        <span><strong>Duration of Use:</strong> {selectedItem.usage_duration}</span>
+                                                        <span><strong>Used Duration:</strong> {selectedItem.usage_duration}</span>
                                                     </div>
                                                 )}
                                                 {selectedItem.location && (

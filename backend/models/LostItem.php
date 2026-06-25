@@ -66,6 +66,37 @@ class LostItem {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public function update($data) {
+        $query = "UPDATE " . $this->table . " SET 
+                  item_name = :item_name, 
+                  description = :description, 
+                  last_seen_datetime = :last_seen_datetime, 
+                  last_seen_place = :last_seen_place, 
+                  contact_number = :contact_number";
+                  
+        if ($data['item_image'] !== null) {
+            $query .= ", item_image = :item_image";
+        }
+        
+        $query .= " WHERE lostID = :lost_id AND userID = :user_id";
+
+        $stmt = $this->conn->prepare($query);
+
+        $stmt->bindParam(':item_name', $data['item_name']);
+        $stmt->bindParam(':description', $data['description']);
+        $stmt->bindParam(':last_seen_datetime', $data['last_seen_datetime']);
+        $stmt->bindParam(':last_seen_place', $data['last_seen_place']);
+        $stmt->bindParam(':contact_number', $data['contact_number']);
+        $stmt->bindParam(':lost_id', $data['lost_id']);
+        $stmt->bindParam(':user_id', $data['user_id']);
+
+        if ($data['item_image'] !== null) {
+            $stmt->bindParam(':item_image', $data['item_image']);
+        }
+
+        return $stmt->execute();
+    }
+
    
     
     public function delete($lost_id, $user_id) {

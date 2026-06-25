@@ -12,6 +12,8 @@ const LostItems = () => {
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [showPrefModal, setShowPrefModal] = useState(false);
+    const [isUpdating, setIsUpdating] = useState(false);
+    const [updateItemId, setUpdateItemId] = useState(null);
 
     const [formData, setFormData] = useState({
         item_name: '',
@@ -94,6 +96,27 @@ const handleDelete = async () => {
     }
 };
 
+    const handleEditClick = (item) => {
+        setIsUpdating(true);
+        setUpdateItemId(item.lost_id);
+        
+        // Format datetime correctly if needed
+        const formattedDate = item.last_seen_datetime 
+            ? new Date(item.last_seen_datetime).toISOString().slice(0, 16) 
+            : '';
+
+        setFormData({
+            item_name: item.item_name,
+            description: item.description,
+            last_seen_datetime: formattedDate,
+            last_seen_place: item.last_seen_place,
+            contact_number: item.contact_number,
+            item_image: null,
+            send_sms_alert: false
+        });
+        setShowModal(true);
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -110,6 +133,10 @@ const handleDelete = async () => {
             data.append('item_image', formData.item_image);
         }
 
+        if (isUpdating) {
+            data.append('update_id', updateItemId);
+        }
+
         try {
             const res = await api.post('/lost-items.php', data, {
                 headers: {
@@ -119,6 +146,8 @@ const handleDelete = async () => {
 
             if (res.data.status === 'success') {
                 setShowModal(false);
+                setIsUpdating(false);
+                setUpdateItemId(null);
 
                 setFormData({
                     item_name: '',
@@ -150,7 +179,20 @@ const handleDelete = async () => {
 
                 <button
                     className="btn btn-primary d-flex align-items-center gap-2"
-                    onClick={() => setShowModal(true)}
+                    onClick={() => {
+                        setIsUpdating(false);
+                        setUpdateItemId(null);
+                        setFormData({
+                            item_name: '',
+                            description: '',
+                            last_seen_datetime: '',
+                            last_seen_place: '',
+                            contact_number: '',
+                            item_image: null,
+                            send_sms_alert: false
+                        });
+                        setShowModal(true);
+                    }}
                 >
                     <Plus size={18} />
                     Report Item
@@ -216,16 +258,22 @@ const handleDelete = async () => {
                                         </div>
                                     </div>
                                     {item.user_id === user?.id && (
-                                        <div className="card-footer bg-white border-0 pt-0 pb-3 px-3">
+                                        <div className="card-footer bg-white border-0 pt-0 pb-3 px-3 d-flex gap-2">
                                             <button
-    className="btn btn-danger"
-    onClick={() => {
-        setSelectedItemId(item.lost_id);
-        setShowDeleteModal(true);
-    }}
->
-    Delete Post
-</button>
+                                                className="btn btn-primary flex-grow-1"
+                                                onClick={() => handleEditClick(item)}
+                                            >
+                                                Update
+                                            </button>
+                                            <button
+                                                className="btn btn-danger flex-grow-1"
+                                                onClick={() => {
+                                                    setSelectedItemId(item.lost_id);
+                                                    setShowDeleteModal(true);
+                                                }}
+                                            >
+                                                Delete
+                                            </button>
                                         </div>
                                     )}
                                 </div>
@@ -285,7 +333,7 @@ const handleDelete = async () => {
                         <div className="modal-content">
 
                             <div className="modal-header">
-                                <h5>Report Lost Item</h5>
+                                <h5>{isUpdating ? "Update Lost Item" : "Report Lost Item"}</h5>
                                 <button
                                     className="btn-close"
                                     onClick={() => setShowModal(false)}
@@ -399,7 +447,7 @@ const handleDelete = async () => {
                                             type="submit"
                                             className="btn btn-primary"
                                         >
-                                            Submit
+                                            {isUpdating ? "Update" : "Submit"}
                                         </button>
                                     </div>
 

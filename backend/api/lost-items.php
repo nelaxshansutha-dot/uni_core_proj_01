@@ -22,7 +22,11 @@ if ($method === 'GET') {
         $data = $_POST;
         $file = $_FILES['item_image'] ?? null;
 
-        $controller->createItem($data, $file, $user['id']);
+        if (isset($data['update_id'])) {
+            $controller->updateItem($data, $file, $user['id']);
+        } else {
+            $controller->createItem($data, $file, $user['id']);
+        }
 
     } elseif ($method === 'PUT') {
         $data = json_decode(file_get_contents("php://input"), true);
