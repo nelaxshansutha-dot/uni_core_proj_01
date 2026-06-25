@@ -319,29 +319,31 @@ const Settings = () => {
                                         </div>
                                     </div>
 
-                                    <div className="col-md-6">
-                                        <div className="card bg-light border-0 p-3 h-100">
-                                            <div className="form-check form-switch d-flex align-items-center justify-content-between p-0">
-                                                <div>
-                                                    <label className="form-check-label fw-bold text-dark" htmlFor="peerNotifSwitch">
-                                                        Peer Learning Notifications
-                                                    </label>
-                                                    <div className="text-muted small">
-                                                        Receive app notifications when peer learning requests are submitted/updated.
+                                    {user?.role !== 'staff' && (
+                                        <div className="col-md-6">
+                                            <div className="card bg-light border-0 p-3 h-100">
+                                                <div className="form-check form-switch d-flex align-items-center justify-content-between p-0">
+                                                    <div>
+                                                        <label className="form-check-label fw-bold text-dark" htmlFor="peerNotifSwitch">
+                                                            Peer Learning Notifications
+                                                        </label>
+                                                        <div className="text-muted small">
+                                                            Receive app notifications when peer learning requests are submitted/updated.
+                                                        </div>
                                                     </div>
+                                                    <input
+                                                        className="form-check-input ms-0"
+                                                        type="checkbox"
+                                                        id="peerNotifSwitch"
+                                                        name="peer_learning_app_notification"
+                                                        checked={formData.peer_learning_app_notification === 1}
+                                                        onChange={handleChange}
+                                                        style={{ width: '2.5em', height: '1.25em', cursor: 'pointer' }}
+                                                    />
                                                 </div>
-                                                <input
-                                                    className="form-check-input ms-0"
-                                                    type="checkbox"
-                                                    id="peerNotifSwitch"
-                                                    name="peer_learning_app_notification"
-                                                    checked={formData.peer_learning_app_notification === 1}
-                                                    onChange={handleChange}
-                                                    style={{ width: '2.5em', height: '1.25em', cursor: 'pointer' }}
-                                                />
                                             </div>
                                         </div>
-                                    </div>
+                                    )}
                                 </>
                             )}
 

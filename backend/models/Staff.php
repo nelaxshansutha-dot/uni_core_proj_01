@@ -11,9 +11,10 @@ class Staff {
     }
 
     public function create($data) {
-        $query = "INSERT INTO " . $this->table . " (userID, dept) VALUES (:userID, :dept)";
+        $query = "INSERT INTO " . $this->table . " (staffID, userID, dept) VALUES (:staffID, :userID, :dept)";
         $stmt = $this->conn->prepare($query);
 
+        $stmt->bindParam(':staffID', $data['staffID']);
         $stmt->bindParam(':userID', $data['userID']);
         $stmt->bindParam(':dept', $data['dept']);
 

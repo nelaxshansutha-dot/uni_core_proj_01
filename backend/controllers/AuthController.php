@@ -90,6 +90,7 @@ class AuthController {
             } else if ($data['role'] === 'staff') {
                 $staffModel = new Staff();
                 $staffModel->create([
+                    'staffID' => $data['enrollment_no'],
                     'userID' => $user_id,
                     'dept' => $data['department']
                 ]);

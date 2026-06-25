@@ -12,20 +12,22 @@ class User {
 
     public function findByEnrollment($enrollment_no)
     {
-        $query = "SELECT u.*, s.enrollmentNo as std_enrollment, cr.enrollmentNo as rep_enrollment 
+        $query = "SELECT u.*, s.enrollmentNo as std_enrollment, cr.enrollmentNo as rep_enrollment, st.staffID as staff_enrollment
                   FROM " . $this->table . " u
                   LEFT JOIN Student s ON u.userID = s.userID
                   LEFT JOIN Course_representative cr ON u.userID = cr.userID
+                  LEFT JOIN Staff st ON u.userID = st.userID
                   WHERE s.enrollmentNo = :id 
                      OR cr.enrollmentNo = :id 
                      OR cr.rep_id_string = :id
+                     OR st.staffID = :id
                      OR u.email = :id LIMIT 1";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':id', $enrollment_no);
         $stmt->execute();
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($result) {
-            $result['enrollment_no'] = $result['std_enrollment'] ?? $result['rep_enrollment'] ?? null;
+            $result['enrollment_no'] = $result['std_enrollment'] ?? $result['rep_enrollment'] ?? $result['staff_enrollment'] ?? null;
             return $result;
         }
         return false;
