@@ -447,16 +447,13 @@ const AdminPanel = () => {
                                     </select>
                                     <button type="submit" className="btn btn-primary px-4">Search</button>
                                 </form>
-                                <button className="btn btn-success d-flex align-items-center gap-2" onClick={openAddModal}>
-                                    <UserPlus size={18} /> Add New User
-                                </button>
                             </div>
 
                             <div className="table-responsive">
                                 <table className="table align-middle table-hover">
                                     <thead className="table-light">
                                         <tr>
-                                            <th>Enrollment No</th>
+                                            <th>Enrollment No / Staff ID</th>
                                             <th>Name</th>
                                             <th>Email</th>
                                             <th>Role</th>
@@ -467,7 +464,7 @@ const AdminPanel = () => {
                                     <tbody>
                                         {users.map(u => (
                                             <tr key={u.id}>
-                                                <td className="fw-semibold">{u.enrollment_no}</td>
+                                                <td className="fw-semibold">{u.enrollment_no || u.staff_id || '-'}</td>
                                                 <td>{u.first_name} {u.last_name}</td>
                                                 <td>{u.email}</td>
                                                 <td>
@@ -654,7 +651,7 @@ const AdminPanel = () => {
                                             <Search className="position-absolute top-50 translate-middle-y text-muted ms-3" size={18} />
                                             <input 
                                                 type="text" 
-                                                className="form-control" 
+                                                className="form-control ps-5" 
                                                 placeholder="Enrollment No, First or Last Name..." 
                                                 value={repSearch}
                                                 onChange={(e) => setRepSearch(e.target.value)}
@@ -828,7 +825,7 @@ const AdminPanel = () => {
                     {/* Inner content switcher */}
                     <div className="btn-group mb-4" role="group">
                         <button type="button" className={`btn ${contentTab === 'lost_item' ? 'btn-primary' : 'btn-light'}`} onClick={() => setContentTab('lost_item')}>
-                            <Search size={16} className="me-2" /> Lost & Found
+                            <Search size={16} className="me-2" /> Lost Items
                         </button>
                         <button type="button" className={`btn ${contentTab === 'marketplace' ? 'btn-primary' : 'btn-light'}`} onClick={() => setContentTab('marketplace')}>
                             <ShoppingBag size={16} className="me-2" /> Marketplace

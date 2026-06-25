@@ -44,6 +44,7 @@ class AdminController {
         
         $sql = "SELECT u.userID as id, 
                        s.enrollmentNo as enrollment_no, 
+                       st.staffID as staff_id,
                        u.email, u.phoneNum as phone_number, u.role, u.is_verified, 
                        1 as is_active, u.created_at, 
                        u.fname as first_name, u.lname as last_name,
@@ -111,6 +112,7 @@ class AdminController {
                 $staffModel = new Staff();
                 $staffModel->create([
                     'userID' => $user_id,
+                    'staffID' => $data['enrollment_no'] ?? null,
                     'dept' => $data['department'] ?? ''
                 ]);
             }

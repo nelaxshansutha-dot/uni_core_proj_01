@@ -142,7 +142,7 @@ const handleDelete = async () => {
             {/*Header*/}
             <div className="d-flex justify-content-between align-items-center mb-4">
                 <div>
-                    <h3 className="fw-bold">Lost & Found</h3>
+                    <h3 className="fw-bold">Lost Items</h3>
                     <p className="text-muted">
                         Report lost items or help others find theirs
                     </p>

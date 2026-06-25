@@ -1,7 +1,7 @@
 import React, { useContext, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
-import { LogOut, User, Bell } from 'lucide-react';
+import { LogOut, User } from 'lucide-react';
 
 const Topbar = () => {
     const { user, logout } = useContext(AuthContext);
@@ -25,17 +25,7 @@ const Topbar = () => {
             <h5 className="m-0 text-dark fw-semibold">Welcome back, {user?.first_name || 'User'}!</h5>
             
             <div className="d-flex align-items-center gap-3">
-                {/* Bell Icon for Notifications */}
-                {user?.role !== 'staff' && (
-                    <button 
-                        onClick={() => navigate('/notifications')} 
-                        className="btn btn-light rounded-circle p-2 position-relative d-flex align-items-center justify-content-center"
-                        style={{ width: '40px', height: '40px' }}
-                        title="Notifications"
-                    >
-                        <Bell size={20} className="text-secondary" />
-                    </button>
-                )}
+
 
                 {/* Round Profile Icon with Dropdown */}
                 <div className="dropdown position-relative">

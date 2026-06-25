@@ -26,7 +26,7 @@ const FEATURES = [
   {
     icon: <Search size={26} />,
     iconClass: 'icon-lost',
-    title: 'Lost & Found',
+    title: 'Lost Items',
     desc: 'Report or search for lost items with photo uploads and campus location tagging.',
     action: { label: 'View Items', to: '/lost-items' },
   },
