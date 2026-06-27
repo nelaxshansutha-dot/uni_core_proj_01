@@ -27,6 +27,16 @@ class LostItemController {
             return; // ✅ IMPORTANT
         }
 
+        if (!preg_match('/^[0-9]+$/', $data['contact_number'])) {
+            Response::error("Contact number must contain only numbers.");
+            return;
+        }
+
+        if (strtotime($data['last_seen_datetime']) > time()) {
+            Response::error("Last seen date cannot be in the future.");
+            return;
+        }
+
         // ---------------- IMAGE UPLOAD ----------------
         $imagePath = null;
 
@@ -100,6 +110,16 @@ class LostItemController {
 
         if (!empty($missing)) {
             Response::error("Missing fields: " . implode(', ', $missing));
+            return;
+        }
+
+        if (!preg_match('/^[0-9]+$/', $data['contact_number'])) {
+            Response::error("Contact number must contain only numbers.");
+            return;
+        }
+
+        if (strtotime($data['last_seen_datetime']) > time()) {
+            Response::error("Last seen date cannot be in the future.");
             return;
         }
 

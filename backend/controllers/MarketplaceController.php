@@ -15,6 +15,12 @@ class MarketplaceController {
         $missing = Validator::required(['item_name', 'description', 'price', 'condition_type', 'location', 'phone_number'], $data);
         if (!empty($missing)) {
             Response::error("Missing fields: " . implode(', ', $missing));
+            return;
+        }
+
+        if (!preg_match('/^[0-9]+$/', $data['phone_number'])) {
+            Response::error("Phone number must contain only numbers.");
+            return;
         }
 
         // Used condition requires usage_duration
@@ -64,6 +70,12 @@ class MarketplaceController {
         $missing = Validator::required(['id', 'item_name', 'description', 'price', 'condition_type', 'location', 'phone_number'], $data);
         if (!empty($missing)) {
             Response::error("Missing fields: " . implode(', ', $missing));
+            return;
+        }
+
+        if (!preg_match('/^[0-9]+$/', $data['phone_number'])) {
+            Response::error("Phone number must contain only numbers.");
+            return;
         }
 
         if ($data['condition_type'] === 'used' && empty($data['usage_duration'])) {

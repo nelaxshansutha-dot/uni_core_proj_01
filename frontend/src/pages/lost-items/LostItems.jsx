@@ -373,6 +373,7 @@ const handleDelete = async () => {
                                         type="datetime-local"
                                         className="form-control mb-2"
                                         value={formData.last_seen_datetime}
+                                        max={new Date().toISOString().slice(0, 16)}
                                         onChange={(e) =>
                                             setFormData({
                                                 ...formData,
@@ -396,15 +397,19 @@ const handleDelete = async () => {
                                     />
 
                                     <input
+                                        type="tel"
                                         className="form-control mb-2"
                                         placeholder="Contact Number"
                                         value={formData.contact_number}
-                                        onChange={(e) =>
-                                            setFormData({
-                                                ...formData,
-                                                contact_number: e.target.value
-                                            })
-                                        }
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            if (val === '' || /^[0-9]+$/.test(val)) {
+                                                setFormData({
+                                                    ...formData,
+                                                    contact_number: val
+                                                });
+                                            }
+                                        }}
                                         required
                                     />
 

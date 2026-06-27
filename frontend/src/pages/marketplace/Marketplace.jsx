@@ -441,9 +441,17 @@ const Marketplace = () => {
                                                 type="tel"
                                                 className="form-control"
                                                 name="phone_number"
-                                                placeholder="e.g. +94 77 123 4567"
+                                                placeholder="e.g. 0771234567"
                                                 value={formData.phone_number}
-                                                onChange={handleChange}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    if (val === '' || /^[0-9]+$/.test(val)) {
+                                                        setFormData(prev => ({
+                                                            ...prev,
+                                                            phone_number: val
+                                                        }));
+                                                    }
+                                                }}
                                                 required
                                             />
                                         </div>
