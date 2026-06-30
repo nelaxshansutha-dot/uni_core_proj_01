@@ -94,7 +94,7 @@ class LostItemController {
 
             Response::success("Item reported successfully.");
         } else {
-            Response::error("Failed to report item.", 500);
+            Response::error("Failed to report the item.", 500);
         }
     }
 
