@@ -32,7 +32,7 @@ if ($method === 'POST') {
     } else if ($action === 'update-profile') {
         require_once __DIR__ . '/../utils/AuthMiddleware.php';
         $user = AuthMiddleware::authenticate();
-        $controller->updateProfile($data, $user['id']);
+        $controller->updateProfile($data, $user['id'], $user['role']);
     } else {
         Response::error("Invalid action.", 404);
     }

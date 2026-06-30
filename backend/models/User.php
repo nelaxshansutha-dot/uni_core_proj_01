@@ -1,13 +1,16 @@
 <?php
 require_once __DIR__ . '/../config/Database.php';
 
-class User {
-    private $conn;
-    private $table = "Users";
+require_once __DIR__ . '/BaseModel.php';
+
+class User extends BaseModel {
+
+    protected function getTableName() {
+        return "Users";
+    }
 
     public function __construct() {
-        $database = new Database();
-        $this->conn = $database->getConnection();
+        parent::__construct();
     }
 
     public function findByEnrollment($enrollment_no)
@@ -44,11 +47,7 @@ class User {
 
     public function findById($id)//profile page
      {
-        $query = "SELECT * FROM " . $this->table . " WHERE userID = :id LIMIT 1";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':id', $id);
-        $stmt->execute();
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        return parent::findByIdBase($id, 'userID');
     }
 
     public function create($data) //new user insert

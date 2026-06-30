@@ -40,11 +40,12 @@ class PeerLearning {
         return $stmt->execute();
     }
 
-    public function getRequestsByCourse($course_code) {
-        $query = "SELECT p.*, s.enrollmentNo as student_enrollment FROM " . $this->table . " p 
-                  JOIN users u ON p.student_id = u.id 
-                  LEFT JOIN Student s ON u.id = s.userID
-                  WHERE p.course_code = :course_code ORDER BY p.created_at DESC";
+    public function getGroupedRequestsByCourse($course_code) {
+        $query = "SELECT topic, course_code, status, COUNT(*) as request_count 
+                  FROM " . $this->table . " 
+                  WHERE course_code = :course_code 
+                  GROUP BY topic, course_code, status 
+                  ORDER BY request_count DESC";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':course_code', $course_code);
         $stmt->execute();
@@ -60,6 +61,16 @@ class PeerLearning {
         $stmt->bindParam(':student_id', $student_id);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function updateStatusByTopic($topic, $course_code, $status, $rep_id) {
+        $query = "UPDATE " . $this->table . " SET status = :status, rep_id = :rep_id WHERE topic = :topic AND course_code = :course_code";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':status', $status);
+        $stmt->bindParam(':rep_id', $rep_id);
+        $stmt->bindParam(':topic', $topic);
+        $stmt->bindParam(':course_code', $course_code);
+        return $stmt->execute();
     }
 }
 ?>

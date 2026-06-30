@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/BaseController.php';
 require_once __DIR__ . '/../models/User.php';
 require_once __DIR__ . '/../models/Student.php';
 require_once __DIR__ . '/../models/Staff.php';
@@ -7,7 +8,7 @@ require_once __DIR__ . '/../utils/Validator.php';
 require_once __DIR__ . '/../config/Database.php';
 require_once __DIR__ . '/../utils/MailService.php';
 
-class AuthController {
+class AuthController extends BaseController {
     
     private function validateEmailDomain($email, $role) {
         $domain = strtolower(substr($email, strpos($email, '@') + 1));
@@ -165,11 +166,11 @@ class AuthController {
                 if ($user['is_verified']) {
                     $profile = null;
                     if ($user['role'] === 'student' || $user['role'] === 'rep') {
-                        $stmt = $db->prepare("SELECT courseID, std_year as year FROM Student WHERE userID = ?");
+                        $stmt = $db->prepare("SELECT enrollmentNo as enrollment_no, courseID, std_year as year FROM Student WHERE userID = ?");
                         $stmt->execute([$user['userID']]);
                         $profile = $stmt->fetch(PDO::FETCH_ASSOC);
                     } else if ($user['role'] === 'staff') {
-                        $stmt = $db->prepare("SELECT dept as department FROM Staff WHERE userID = ?");
+                        $stmt = $db->prepare("SELECT staffID as enrollment_no, dept as department FROM Staff WHERE userID = ?");
                         $stmt->execute([$user['userID']]);
                         $profile = $stmt->fetch(PDO::FETCH_ASSOC);
                     }
@@ -245,11 +246,11 @@ class AuthController {
             $user = $userModel->findById($data['user_id']);
             $profile = null;
             if ($user['role'] === 'student' || $user['role'] === 'rep') {
-                $stmt = $db->prepare("SELECT courseID, std_year as year FROM Student WHERE userID = ?");
+                $stmt = $db->prepare("SELECT enrollmentNo as enrollment_no, courseID, std_year as year FROM Student WHERE userID = ?");
                 $stmt->execute([$data['user_id']]);
                 $profile = $stmt->fetch(PDO::FETCH_ASSOC);
             } else if ($user['role'] === 'staff') {
-                $stmt = $db->prepare("SELECT dept as department FROM Staff WHERE userID = ?");
+                $stmt = $db->prepare("SELECT staffID as enrollment_no, dept as department FROM Staff WHERE userID = ?");
                 $stmt->execute([$data['user_id']]);
                 $profile = $stmt->fetch(PDO::FETCH_ASSOC);
             }
@@ -404,7 +405,7 @@ class AuthController {
         Response::success("Password has been reset successfully! You can now log in with your new password.");
     }
 
-    public function updateProfile($data, $user_id) {
+    public function updateProfile($data, $user_id, $logged_in_role = null) {
         $required = ['first_name', 'last_name', 'email'];
         $missing = Validator::required($required, $data);
         if (!empty($missing)) {
@@ -430,8 +431,19 @@ class AuthController {
         }
 
         $password_hash = $user['hash_password'];
+        $is_rep_password = ($logged_in_role === 'rep');
+
+        if ($is_rep_password) {
+            $stmt = $db->prepare("SELECT hash_password FROM Course_representative WHERE userID = ?");
+            $stmt->execute([$user_id]);
+            $repData = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($repData) {
+                $password_hash = $repData['hash_password'];
+            }
+        }
+
         if (!empty($data['new_password'])) {
-            if (!password_verify($data['old_password'], $user['hash_password'])) {
+            if (!password_verify($data['old_password'], $password_hash)) {
                 Response::error("Incorrect current password.");
             }
             if ($data['new_password'] !== $data['confirm_password']) {
@@ -446,12 +458,22 @@ class AuthController {
             $smsPref = isset($data['lost_item_sms_notification']) ? (int)$data['lost_item_sms_notification'] : 0;
             $peerPref = isset($data['peer_learning_app_notification']) ? (int)$data['peer_learning_app_notification'] : 1;
             
-            $stmt = $db->prepare("UPDATE Users SET fname = ?, lname = ?, email = ?, phoneNum = ?, hash_password = ?, lost_item_sms_notification = ?, peer_learning_app_notification = ? WHERE userID = ?");
-            $stmt->execute([$data['first_name'], $data['last_name'], $data['email'], $phone, $password_hash, $smsPref, $peerPref, $user_id]);
+            if ($is_rep_password && !empty($data['new_password'])) {
+                // Update general profile in Users table without modifying hash_password
+                $stmt = $db->prepare("UPDATE Users SET fname = ?, lname = ?, email = ?, phoneNum = ?, lost_item_sms_notification = ?, peer_learning_app_notification = ? WHERE userID = ?");
+                $stmt->execute([$data['first_name'], $data['last_name'], $data['email'], $phone, $smsPref, $peerPref, $user_id]);
+                
+                // Update password in Course_representative table
+                $stmt = $db->prepare("UPDATE Course_representative SET hash_password = ? WHERE userID = ?");
+                $stmt->execute([$password_hash, $user_id]);
+            } else {
+                $stmt = $db->prepare("UPDATE Users SET fname = ?, lname = ?, email = ?, phoneNum = ?, hash_password = ?, lost_item_sms_notification = ?, peer_learning_app_notification = ? WHERE userID = ?");
+                $stmt->execute([$data['first_name'], $data['last_name'], $data['email'], $phone, $password_hash, $smsPref, $peerPref, $user_id]);
+            }
 
             if ($user['role'] === 'student' || $user['role'] === 'rep') {
-                $course = isset($data['course']) ? $data['course'] : null;
-                $year = isset($data['year']) ? $data['year'] : null;
+                $course = (isset($data['course']) && $data['course'] !== '' && is_numeric($data['course'])) ? (int)$data['course'] : null;
+                $year = (isset($data['year']) && $data['year'] !== '' && is_numeric($data['year'])) ? (int)$data['year'] : null;
                 $stmt = $db->prepare("UPDATE Student SET courseID = ?, std_year = ? WHERE userID = ?");
                 $stmt->execute([$course, $year, $user_id]);
             } else if ($user['role'] === 'staff') {
@@ -469,11 +491,11 @@ class AuthController {
         $updatedUser = $userModel->findById($user_id);
         $profile = null;
         if ($updatedUser['role'] === 'student' || $updatedUser['role'] === 'rep') {
-            $stmt = $db->prepare("SELECT courseID, std_year as year FROM Student WHERE userID = ?");
+            $stmt = $db->prepare("SELECT enrollmentNo as enrollment_no, courseID, std_year as year FROM Student WHERE userID = ?");
             $stmt->execute([$user_id]);
             $profile = $stmt->fetch(PDO::FETCH_ASSOC);
         } else if ($updatedUser['role'] === 'staff') {
-            $stmt = $db->prepare("SELECT dept as department FROM Staff WHERE userID = ?");
+            $stmt = $db->prepare("SELECT staffID as enrollment_no, dept as department FROM Staff WHERE userID = ?");
             $stmt->execute([$user_id]);
             $profile = $stmt->fetch(PDO::FETCH_ASSOC);
         }

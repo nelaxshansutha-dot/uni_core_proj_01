@@ -20,20 +20,35 @@ class PeerLearningController {
         ];
 
         if ($model->createRequest($requestData)) {
-            // Send App Notifications to Course Representatives who have peer_learning_app_notification enabled
             try {
                 $db = (new Database())->getConnection();
-                // Find all representatives with peer_learning_app_notification enabled
-                $stmt = $db->prepare("SELECT id FROM users WHERE role = 'rep' AND peer_learning_app_notification = 1");
-                $stmt->execute();
-                $reps = $stmt->fetchAll(PDO::FETCH_COLUMN);
+                
+                // Find student's courseID and std_year
+                $stmt = $db->prepare("SELECT courseID, std_year FROM Student WHERE userID = ?");
+                $stmt->execute([$student_id]);
+                $studentInfo = $stmt->fetch(PDO::FETCH_ASSOC);
 
-                if (!empty($reps)) {
-                    require_once __DIR__ . '/../models/Notification.php';
-                    $notif = new Notification();
-                    $title = "New Peer Learning Request";
-                    $msg = "A new peer learning request has been submitted for " . $data['course_code'] . " on topic: " . $data['topic'];
-                    $notif->createForUsers($reps, $title, $msg);
+                if ($studentInfo) {
+                    $courseID = $studentInfo['courseID'];
+                    $std_year = $studentInfo['std_year'];
+
+                    // Find rep for that course and year
+                    $stmt = $db->prepare("
+                        SELECT cr.userID 
+                        FROM Course_representative cr
+                        JOIN Student s ON cr.enrollmentNo = s.enrollmentNo
+                        WHERE cr.courseID = ? AND s.std_year = ?
+                    ");
+                    $stmt->execute([$courseID, $std_year]);
+                    $reps = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+                    if (!empty($reps)) {
+                        require_once __DIR__ . '/../models/Notification.php';
+                        $notif = new Notification();
+                        $title = "New Peer Learning Request";
+                        $msg = "A new peer learning request has been submitted for " . $data['course_code'] . " on topic: " . $data['topic'];
+                        $notif->createForUsers($reps, $title, $msg);
+                    }
                 }
             } catch (Exception $e) {
                 // Fail silently so request creation succeeds even if notification fails
@@ -53,43 +68,56 @@ class PeerLearningController {
     
     public function getCourseRequests($course_code) {
         $model = new PeerLearning();
-        $requests = $model->getRequestsByCourse($course_code);
+        $requests = $model->getGroupedRequestsByCourse($course_code);
         Response::success("Requests retrieved", $requests);
     }
 
     public function updateStatus($data, $rep_id) {
-        $missing = Validator::required(['id', 'status'], $data);
+        $missing = Validator::required(['topic', 'course_code', 'status'], $data);
         if (!empty($missing)) {
             Response::error("Missing fields.");
         }
 
         $model = new PeerLearning();
         
-        // Fetch request info before updating status so we can notify the correct student
-        $reqInfo = null;
-        try {
-            $db = (new Database())->getConnection();
-            $stmt = $db->prepare("SELECT student_id, course_code, topic FROM peer_learning_requests WHERE id = ?");
-            $stmt->execute([$data['id']]);
-            $reqInfo = $stmt->fetch(PDO::FETCH_ASSOC);
-        } catch (Exception $e) {
-            // Ignore fetch error
-        }
-
-        if ($model->updateStatus($data['id'], $data['status'], $rep_id)) {
-            // Send App Notification to the student if peer_learning_app_notification is enabled
-            if ($reqInfo) {
+        if ($model->updateStatusByTopic($data['topic'], $data['course_code'], $data['status'], $rep_id)) {
+            if ($data['status'] === 'approved') {
                 try {
-                    $stmt = $db->prepare("SELECT peer_learning_app_notification FROM users WHERE id = ?");
-                    $stmt->execute([$reqInfo['student_id']]);
-                    $pref = $stmt->fetchColumn();
+                    $db = (new Database())->getConnection();
+                    
+                    // We need any student from this topic to find the courseID and std_year
+                    $stmt = $db->prepare("SELECT student_id FROM peer_learning_requests WHERE topic = ? AND course_code = ? LIMIT 1");
+                    $stmt->execute([$data['topic'], $data['course_code']]);
+                    $sampleStudentId = $stmt->fetchColumn();
 
-                    if ($pref == 1) {
-                        require_once __DIR__ . '/../models/Notification.php';
-                        $notif = new Notification();
-                        $title = "Peer Learning Request Updated";
-                        $msg = "Your peer learning request for " . $reqInfo['course_code'] . " on '" . $reqInfo['topic'] . "' has been " . $data['status'] . ".";
-                        $notif->createForUser($reqInfo['student_id'], $title, $msg);
+                    if ($sampleStudentId) {
+                        $stmt = $db->prepare("SELECT courseID, std_year FROM Student WHERE userID = ?");
+                        $stmt->execute([$sampleStudentId]);
+                        $studentInfo = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                        if ($studentInfo) {
+                            $courseID = $studentInfo['courseID'];
+                            $std_year = $studentInfo['std_year'];
+                            
+                            require_once __DIR__ . '/../models/Notification.php';
+                            $notif = new Notification();
+                            
+                            // Notify Peers (same year)
+                            $stmt = $db->prepare("SELECT userID FROM Student WHERE courseID = ? AND std_year = ?");
+                            $stmt->execute([$courseID, $std_year]);
+                            $peers = $stmt->fetchAll(PDO::FETCH_COLUMN);
+                            if (!empty($peers)) {
+                                $notif->createForUsers($peers, "Peer Learning Session Approved", "A peer learning session for " . $data['course_code'] . " on '" . $data['topic'] . "' has been approved.");
+                            }
+                            
+                            // Notify Seniors (higher year)
+                            $stmt = $db->prepare("SELECT userID FROM Student WHERE courseID = ? AND std_year > ?");
+                            $stmt->execute([$courseID, $std_year]);
+                            $seniors = $stmt->fetchAll(PDO::FETCH_COLUMN);
+                            if (!empty($seniors)) {
+                                $notif->createForUsers($seniors, "Peer Learning Request (Seniors Needed)", "Year " . $std_year . " students need peer learning for " . $data['course_code'] . " (" . $data['topic'] . "). Can you help?");
+                            }
+                        }
                     }
                 } catch (Exception $e) {
                     // Fail silently so status update succeeds
