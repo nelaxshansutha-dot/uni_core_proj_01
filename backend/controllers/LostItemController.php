@@ -80,7 +80,7 @@ class LostItemController {
 
             Response::success("Item reported successfully.");
         } else {
-            Response::error("Failed to report item.", 500);
+            Response::error("Failed to report the item.", 500);
         }
     }
 
@@ -91,7 +91,7 @@ class LostItemController {
         if ($model->delete($itemId, $userId)) {
             Response::success("Item deleted successfully.");
         } else {
-            Response::error("Failed to delete item. You may not be authorized.", 403);
+            Response::error("Failed to delete the item. You may not be authorized.", 403);
         }
     }
 }
