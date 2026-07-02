@@ -11,7 +11,7 @@ const PeerLearning = () => {
     const [showSemPopup, setShowSemPopup] = useState(user?.role === 'student');
     const [loading, setLoading] = useState(user?.role === 'rep' || (user?.role !== 'student'));
     const [showModal, setShowModal] = useState(false);
-    const [courseFilters, setCourseFilters] = useState({ courseID: '1', year: '1', semester: '1' });
+    const [courseFilters, setCourseFilters] = useState({ courseID: '7', year: '1', semester: '1' });
     const [modules, setModules] = useState([]);
     
     const [formData, setFormData] = useState({
@@ -19,6 +19,13 @@ const PeerLearning = () => {
         topic: '',
         description: ''
     });
+
+    const [actionStatus, setActionStatus] = useState({ show: false, message: '', type: '' });
+
+    const showToast = (message, type) => {
+        setActionStatus({ show: true, message, type });
+        setTimeout(() => setActionStatus({ show: false, message: '', type: '' }), 4000);
+    };
 
     // Update state when user object loads
     useEffect(() => {
@@ -79,9 +86,13 @@ const PeerLearning = () => {
                 setShowModal(false);
                 setFormData({ course_code: '', topic: '', description: '' });
                 fetchRequests();
+                showToast('Request submitted successfully!', 'success');
+            } else {
+                showToast(res.data.message || 'Failed to submit request.', 'danger');
             }
         } catch (err) {
             console.error(err);
+            showToast('An error occurred while submitting the request.', 'danger');
         }
     };
 
@@ -103,6 +114,12 @@ const PeerLearning = () => {
 
     return (
         <div>
+            {actionStatus.show && (
+                <div className={`alert alert-${actionStatus.type} d-flex align-items-center position-fixed top-0 end-0 m-3 z-index-toast shadow`} style={{ zIndex: 1050 }}>
+                    {actionStatus.type === 'success' ? <CheckCircle className="me-2" size={20} /> : <XCircle className="me-2" size={20} />}
+                    {actionStatus.message}
+                </div>
+            )}
             <div className="d-flex justify-content-between align-items-center mb-4">
                 <div>
                     <h3 className="fw-bold text-dark mb-1">Peer Learning</h3>
@@ -125,8 +142,8 @@ const PeerLearning = () => {
                             <div className="mb-3">
                                 <label className="form-label text-muted small fw-bold">Course</label>
                                 <select className="form-select" value={courseFilters.courseID} onChange={e => setCourseFilters({...courseFilters, courseID: e.target.value})}>
-                                    <option value="1">CST</option>
-                                    <option value="2">SCT</option>
+                                    <option value="7">CST</option>
+                                    <option value="8">SCT</option>
                                 </select>
                             </div>
                             <div className="mb-3">
@@ -155,17 +172,41 @@ const PeerLearning = () => {
                     <div className="row g-3 mb-5">
                         {modules.map(mod => (
                             <div className="col-md-4" key={mod.courseCode}>
-                                <div 
-                                    className="card border-0 shadow-sm h-100" 
-                                    style={{cursor: 'pointer', transition: 'transform 0.2s'}} 
-                                    onClick={() => handleModuleClick(mod.courseCode)}
-                                    onMouseOver={e => e.currentTarget.style.transform = 'scale(1.02)'}
-                                    onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
-                                >
-                                    <div className="card-body p-4 text-center">
-                                        <BookOpen className="text-primary mb-3" size={32} />
-                                        <h6 className="fw-bold m-0">{mod.name}</h6>
-                                        <span className="badge bg-light text-dark mt-2 border">{mod.courseCode}</span>
+                                <div className="card border-0 shadow-sm h-100">
+                                    <div className="card-body p-4 text-center d-flex flex-column">
+                                        <BookOpen className="text-primary mb-3 mx-auto" size={32} />
+                                        <h6 className="fw-bold m-0 flex-grow-1">{mod.name}</h6>
+                                        <span className="badge bg-light text-dark mt-2 mb-3 border mx-auto">{mod.courseCode}</span>
+                                        <button 
+                                            className="btn btn-sm btn-outline-primary mt-auto rounded-pill"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                const autoSubmit = async () => {
+                                                    try {
+                                                        const res = await api.post('/peer-learning.php', {
+                                                            course_code: mod.courseCode,
+                                                            topic: mod.name,
+                                                            description: 'General unit request'
+                                                        });
+                                                        if (res.data.status === 'success') {
+                                                            fetchRequests();
+                                                            showToast('Unit request submitted!', 'success');
+                                                        }
+                                                    } catch (err) {
+                                                        showToast('Failed to request unit.', 'danger');
+                                                    }
+                                                };
+                                                autoSubmit();
+                                            }}
+                                        >
+                                            Request Unit
+                                        </button>
+                                        <button 
+                                            className="btn btn-link text-decoration-none small text-muted mt-2 p-0"
+                                            onClick={() => handleModuleClick(mod.courseCode)}
+                                        >
+                                            Ask specific question
+                                        </button>
                                     </div>
                                 </div>
                             </div>

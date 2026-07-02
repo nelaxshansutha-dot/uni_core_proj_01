@@ -11,59 +11,83 @@ class PeerLearningController {
             Response::error("Missing fields: " . implode(', ', $missing));
         }
 
-        $model = new PeerLearning();
-        $requestData = [
-            'student_id' => $student_id,
-            'course_code' => $data['course_code'],
-            'topic' => $data['topic'],
-            'description' => isset($data['description']) ? $data['description'] : null
-        ];
+        try {
+            $db = (new Database())->getConnection();
+            
+            // 1. Get the student's enrollmentNo, courseID, std_year
+            $stmt = $db->prepare("SELECT enrollmentNo, courseID, std_year FROM Student WHERE userID = ?");
+            $stmt->execute([$student_id]);
+            $studentInfo = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if ($model->createRequest($requestData)) {
-            try {
-                $db = (new Database())->getConnection();
-                
-                // Find student's courseID and std_year
-                $stmt = $db->prepare("SELECT courseID, std_year FROM Student WHERE userID = ?");
-                $stmt->execute([$student_id]);
-                $studentInfo = $stmt->fetch(PDO::FETCH_ASSOC);
-
-                if ($studentInfo) {
-                    $courseID = $studentInfo['courseID'];
-                    $std_year = $studentInfo['std_year'];
-
-                    // Find rep for that course and year
-                    $stmt = $db->prepare("
-                        SELECT cr.userID 
-                        FROM Course_representative cr
-                        JOIN Student s ON cr.enrollmentNo = s.enrollmentNo
-                        WHERE cr.courseID = ? AND s.std_year = ?
-                    ");
-                    $stmt->execute([$courseID, $std_year]);
-                    $reps = $stmt->fetchAll(PDO::FETCH_COLUMN);
-
-                    if (!empty($reps)) {
-                        require_once __DIR__ . '/../models/Notification.php';
-                        $notif = new Notification();
-                        $title = "New Peer Learning Request";
-                        $msg = "A new peer learning request has been submitted for " . $data['course_code'] . " on topic: " . $data['topic'];
-                        $notif->createForUsers($reps, $title, $msg);
-                    }
-                }
-            } catch (Exception $e) {
-                // Fail silently so request creation succeeds even if notification fails
+            if (!$studentInfo) {
+                Response::error("Student record not found.", 404);
             }
 
-            Response::success("Peer learning request submitted.");
-        } else {
-            Response::error("Failed to submit request.", 500);
+            $enrollmentNo = $studentInfo['enrollmentNo'];
+            $courseID = $studentInfo['courseID'];
+            $std_year = $studentInfo['std_year'];
+
+            // 2. Find the course rep for this course and year
+            $stmt = $db->prepare("
+                SELECT cr.repID, cr.userID 
+                FROM Course_representative cr
+                JOIN Student s ON cr.enrollmentNo = s.enrollmentNo
+                WHERE cr.courseID = ? AND s.std_year = ?
+                LIMIT 1
+            ");
+            $stmt->execute([$courseID, $std_year]);
+            $repInfo = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$repInfo) {
+                Response::error("No course representative found for your course and year.", 400);
+            }
+
+            $repID = $repInfo['repID'];
+
+            // 3. Create the request
+            $model = new PeerLearning();
+            $requestData = [
+                'repID' => $repID,
+                'enrollmentNo' => $enrollmentNo,
+                'courseCode' => $data['course_code'],
+                'std_year' => $std_year ? $std_year : 1, // Fallback to 1 if not set
+                'semester' => isset($data['semester']) ? $data['semester'] : 1,
+                'topic' => $data['topic']
+            ];
+
+            if ($model->createRequest($requestData)) {
+                // Try sending notification
+                try {
+                    require_once __DIR__ . '/../models/Notification.php';
+                    $notif = new Notification();
+                    $title = "New Course Unit Request";
+                    $msg = "A student requested the unit " . $data['topic'] . " (" . $data['course_code'] . ")";
+                    $notif->createForUsers([$repInfo['userID']], $title, $msg);
+                } catch (Exception $e) {
+                    // Fail silently
+                }
+                Response::success("Request submitted successfully.");
+            } else {
+                Response::error("Failed to submit request.", 500);
+            }
+        } catch (PDOException $e) {
+            Response::error("Database error: " . $e->getMessage(), 500);
         }
     }
 
     public function getStudentRequests($student_id) {
-        $model = new PeerLearning();
-        $requests = $model->getStudentRequests($student_id);
-        Response::success("Requests retrieved", $requests);
+        $db = (new Database())->getConnection();
+        $stmt = $db->prepare("SELECT enrollmentNo FROM Student WHERE userID = ?");
+        $stmt->execute([$student_id]);
+        $enrollmentNo = $stmt->fetchColumn();
+
+        if ($enrollmentNo) {
+            $model = new PeerLearning();
+            $requests = $model->getStudentRequests($enrollmentNo);
+            Response::success("Requests retrieved", $requests);
+        } else {
+            Response::error("Student record not found", 404);
+        }
     }
     
     public function getCourseRequests($course_code) {

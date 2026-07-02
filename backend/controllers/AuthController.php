@@ -14,12 +14,12 @@ class AuthController extends BaseController {
         $domain = strtolower(substr($email, strpos($email, '@') + 1));
         
         if ($role === 'student') {
-            if ($domain === 'uwu.ac.lk') {
-                return "Students cannot register with @uwu.ac.lk. Use @std.uwu.ac.lk or your personal email.";
+            if ($domain !== 'std.uwu.ac.lk') {
+                return "Students must register with a university email ending in @std.uwu.ac.lk. Please use your student email.";
             }
         } else if ($role === 'staff') {
-            if ($domain === 'std.uwu.ac.lk') {
-                return "Staff cannot register with @std.uwu.ac.lk. Use @uwu.ac.lk or your personal email.";
+            if ($domain !== 'gmail.com') {
+                return "Staff must register with a Gmail address ending in @gmail.com.";
             }
         }
         return null;
@@ -55,8 +55,8 @@ class AuthController extends BaseController {
             Response::error("Password must be at least 6 characters long.");
         }
 
-        if (!preg_match('/^[0-9+\-\s()]{7,20}$/', $data['phone_number'])) {
-            Response::error("Invalid phone number format.");
+        if (!preg_match('/^[+]?[0-9][\s\-]?([0-9][\s\-]?){6,14}$/', $data['phone_number'])) {
+            Response::error("Invalid phone number. Please enter a valid phone number with digits only (7–15 digits).");
         }
 
         $userModel = new User();

@@ -8,7 +8,6 @@ require_once __DIR__ . '/../utils/Validator.php';
 require_once __DIR__ . '/../utils/MailService.php';
 require_once __DIR__ . '/../config/Database.php';
 require_once __DIR__ . '/../vendor/autoload.php';
-use Dompdf\Dompdf;
 
 class AdminController {
 

@@ -63,12 +63,30 @@ try {
     $stmtRequests->execute([$courseId, $year]);
     $requests = $stmtRequests->fetchAll(PDO::FETCH_ASSOC);
 
+    // 4. Get Counts Grouped by Unit
+    $countQuery = "
+        SELECT 
+            cu.name as unitName,
+            plr.courseCode,
+            COUNT(DISTINCT plr.enrollmentNo) as studentCount
+        FROM Peer_learning_request plr
+        JOIN Student s ON plr.enrollmentNo = s.enrollmentNo
+        LEFT JOIN Course_units cu ON plr.courseCode = cu.courseCode
+        WHERE s.courseID = ? AND s.std_year = ?
+        GROUP BY plr.courseCode, cu.name
+        ORDER BY studentCount DESC
+    ";
+    $stmtCounts = $db->prepare($countQuery);
+    $stmtCounts->execute([$courseId, $year]);
+    $unitCounts = $stmtCounts->fetchAll(PDO::FETCH_ASSOC);
+
     Response::success("Requests fetched successfully", [
         'rep_context' => [
             'courseID' => $courseId,
             'std_year' => $year
         ],
-        'requests' => $requests
+        'requests' => $requests,
+        'unit_counts' => $unitCounts
     ]);
 
 } catch (Exception $e) {

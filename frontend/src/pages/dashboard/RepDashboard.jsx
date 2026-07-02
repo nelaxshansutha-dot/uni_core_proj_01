@@ -4,6 +4,7 @@ import api from '../../services/api';
 
 const RepDashboard = () => {
     const [requests, setRequests] = useState([]);
+    const [unitCounts, setUnitCounts] = useState([]);
     const [repContext, setRepContext] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -18,6 +19,7 @@ const RepDashboard = () => {
             const response = await api.get('/get_rep_dashboard.php');
             if (response.data.status === 'success') {
                 setRequests(response.data.data.requests || []);
+                setUnitCounts(response.data.data.unit_counts || []);
                 setRepContext(response.data.data.rep_context);
             } else {
                 setError(response.data.message || 'Failed to fetch dashboard data.');
@@ -87,6 +89,30 @@ const RepDashboard = () => {
                 </div>
             )}
 
+            <h4 className="fw-bold mb-3 mt-4 text-dark">Course Unit Requests (Aggregated)</h4>
+            <div className="row g-4 mb-5">
+                {unitCounts.length === 0 ? (
+                    <div className="col-12 text-muted">No course units have been requested yet.</div>
+                ) : (
+                    unitCounts.map((unit, idx) => (
+                        <div key={idx} className="col-12 col-md-4">
+                            <div className="card shadow-sm border-0 border-start border-primary border-4 h-100">
+                                <div className="card-body">
+                                    <h5 className="card-title fw-bold mb-1">{unit.unitName || unit.courseCode}</h5>
+                                    <span className="badge bg-light text-dark mb-3">{unit.courseCode}</span>
+                                    <div className="d-flex align-items-center mt-auto">
+                                        <Users className="text-primary me-2" size={24} />
+                                        <span className="fs-4 fw-bold text-dark">{unit.studentCount}</span>
+                                        <span className="text-muted ms-2 mt-1">Student(s) requested</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ))
+                )}
+            </div>
+
+            <h4 className="fw-bold mb-3 border-top pt-4 text-dark">Individual Peer Learning Requests</h4>
             <div className="row g-4">
                 {requests.length === 0 ? (
                     <div className="col-12 text-center py-5">

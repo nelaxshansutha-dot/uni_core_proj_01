@@ -24,7 +24,7 @@ class DashboardController {
 
         // 2. Fetch latest Marketplace products (max 5)
         $stmt = $db->prepare("
-            SELECT productID as id, product_name as title, 'marketplace' as type, created_at
+            SELECT id, item_name as title, 'marketplace' as type, created_at
             FROM marketplace
             ORDER BY created_at DESC
             LIMIT 5

@@ -71,24 +71,21 @@ class LostItemController {
 
         // ---------------- INSERT ----------------
         if ($model->create($itemData)) {
-            // Trigger SMS notifications for users who accepted SMS notifications
-            // ONLY if the poster checked the "send notification" box
-            if (isset($data['send_sms_alert']) && filter_var($data['send_sms_alert'], FILTER_VALIDATE_BOOLEAN)) {
-                try {
-                    $db = (new Database())->getConnection();
-                    $stmt = $db->prepare("SELECT phoneNum FROM Users WHERE lost_item_sms_notification = 1 AND phoneNum IS NOT NULL AND phoneNum != ''");
-                    $stmt->execute();
-                    $subscribedUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            // Trigger SMS notifications to ALL registered users who have a phone number
+            try {
+                $db = (new Database())->getConnection();
+                $stmt = $db->prepare("SELECT phoneNum FROM Users WHERE phoneNum IS NOT NULL AND phoneNum != '' AND lost_item_sms_notification = 1");
+                $stmt->execute();
+                $allUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-                    if (!empty($subscribedUsers)) {
-                        $smsMessage = "UniCore Alert: A new lost item '" . $data['item_name'] . "' has been reported at " . $data['last_seen_place'] . ". Contact: " . $data['contact_number'];
-                        foreach ($subscribedUsers as $sub) {
-                            SMSService::sendSMS($sub['phoneNum'], $smsMessage);
-                        }
+                if (!empty($allUsers)) {
+                    $smsMessage = "UniCore Alert: A new lost item '" . $data['item_name'] . "' has been reported at " . $data['last_seen_place'] . ". Contact: " . $data['contact_number'];
+                    foreach ($allUsers as $user) {
+                        SMSService::sendSMS($user['phoneNum'], $smsMessage);
                     }
-                } catch (Exception $e) {
-                    // Fail silently so item reporting completes even if SMS gateway encounters issues
                 }
+            } catch (Exception $e) {
+                // Fail silently so item reporting completes even if SMS gateway encounters issues
             }
 
             Response::success("Item reported successfully.");

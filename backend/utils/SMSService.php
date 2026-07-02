@@ -22,7 +22,7 @@ class SMSService {
 
         $payload = [
             'recipient' => $phoneNumber,
-            'sender_id' => 'Sandbox', // text.lk default sandbox or verified sender ID
+            'sender_id' => 'TextLKDemo', // text.lk authorized sandbox sender ID
             'message' => $message
         ];
 

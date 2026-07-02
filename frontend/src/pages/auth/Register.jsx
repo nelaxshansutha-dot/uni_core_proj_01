@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../../services/api';
-import { UserPlus, CheckCircle, XCircle, Eye, EyeOff } from 'lucide-react';
+import { UserPlus, CheckCircle, XCircle, Eye, EyeOff, Phone, Mail } from 'lucide-react';
 import authImage from '../../assets/auth_side_image.png';
 import logo from '../../assets/logo.jpg';
 
@@ -34,13 +34,29 @@ const Register = () => {
         return formData.password === formData.confirm_password;
     }, [formData.password, formData.confirm_password]);
 
-    // Email suggestion text
+    // Email domain validation
+    const emailDomainValid = useMemo(() => {
+        if (!formData.email) return null;
+        if (formData.role === 'student') {
+            return formData.email.toLowerCase().endsWith('@std.uwu.ac.lk');
+        } else if (formData.role === 'staff') {
+            return formData.email.toLowerCase().endsWith('@gmail.com');
+        }
+        return null;
+    }, [formData.email, formData.role]);
+
     const emailHint = useMemo(() => {
         if (formData.role === 'student') {
-            return 'Use your university email (name@std.uwu.ac.lk) or personal email';
+            return 'Students must use their university email ending with @std.uwu.ac.lk';
         }
-        return 'Use your university email (name@uwu.ac.lk) or personal email';
+        return 'Staff must use a Gmail address ending with @gmail.com';
     }, [formData.role]);
+
+    // Phone number validation — digits, +, spaces, hyphens only (7–15 digits)
+    const phoneValid = useMemo(() => {
+        if (!formData.phone_number) return null;
+        return /^[+]?[0-9][\s\-]?([0-9][\s\-]?){6,14}$/.test(formData.phone_number.trim());
+    }, [formData.phone_number]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -48,6 +64,19 @@ const Register = () => {
         setError('');
 
         // Client-side validation
+        if (!phoneValid) {
+            setError('Please enter a valid phone number (digits only, 7–15 digits).');
+            setLoading(false);
+            return;
+        }
+
+        if (emailDomainValid === false) {
+            const expectedDomain = formData.role === 'student' ? '@std.uwu.ac.lk' : '@gmail.com';
+            setError(`Invalid email domain. ${formData.role === 'student' ? 'Students' : 'Staff'} must register with a ${expectedDomain} email address.`);
+            setLoading(false);
+            return;
+        }
+
         if (formData.password.length < 6) {
             setError('Password must be at least 6 characters long.');
             setLoading(false);
@@ -137,15 +166,54 @@ const Register = () => {
                             {/* Email */}
                             <div className="col-12">
                                 <label className="form-label">Email Address</label>
-                                <input type="email" className="form-control" name="email" placeholder={formData.role === 'student' ? 'name@std.uwu.ac.lk' : 'name@uwu.ac.lk'} value={formData.email} onChange={handleChange} required />
-                                <div className="form-hint">{emailHint}</div>
+                                <input
+                                    type="email"
+                                    className={`form-control${emailDomainValid === false ? ' is-invalid' : emailDomainValid === true ? ' is-valid' : ''}`}
+                                    name="email"
+                                    placeholder={formData.role === 'student' ? 'name@std.uwu.ac.lk' : 'name@gmail.com'}
+                                    value={formData.email}
+                                    onChange={handleChange}
+                                    required
+                                />
+                                {emailDomainValid === false ? (
+                                    <div className="invalid-feedback d-flex align-items-center gap-1">
+                                        <XCircle size={13} />
+                                        {formData.role === 'student'
+                                            ? 'Students must register with a @std.uwu.ac.lk email address.'
+                                            : 'Staff must register with a @gmail.com email address.'}
+                                    </div>
+                                ) : emailDomainValid === true ? (
+                                    <div className="valid-feedback d-flex align-items-center gap-1">
+                                        <CheckCircle size={13} /> Valid email domain
+                                    </div>
+                                ) : (
+                                    <div className="form-hint">{emailHint}</div>
+                                )}
                             </div>
 
                             {/* Phone Number */}
                             <div className="col-12">
                                 <label className="form-label">Phone Number</label>
-                                <input type="tel" className="form-control" name="phone_number" placeholder="e.g. +94 77 123 4567" value={formData.phone_number} onChange={handleChange} required />
-                                <div className="form-hint">We'll use this to contact you if needed</div>
+                                <input
+                                    type="tel"
+                                    className={`form-control${phoneValid === false ? ' is-invalid' : phoneValid === true ? ' is-valid' : ''}`}
+                                    name="phone_number"
+                                    placeholder="e.g. +94 77 123 4567"
+                                    value={formData.phone_number}
+                                    onChange={handleChange}
+                                    required
+                                />
+                                {phoneValid === false ? (
+                                    <div className="invalid-feedback d-flex align-items-center gap-1">
+                                        <XCircle size={13} /> Enter a valid phone number (digits only, 7–15 digits).
+                                    </div>
+                                ) : phoneValid === true ? (
+                                    <div className="valid-feedback d-flex align-items-center gap-1">
+                                        <CheckCircle size={13} /> Valid phone number
+                                    </div>
+                                ) : (
+                                    <div className="form-hint">Enter your phone number (digits only)</div>
+                                )}
                             </div>
 
                             {/* Password */}
@@ -217,7 +285,11 @@ const Register = () => {
 
                             {/* Submit */}
                             <div className="col-12 mt-3">
-                                <button type="submit" className="btn btn-primary btn-lg w-100" disabled={loading || passwordMatch === false}>
+                                <button
+                                    type="submit"
+                                    className="btn btn-primary btn-lg w-100"
+                                    disabled={loading || passwordMatch === false || emailDomainValid === false || phoneValid === false}
+                                >
                                     {loading ? <span className="spinner-border spinner-border-sm me-2"></span> : null}
                                     Create Account
                                 </button>
