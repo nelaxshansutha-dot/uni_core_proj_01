@@ -1,14 +1,35 @@
 <?php
-require_once __DIR__ . '/../config/Database.php';
+require_once __DIR__ . '/BaseModel.php';
 
-class Notification {
-    private $conn;
+// Inheritance: Notification inherits core database configuration from BaseModel
+class Notification extends BaseModel {
+    // Encapsulation: Keep table references encapsulated inside the class
     private $table_notifications = "notifications";
     private $table_recipients = "notification_recipients";
 
+    // Encapsulation: Define primary table name internally
+    protected function getTableName() {
+        return "notifications";
+    }
+
     public function __construct() {
-        $database = new Database();
-        $this->conn = $database->getConnection();
+        parent::__construct();
+    }
+
+    // Abstraction: Implement abstract create method from BaseModel
+    public function create($data) {
+        if (isset($data['userId'])) {
+            return $this->createForUser($data['userId'], $data['title'], $data['message']);
+        } elseif (isset($data['userIds'])) {
+            return $this->createForUsers($data['userIds'], $data['title'], $data['message']);
+        } else {
+            return $this->createGlobal($data['title'], $data['message']);
+        }
+    }
+
+    // Polymorphism: Override default findById to retrieve notification by ID
+    public function findById($id) {
+        return $this->findByIdBase($id, 'id');
     }
 
     public function createGlobal($title, $message) {

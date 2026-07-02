@@ -1,15 +1,19 @@
 <?php
-require_once __DIR__ . '/../config/Database.php';
+require_once __DIR__ . '/BaseModel.php';
 
-class Student {
-    private $conn;
-    private $table = "Student";
+// Inheritance: Student inherits connection and database features from BaseModel
+class Student extends BaseModel {
 
-    public function __construct() {
-        $database = new Database();
-        $this->conn = $database->getConnection();
+    // Encapsulation: Define the table name internally
+    protected function getTableName() {
+        return "Student";
     }
 
+    public function __construct() {
+        parent::__construct();
+    }
+
+    // Abstraction: Implementing the abstract create method from BaseModel
     public function create($data) {
         $query = "INSERT INTO " . $this->table . " (enrollmentNo, userID, courseID, std_year) VALUES (:enrollmentNo, :userID, :courseID, :std_year)";
         $stmt = $this->conn->prepare($query);
@@ -22,6 +26,11 @@ class Student {
         $stmt->bindParam(':std_year', $year);
 
         return $stmt->execute();
+    }
+    
+    // Polymorphism: Override default findById to query using enrollmentNo
+    public function findById($id) {
+        return $this->findByIdBase($id, 'enrollmentNo');
     }
     
     public function getProfile($user_id) {

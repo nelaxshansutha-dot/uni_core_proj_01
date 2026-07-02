@@ -1,15 +1,19 @@
 <?php
-require_once __DIR__ . '/../config/Database.php';
+require_once __DIR__ . '/BaseModel.php';
 
-class CourseRep {
-    private $conn;
-    private $table = "Course_representative";
+// Inheritance: CourseRep inherits database operations from BaseModel
+class CourseRep extends BaseModel {
 
-    public function __construct() {
-        $database = new Database();
-        $this->conn = $database->getConnection();
+    // Encapsulation: Define the table name internally
+    protected function getTableName() {
+        return "Course_representative";
     }
 
+    public function __construct() {
+        parent::__construct();
+    }
+
+    // Abstraction: Implement abstract create method from BaseModel
     public function create($data) {
         $query = "INSERT INTO " . $this->table . " (userID, enrollmentNo, courseID, hash_password) VALUES (:userID, :enrollmentNo, :courseID, :hash_password)";
         
@@ -24,6 +28,11 @@ class CourseRep {
             return $this->conn->lastInsertId();
         }
         return false;
+    }
+
+    // Polymorphism: Override findById to query using repID
+    public function findById($id) {
+        return $this->findByIdBase($id, 'repID');
     }
 
     public function deleteByUserId($userID) {

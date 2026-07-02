@@ -1,15 +1,19 @@
 <?php
-require_once __DIR__ . '/../config/Database.php';
+require_once __DIR__ . '/BaseModel.php';
 
-class Staff {
-    private $conn;
-    private $table = "Staff";
+// Inheritance: Staff inherits database operations from BaseModel
+class Staff extends BaseModel {
 
-    public function __construct() {
-        $database = new Database();
-        $this->conn = $database->getConnection();
+    // Encapsulation: Define the table name internally
+    protected function getTableName() {
+        return "Staff";
     }
 
+    public function __construct() {
+        parent::__construct();
+    }
+
+    // Abstraction: Implementing the abstract create method from BaseModel
     public function create($data) {
         $query = "INSERT INTO " . $this->table . " (staffID, userID, dept) VALUES (:staffID, :userID, :dept)";
         $stmt = $this->conn->prepare($query);
@@ -19,6 +23,11 @@ class Staff {
         $stmt->bindParam(':dept', $data['dept']);
 
         return $stmt->execute();
+    }
+
+    // Polymorphism: Override findById to query using staffID
+    public function findById($id) {
+        return $this->findByIdBase($id, 'staffID');
     }
 }
 ?>

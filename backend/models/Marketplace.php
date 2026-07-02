@@ -1,15 +1,19 @@
 <?php
-require_once __DIR__ . '/../config/Database.php';
+require_once __DIR__ . '/BaseModel.php';
 
-class Marketplace {
-    private $conn;
-    private $table = "marketplace";
+// Inheritance: Marketplace inherits base database functionality from BaseModel
+class Marketplace extends BaseModel {
 
-    public function __construct() {
-        $database = new Database();
-        $this->conn = $database->getConnection();
+    // Encapsulation: Define the table name internally
+    protected function getTableName() {
+        return "marketplace";
     }
 
+    public function __construct() {
+        parent::__construct();
+    }
+
+    // Abstraction: Implement abstract create method from BaseModel
     public function create($data) {
         $query = "INSERT INTO " . $this->table . " 
             (seller_id, item_name, description, price, condition_type, location, phone_number, usage_duration, image_url, image_url2, image_url3, image_url4, status) 
@@ -33,9 +37,21 @@ class Marketplace {
         return $stmt->execute();
     }
 
+    // Polymorphism: Override default findById to retrieve item with seller info
+    public function findById($id) {
+        $query = "SELECT m.*, CONCAT(u.fname, ' ', u.lname) AS seller_name 
+                  FROM " . $this->table . " m 
+                  JOIN Users u ON m.seller_id = u.userID 
+                  WHERE m.id = :id LIMIT 1";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':id', $id);
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
     public function getAll() {
         $query = "SELECT m.*, s.enrollmentNo as enrollment_no, 
-                         CONCAT(u.fname, ' ', u.lname) AS seller_name
+                          CONCAT(u.fname, ' ', u.lname) AS seller_name
                   FROM " . $this->table . " m 
                   JOIN Users u ON m.seller_id = u.userID
                   LEFT JOIN Student s ON u.userID = s.userID
@@ -88,11 +104,17 @@ class Marketplace {
         return $stmt->execute();
     }
 
-    public function delete($id, $seller_id) {
-        $query = "DELETE FROM " . $this->table . " WHERE id = :id AND seller_id = :seller_id";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':id',        $id);
-        $stmt->bindParam(':seller_id', $seller_id);
+    public function delete($id, $seller_id = null) {
+        if ($seller_id !== null) {
+            $query = "DELETE FROM " . $this->table . " WHERE id = :id AND seller_id = :seller_id";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(':id',        $id);
+            $stmt->bindParam(':seller_id', $seller_id);
+        } else {
+            $query = "DELETE FROM " . $this->table . " WHERE id = :id";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(':id',        $id);
+        }
         return $stmt->execute();
     }
 }

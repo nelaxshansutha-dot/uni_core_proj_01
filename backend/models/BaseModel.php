@@ -3,6 +3,7 @@ require_once __DIR__ . '/../config/Database.php';
 
 // Abstraction: This class cannot be instantiated directly.
 abstract class BaseModel {
+    // Encapsulation: Database properties are protected, hiding direct connection details
     protected $conn;
     protected $table;
 
@@ -15,13 +16,21 @@ abstract class BaseModel {
     // Abstraction: Force child classes to define their table name
     abstract protected function getTableName();
 
-    // Inheritance: Common method available to all models
+    // Abstraction: Force child classes to define how they are created
+    abstract public function create($data);
+
+    // Inheritance: Common read method inherited by all models
     public function findByIdBase($id, $idColumn = 'id') {
         $query = "SELECT * FROM " . $this->table . " WHERE " . $idColumn . " = :id LIMIT 1";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':id', $id);
         $stmt->execute();
         return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    // Polymorphism: Default findById method that subclasses can override
+    public function findById($id) {
+        return $this->findByIdBase($id, 'id');
     }
 }
 ?>

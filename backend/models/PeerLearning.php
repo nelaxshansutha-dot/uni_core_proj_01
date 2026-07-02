@@ -1,13 +1,26 @@
 <?php
-require_once __DIR__ . '/../config/Database.php';
+require_once __DIR__ . '/BaseModel.php';
 
-class PeerLearning {
-    private $conn;
-    private $table = "peer_learning_request";
+// Inheritance: PeerLearning inherits common database facilities from BaseModel
+class PeerLearning extends BaseModel {
+
+    // Encapsulation: Define the table name internally
+    protected function getTableName() {
+        return "peer_learning_request";
+    }
 
     public function __construct() {
-        $database = new Database();
-        $this->conn = $database->getConnection();
+        parent::__construct();
+    }
+
+    // Abstraction: Implement abstract create method from BaseModel
+    public function create($data) {
+        return $this->createRequest($data);
+    }
+
+    // Polymorphism: Override default findById to query using requestID
+    public function findById($id) {
+        return $this->findByIdBase($id, 'requestID');
     }
 
     public function createRequest($data) {

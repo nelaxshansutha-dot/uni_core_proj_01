@@ -45,6 +45,7 @@ class User extends BaseModel {
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
+    // Polymorphism: Overriding the parent's findById method to use userID column instead of id
     public function findById($id)//profile page
      {
         return parent::findByIdBase($id, 'userID');
