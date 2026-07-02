@@ -103,7 +103,7 @@ const Dashboard = () => {
                     icon={<ShoppingBag size={32} strokeWidth={1.5} />} 
                     color="success" 
                     link="/marketplace"
-                    description="Buy, sell, or exchange academic materials with your peers."
+                    description="Connecting buyers and sellers within a unified campus marketplace"
                 />
                 {user?.role !== 'staff' && (
                     <>
@@ -119,7 +119,7 @@ const Dashboard = () => {
                             icon={<Users size={32} strokeWidth={1.5} />} 
                             color="info" 
                             link="/peer-learning"
-                            description="Request help or assist peers in your challenging courses."
+                            description="Connect with peers to get the academic support you need for challenging courses."
                         />
                     </>
                 )}
