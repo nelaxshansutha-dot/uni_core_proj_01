@@ -125,11 +125,18 @@ CREATE TABLE SMS_notification (
 CREATE TABLE marketplace (
     productID INT AUTO_INCREMENT PRIMARY KEY,
     userID INT NOT NULL,
-    product_name VARCHAR(100) NOT NULL,
+    item_name VARCHAR(100) NOT NULL,
+    description TEXT NULL,
     price DECIMAL(10,2) NOT NULL,
+    condition_type VARCHAR(20) NOT NULL DEFAULT 'new',
     location VARCHAR(255) NOT NULL,
-    product_image VARCHAR(255),
-    contact_no VARCHAR(20),
+    phone_number VARCHAR(30) NOT NULL,
+    usage_duration VARCHAR(100) NULL,
+    image_url VARCHAR(255),
+    image_url2 VARCHAR(255) NULL,
+    image_url3 VARCHAR(255) NULL,
+    image_url4 VARCHAR(255) NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'available',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (userID) REFERENCES Users(userID) ON DELETE CASCADE
 );

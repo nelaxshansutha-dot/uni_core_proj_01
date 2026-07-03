@@ -306,7 +306,7 @@ class AdminController {
         }
 
         if (empty($type) || $type === 'marketplace') {
-            $stmt = $db->query("SELECT m.productID as id, m.product_name as title, m.price, m.location, m.product_image, m.contact_no, m.created_at, u.email, s.enrollmentNo as enrollment_no
+            $stmt = $db->query("SELECT m.productID as id, m.item_name as title, m.price, m.location, m.image_url as product_image, m.phone_number as contact_no, m.created_at, u.email, s.enrollmentNo as enrollment_no
                                 FROM marketplace m 
                                 JOIN Users u ON m.userID = u.userID 
                                 LEFT JOIN Student s ON u.userID = s.userID
