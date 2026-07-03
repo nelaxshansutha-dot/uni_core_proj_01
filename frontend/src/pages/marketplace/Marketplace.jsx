@@ -108,7 +108,7 @@ const Marketplace = () => {
             if (res.data.status === 'success') {
                 setItems(res.data.data);
                 if (selectedItem) {
-                    const updated = res.data.data.find(i => i.id === selectedItem.id);
+                    const updated = res.data.data.find(i => i.productID === selectedItem.productID);
                     if (updated) setSelectedItem(updated);
                 }
             }
@@ -131,7 +131,7 @@ const Marketplace = () => {
         e.stopPropagation();
         setEditingItem(item);
         setFormData({
-            id: item.id,
+            productID: item.productID,
             item_name: item.item_name,
             condition_type: item.condition_type,
             description: item.description,
@@ -179,19 +179,19 @@ const Marketplace = () => {
         }
     };
 
-    const handleMarkSold = async (id, e) => {
+    const handleMarkSold = async (productID, e) => {
         if (e) e.stopPropagation();
         try {
-            await api.put('/marketplace.php', { id, status: 'sold' });
+            await api.put('/marketplace.php', { productID, status: 'sold' });
             fetchItems();
         } catch (err) { console.error(err); }
     };
 
-    const handleDelete = async (id) => {
-        setDeletingId(id);
+    const handleDelete = async (productID) => {
+        setDeletingId(productID);
         try {
-            await api.delete('/marketplace.php', { data: { id } });
-            if (selectedItem && selectedItem.id === id) {
+            await api.delete('/marketplace.php', { data: { productID } });
+            if (selectedItem && selectedItem.productID === productID) {
                 setSelectedItem(null);
             }
             setConfirmDeleteId(null);
@@ -232,9 +232,9 @@ const Marketplace = () => {
                     ) : (
                         items.map(item => {
                             const images = [item.image_url, item.image_url2, item.image_url3, item.image_url4].filter(Boolean);
-                            const isMine = item.seller_id === user?.id;
+                            const isMine = item.userID === user?.id;
                             return (
-                                <div className="col-sm-6 col-lg-4 col-xl-3" key={item.id} onClick={() => { setSelectedItem(item); setActiveImageIndex(0); }}>
+                                <div className="col-sm-6 col-lg-4 col-xl-3" key={item.productID} onClick={() => { setSelectedItem(item); setActiveImageIndex(0); }}>
                                     <div className="card h-100 border-0 shadow-sm overflow-hidden market-card" style={{ cursor: 'pointer' }}>
                                         {/* Image Area */}
                                         {images.length > 0 ? (
@@ -313,7 +313,7 @@ const Marketplace = () => {
                                                         </button>
                                                         <button
                                                             className="btn btn-outline-secondary btn-sm rounded-pill flex-grow-1"
-                                                            onClick={(e) => handleMarkSold(item.id, e)}
+                                                            onClick={(e) => handleMarkSold(item.productID, e)}
                                                         >
                                                             Mark as Sold
                                                         </button>
@@ -323,10 +323,10 @@ const Marketplace = () => {
                                                 {isMine && (
                                                     <button
                                                         className="btn btn-outline-danger btn-sm rounded-pill d-flex align-items-center justify-content-center gap-1"
-                                                        onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(item.id); }}
-                                                        disabled={deletingId === item.id}
+                                                        onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(item.productID); }}
+                                                        disabled={deletingId === item.productID}
                                                     >
-                                                        {deletingId === item.id
+                                                        {deletingId === item.productID
                                                             ? <span className="spinner-border spinner-border-sm" />
                                                             : <><Trash2 size={14} /> Delete Listing</>
                                                         }
@@ -554,7 +554,7 @@ const Marketplace = () => {
                     selectedItem.image_url3,
                     selectedItem.image_url4
                 ].filter(Boolean);
-                const isMine = selectedItem.seller_id === user?.id;
+                const isMine = selectedItem.userID === user?.id;
 
                 return (
                     <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.65)' }} onClick={() => setSelectedItem(null)}>
@@ -666,7 +666,7 @@ const Marketplace = () => {
                                                     </button>
                                                     <button
                                                         className="btn btn-outline-secondary rounded-pill flex-grow-1"
-                                                        onClick={(e) => handleMarkSold(selectedItem.id, e)}
+                                                        onClick={(e) => handleMarkSold(selectedItem.productID, e)}
                                                     >
                                                         Mark as Sold
                                                     </button>
@@ -676,10 +676,10 @@ const Marketplace = () => {
                                             {isMine && (
                                                 <button
                                                     className="btn btn-danger rounded-pill d-flex align-items-center justify-content-center gap-2"
-                                                    onClick={(e) => handleDelete(selectedItem.id, e)}
-                                                    disabled={deletingId === selectedItem.id}
+                                                    onClick={(e) => handleDelete(selectedItem.productID, e)}
+                                                    disabled={deletingId === selectedItem.productID}
                                                 >
-                                                    {deletingId === selectedItem.id
+                                                    {deletingId === selectedItem.productID
                                                         ? <span className="spinner-border spinner-border-sm" />
                                                         : <><Trash2 size={16} /> Delete Listing</>
                                                     }

@@ -30,7 +30,7 @@ class MarketplaceController {
 
         $model = new Marketplace();
         $itemData = [
-            'seller_id'      => $user_id,
+            'userID'         => $user_id,
             'item_name'      => $data['item_name'],
             'description'    => $data['description'],
             'price'          => $data['price'],
@@ -53,13 +53,13 @@ class MarketplaceController {
     }
 
     public function updateStatus($data, $user_id) {
-        $missing = Validator::required(['id', 'status'], $data);
+        $missing = Validator::required(['productID', 'status'], $data);
         if (!empty($missing)) {
              Response::error("Missing fields.");
         }
 
         $model = new Marketplace();
-        if ($model->updateStatus($data['id'], $user_id, $data['status'])) {
+        if ($model->updateStatus($data['productID'], $user_id, $data['status'])) {
             Response::success("Status updated.");
         } else {
             Response::error("Failed to update status. You may not own this item.", 403);
@@ -67,7 +67,7 @@ class MarketplaceController {
     }
 
     public function updateListing($data, $user_id) {
-        $missing = Validator::required(['id', 'item_name', 'description', 'price', 'condition_type', 'location', 'phone_number'], $data);
+        $missing = Validator::required(['productID', 'item_name', 'description', 'price', 'condition_type', 'location', 'phone_number'], $data);
         if (!empty($missing)) {
             Response::error("Missing fields: " . implode(', ', $missing));
             return;
@@ -84,7 +84,7 @@ class MarketplaceController {
 
         $model = new Marketplace();
         $itemData = [
-            'id'             => $data['id'],
+            'productID'      => $data['productID'],
             'item_name'      => $data['item_name'],
             'description'    => $data['description'],
             'price'          => $data['price'],
@@ -106,13 +106,13 @@ class MarketplaceController {
     }
 
     public function deleteItem($data, $user_id) {
-        $missing = Validator::required(['id'], $data);
+        $missing = Validator::required(['productID'], $data);
         if (!empty($missing)) {
             Response::error("Missing item ID.");
         }
 
         $model = new Marketplace();
-        if ($model->delete($data['id'], $user_id)) {
+        if ($model->delete($data['productID'], $user_id)) {
             Response::success("Item deleted successfully.");
         } else {
             Response::error("Failed to delete item. You may not own this item.", 403);
