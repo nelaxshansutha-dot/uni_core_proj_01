@@ -184,9 +184,7 @@ const Home = () => {
               <Link to="/register" className="btn-cta-primary">
                 Sign Up  <ArrowRight size={16} />
               </Link>
-              <Link to="/contact" className="btn-cta-ghost">
-                Contact Us
-              </Link>
+
             </div>
           </div>
         </div>

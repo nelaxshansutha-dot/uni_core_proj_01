@@ -9,12 +9,12 @@ const Notes = () => {
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     
-    const [filters, setFilters] = useState({ course_code: '', year: '', semester: '' });
+    const [filters, setFilters] = useState({ courseUnitID: '', year: '', semester: '' });
     
     const [formData, setFormData] = useState({
         title: '',
         description: '',
-        course_code: '',
+        courseUnitID: '',
         year: '',
         semester: ''
     });
@@ -58,7 +58,7 @@ const Notes = () => {
             });
             if (res.data.status === 'success') {
                 setShowModal(false);
-                setFormData({ title: '', description: '', course_code: '', year: '', semester: '' });
+                setFormData({ title: '', description: '', courseUnitID: '', year: '', semester: '' });
                 setFile(null);
                 fetchNotes();
             }
@@ -87,7 +87,7 @@ const Notes = () => {
                 <div className="card-body p-3">
                     <div className="row g-3">
                         <div className="col-md-4">
-                            <input type="text" className="form-control" name="course_code" placeholder="Course Code (e.g. CS101)" value={filters.course_code} onChange={handleFilterChange} />
+                            <input type="text" className="form-control" name="courseUnitID" placeholder="Course Unit (e.g. CS101)" value={filters.courseUnitID} onChange={handleFilterChange} />
                         </div>
                         <div className="col-md-4">
                             <input type="number" className="form-control" name="year" placeholder="Year" value={filters.year} onChange={handleFilterChange} />
@@ -119,7 +119,7 @@ const Notes = () => {
                                             </div>
                                             <div>
                                                 <h5 className="fw-bold m-0">{note.title}</h5>
-                                                <span className="badge bg-secondary mt-1">{note.course_code}</span>
+                                                <span className="badge bg-secondary mt-1">{note.courseUnitID}</span>
                                             </div>
                                         </div>
                                         <p className="text-muted small flex-grow-1">{note.description}</p>
@@ -156,7 +156,7 @@ const Notes = () => {
                                     </div>
                                     <div className="mb-3">
                                         <label className="form-label text-muted small fw-bold">Course Code</label>
-                                        <input type="text" className="form-control" value={formData.course_code} onChange={e => setFormData({...formData, course_code: e.target.value})} required />
+                                        <input type="text" className="form-control" value={formData.courseUnitID} onChange={e => setFormData({...formData, courseUnitID: e.target.value})} required />
                                     </div>
                                     <div className="row g-3 mb-3">
                                         <div className="col-6">

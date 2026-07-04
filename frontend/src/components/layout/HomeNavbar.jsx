@@ -17,7 +17,7 @@ const HomeNavbar = () => {
   const navLinks = [
     { label: 'About', to: '#features', isScroll: true },
     { label: 'How it Works', to: '#how-it-works', isScroll: true },
-    { label: 'Contact', to: '/contact', isScroll: false },
+
   ];
 
   const handleNavClick = (e, link) => {

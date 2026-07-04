@@ -16,7 +16,7 @@ const LostItems = () => {
     const [updateItemId, setUpdateItemId] = useState(null);
 
     const [formData, setFormData] = useState({
-        item_name: '',
+        lostItemName: '',
         description: '',
         last_seen_datetime: '',
         last_seen_place: '',
@@ -106,7 +106,7 @@ const handleDelete = async () => {
             : '';
 
         setFormData({
-            item_name: item.item_name,
+            lostItemName: item.lostItemName,
             description: item.description,
             last_seen_datetime: formattedDate,
             last_seen_place: item.last_seen_place,
@@ -122,7 +122,7 @@ const handleDelete = async () => {
 
         const data = new FormData();
 
-        data.append('item_name', formData.item_name);
+        data.append('lostItemName', formData.lostItemName);
         data.append('description', formData.description);
         data.append('last_seen_datetime', formData.last_seen_datetime);
         data.append('last_seen_place', formData.last_seen_place);
@@ -150,7 +150,7 @@ const handleDelete = async () => {
                 setUpdateItemId(null);
 
                 setFormData({
-                    item_name: '',
+                    lostItemName: '',
                     description: '',
                     last_seen_datetime: '',
                     last_seen_place: '',
@@ -183,7 +183,7 @@ const handleDelete = async () => {
                         setIsUpdating(false);
                         setUpdateItemId(null);
                         setFormData({
-                            item_name: '',
+                            lostItemName: '',
                             description: '',
                             last_seen_datetime: '',
                             last_seen_place: '',
@@ -213,15 +213,15 @@ const handleDelete = async () => {
                         </div>
                     ) : (
                         items.map((item) => (
-                            <div className="col-md-4" key={item.lost_id}>
+                            <div className="col-md-3" key={item.lost_id}>
                                 <div className="card shadow-sm h-100 d-flex flex-column justify-content-between">
                                     <div>
                                         {item.item_image ? (
                                             <img
                                                 src={`http://localhost/uni_core_proj_01/backend/${item.item_image}`}
-                                                alt={item.item_name}
+                                                alt={item.lostItemName}
                                                 style={{
-                                                    height: '200px',
+                                                    height: '150px',
                                                     width: '100%',
                                                     objectFit: 'cover'
                                                 }}
@@ -229,14 +229,14 @@ const handleDelete = async () => {
                                         ) : (
                                             <div
                                                 className="bg-light d-flex justify-content-center align-items-center"
-                                                style={{ height: '200px' }}
+                                                style={{ height: '150px' }}
                                             >
                                                 <Search size={40} />
                                             </div>
                                         )}
 
                                         <div className="card-body">
-                                            <h5>{item.item_name}</h5>
+                                            <h5>{item.lostItemName}</h5>
                                             <p>{item.description}</p>
 
                                             <p className="mb-1">
@@ -346,11 +346,11 @@ const handleDelete = async () => {
                                     <input
                                         className="form-control mb-2"
                                         placeholder="Item Name"
-                                        value={formData.item_name}
+                                        value={formData.lostItemName}
                                         onChange={(e) =>
                                             setFormData({
                                                 ...formData,
-                                                item_name: e.target.value
+                                                lostItemName: e.target.value
                                             })
                                         }
                                         required

@@ -94,13 +94,16 @@ const RepDashboard = () => {
                 {unitCounts.length === 0 ? (
                     <div className="col-12 text-muted">No course units have been requested yet.</div>
                 ) : (
-                    unitCounts.map((unit, idx) => (
-                        <div key={idx} className="col-12 col-md-4">
-                            <div className="card shadow-sm border-0 border-start border-primary border-4 h-100">
-                                <div className="card-body">
-                                    <h5 className="card-title fw-bold mb-1">{unit.unitName || unit.courseCode}</h5>
-                                    <span className="badge bg-light text-dark mb-3">{unit.courseCode}</span>
-                                    <div className="d-flex align-items-center mt-auto">
+                    unitCounts.map((unit) => (
+                        <div className="col-md-6 col-lg-3" key={unit.courseUnitID}>
+                            <div className="card shadow-sm border-0 h-100">
+                                <div className="card-body p-4 text-center">
+                                    <div className="mb-3">
+                                        <TrendingUp className="text-primary" size={32} />
+                                    </div>
+                                    <h5 className="card-title fw-bold mb-1">{unit.unitName || unit.courseUnitID}</h5>
+                                    <span className="badge bg-light text-dark mb-3">{unit.courseUnitID}</span>
+                                    <div className="d-flex align-items-center mt-auto justify-content-center">
                                         <Users className="text-primary me-2" size={24} />
                                         <span className="fs-4 fw-bold text-dark">{unit.studentCount}</span>
                                         <span className="text-muted ms-2 mt-1">Student(s) requested</span>
@@ -136,9 +139,9 @@ const RepDashboard = () => {
                                     </div>
                                     
                                     <h5 className="card-title fw-bold mb-2 text-primary">
-                                        {req.courseUnitName || 'General Topic'}
+                                        {req.course_unit_name || 'General Topic'}
                                     </h5>
-                                    <p className="card-text mb-3 fw-medium">Topic: {req.topic}</p>
+                                    <p className="card-text mb-3 fw-medium">Topic: {req.courseUnitName}</p>
                                     
                                     <div className="d-flex align-items-center mb-4 text-muted small">
                                         <User size={16} className="me-2" />

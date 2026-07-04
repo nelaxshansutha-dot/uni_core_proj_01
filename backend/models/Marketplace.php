@@ -16,12 +16,12 @@ class Marketplace extends BaseModel {
     // Abstraction: Implement abstract create method from BaseModel
     public function create($data) {
         $query = "INSERT INTO " . $this->table . " 
-            (userID, item_name, description, price, condition_type, location, phone_number, usage_duration, image_url, image_url2, image_url3, image_url4, status) 
-            VALUES (:userID, :item_name, :description, :price, :condition_type, :location, :phone_number, :usage_duration, :image_url, :image_url2, :image_url3, :image_url4, :status)";
+            (userID, productName, description, price, condition_type, location, phone_number, usage_duration, image_url, image_url2, image_url3, image_url4, status) 
+            VALUES (:userID, :productName, :description, :price, :condition_type, :location, :phone_number, :usage_duration, :image_url, :image_url2, :image_url3, :image_url4, :status)";
         $stmt = $this->conn->prepare($query);
 
         $stmt->bindParam(':userID',         $data['userID']);
-        $stmt->bindParam(':item_name',      $data['item_name']);
+        $stmt->bindParam(':productName',      $data['productName']);
         $stmt->bindParam(':description',    $data['description']);
         $stmt->bindParam(':price',          $data['price']);
         $stmt->bindParam(':condition_type', $data['condition_type']);
@@ -72,7 +72,7 @@ class Marketplace extends BaseModel {
 
     public function update($data, $userID) {
         $query = "UPDATE " . $this->table . " 
-            SET item_name = :item_name, 
+            SET productName = :productName, 
                 description = :description, 
                 price = :price, 
                 condition_type = :condition_type, 
@@ -87,7 +87,7 @@ class Marketplace extends BaseModel {
         
         $stmt = $this->conn->prepare($query);
 
-        $stmt->bindParam(':item_name',      $data['item_name']);
+        $stmt->bindParam(':productName',      $data['productName']);
         $stmt->bindParam(':description',    $data['description']);
         $stmt->bindParam(':price',          $data['price']);
         $stmt->bindParam(':condition_type', $data['condition_type']);

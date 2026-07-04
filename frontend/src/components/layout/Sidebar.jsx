@@ -78,15 +78,7 @@ const Sidebar = () => {
                                 Content Moderation
                             </Link>
                         </li>
-                        <li>
-                            <Link 
-                                to="/admin?tab=reports" 
-                                className={`nav-link d-flex align-items-center gap-3 ${isActive('/admin', 'reports') ? 'active' : ''}`}
-                            >
-                                <AlertTriangle size={20} />
-                                Reports &amp; Complaints
-                            </Link>
-                        </li>
+
                         <li className="mt-4">
                             <div className="text-uppercase text-secondary small fw-bold px-3 mb-2">System</div>
                         </li>

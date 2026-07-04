@@ -15,8 +15,8 @@ const PeerLearning = () => {
     const [modules, setModules] = useState([]);
     
     const [formData, setFormData] = useState({
-        course_code: '',
-        topic: '',
+        courseUnitName: '',
+        courseUnitID: '',
         description: ''
     });
 
@@ -42,7 +42,7 @@ const PeerLearning = () => {
         try {
             setLoading(true);
             const endpoint = user?.role === 'rep' 
-                ? '/peer-learning.php?action=course-requests&course_code=CS101' 
+                ? '/peer-learning.php?action=course-requests&courseUnitID=CS101' 
                 : '/peer-learning.php?action=my-requests';
             // Note: hardcoded CS101 for rep to simplify, ideally should fetch rep's course
             const res = await api.get(endpoint);
@@ -84,7 +84,7 @@ const PeerLearning = () => {
             const res = await api.post('/peer-learning.php', formData);
             if (res.data.status === 'success') {
                 setShowModal(false);
-                setFormData({ course_code: '', topic: '', description: '' });
+                setFormData({ courseUnitName: '', courseUnitID: '', description: '' });
                 fetchRequests();
                 showToast('Request submitted successfully!', 'success');
             } else {
@@ -96,9 +96,9 @@ const PeerLearning = () => {
         }
     };
 
-    const handleUpdateStatus = async (topic, course_code, status) => {
+    const handleStatusUpdate = async (courseUnitName, courseUnitID, status) => {
         try {
-            const res = await api.put('/peer-learning.php', { topic, course_code, status });
+            const res = await api.put('/peer-learning.php', { courseUnitName, courseUnitID, status });
             if (res.data.status === 'success') {
                 fetchRequests();
             }
@@ -107,8 +107,8 @@ const PeerLearning = () => {
         }
     };
 
-    const handleModuleClick = (courseCode) => {
-        setFormData({ ...formData, course_code: courseCode });
+    const handleModuleClick = (courseUnitID) => {
+        setFormData({ ...formData, courseUnitID: courseUnitID });
         setShowModal(true);
     };
 
@@ -144,6 +144,15 @@ const PeerLearning = () => {
                                 <select className="form-select" value={courseFilters.courseID} onChange={e => setCourseFilters({...courseFilters, courseID: e.target.value})}>
                                     <option value="7">CST</option>
                                     <option value="8">SCT</option>
+                                    <option value="9">IIT</option>
+                                    <option value="10">MRT</option>
+                                    <option value="11">AQT</option>
+                                    <option value="12">PMT</option>
+                                    <option value="13">BBST</option>
+                                    <option value="14">ENM</option>
+                                    <option value="15">HRD</option>
+                                    <option value="16">HTE</option>
+                                    <option value="17">ET</option>
                                 </select>
                             </div>
                             <div className="mb-3">
@@ -171,12 +180,12 @@ const PeerLearning = () => {
                     <h5 className="mb-3 fw-bold">Select a Module for Peer Learning</h5>
                     <div className="row g-3 mb-5">
                         {modules.map(mod => (
-                            <div className="col-md-4" key={mod.courseCode}>
+                            <div className="col-md-4" key={mod.courseUnitID}>
                                 <div className="card border-0 shadow-sm h-100">
                                     <div className="card-body p-4 text-center d-flex flex-column">
                                         <BookOpen className="text-primary mb-3 mx-auto" size={32} />
-                                        <h6 className="fw-bold m-0 flex-grow-1">{mod.name}</h6>
-                                        <span className="badge bg-light text-dark mt-2 mb-3 border mx-auto">{mod.courseCode}</span>
+                                        <h6 className="fw-bold m-0 flex-grow-1">{mod.courseUnitName}</h6>
+                                        <span className="badge bg-light text-dark mt-2 mb-3 border mx-auto">{mod.courseUnitID}</span>
                                         <button 
                                             className="btn btn-sm btn-outline-primary mt-auto rounded-pill"
                                             onClick={(e) => {
@@ -184,8 +193,8 @@ const PeerLearning = () => {
                                                 const autoSubmit = async () => {
                                                     try {
                                                         const res = await api.post('/peer-learning.php', {
-                                                            course_code: mod.courseCode,
-                                                            topic: mod.name,
+                                                            courseUnitID: mod.courseUnitID,
+                                                            courseUnitName: mod.courseUnitName,
                                                             description: 'General unit request'
                                                         });
                                                         if (res.data.status === 'success') {
@@ -203,7 +212,7 @@ const PeerLearning = () => {
                                         </button>
                                         <button 
                                             className="btn btn-link text-decoration-none small text-muted mt-2 p-0"
-                                            onClick={() => handleModuleClick(mod.courseCode)}
+                                            onClick={() => handleModuleClick(mod.courseUnitID)}
                                         >
                                             Ask specific question
                                         </button>
@@ -221,20 +230,14 @@ const PeerLearning = () => {
                                 <h6>No requests found</h6>
                             </div>
                         ) : (
-                            requests.map(req => (
-                                <div className="col-md-6" key={req.id}>
+                            requests.map((req, idx) => (
+                                <div className="col-md-6" key={req.requestID || idx}>
                                     <div className="card border-0 shadow-sm">
                                         <div className="card-body p-4">
                                             <div className="d-flex justify-content-between align-items-start mb-2">
-                                                <h6 className="fw-bold m-0">{req.topic}</h6>
-                                                <span className={`badge rounded-pill ${
-                                                    req.status === 'pending' ? 'bg-warning' : 
-                                                    req.status === 'approved' ? 'bg-success' : 'bg-danger'
-                                                }`}>
-                                                    {req.status.toUpperCase()}
-                                                </span>
+                                                <h6 className="fw-bold m-0">{req.courseUnitName}</h6>
                                             </div>
-                                            <span className="badge bg-secondary mb-2">{req.course_code}</span>
+                                            <span className="badge bg-secondary mb-2">{req.courseUnitID}</span>
                                             <p className="text-muted small mb-0">{req.description}</p>
                                         </div>
                                     </div>
@@ -257,8 +260,8 @@ const PeerLearning = () => {
                                     <div className="card-body p-4">
                                         <div className="d-flex justify-content-between align-items-start mb-3">
                                             <div>
-                                                <h5 className="fw-bold m-0">{req.topic}</h5>
-                                                <span className="badge bg-secondary mt-1">{req.course_code}</span>
+                                                <h5 className="fw-bold m-0">{req.courseUnitName}</h5>
+                                                <span className="badge bg-secondary mt-1">{req.courseUnitID}</span>
                                             </div>
                                             <span className={`badge rounded-pill ${
                                                 req.status === 'pending' ? 'bg-warning' : 
@@ -277,11 +280,11 @@ const PeerLearning = () => {
                                         {!req.request_count && <p className="text-muted small">{req.description}</p>}
 
                                         {user?.role === 'rep' && req.status === 'pending' && (
-                                            <div className="d-flex gap-2 mt-3">
-                                                <button className="btn btn-sm btn-success w-100 rounded-pill d-flex justify-content-center align-items-center gap-1" onClick={() => handleUpdateStatus(req.topic, req.course_code, 'approved')}>
-                                                    <CheckCircle size={16} /> Approve
+                                            <div className="d-flex flex-column gap-2 mt-3">
+                                                <button className="btn btn-sm btn-success w-100 rounded-pill mb-2" onClick={() => handleStatusUpdate(req.courseUnitName, req.courseUnitID, 'approved')}>
+                                                    Approve
                                                 </button>
-                                                <button className="btn btn-sm btn-danger w-100 rounded-pill d-flex justify-content-center align-items-center gap-1" onClick={() => handleUpdateStatus(req.topic, req.course_code, 'rejected')}>
+                                                <button className="btn btn-sm btn-danger w-100 rounded-pill" onClick={() => handleStatusUpdate(req.courseUnitName, req.courseUnitID, 'rejected')}>
                                                     <XCircle size={16} /> Reject
                                                 </button>
                                             </div>
@@ -307,11 +310,11 @@ const PeerLearning = () => {
                                 <form onSubmit={handleSubmit}>
                                     <div className="mb-3">
                                         <label className="form-label text-muted small fw-bold">Course Code</label>
-                                        <input type="text" className="form-control bg-light" value={formData.course_code} readOnly />
+                                        <input type="text" className="form-control bg-light" value={formData.courseUnitID} readOnly />
                                     </div>
                                     <div className="mb-3">
-                                        <label className="form-label text-muted small fw-bold">Topic</label>
-                                        <input type="text" className="form-control" placeholder="e.g. Loops in Java" value={formData.topic} onChange={e => setFormData({...formData, topic: e.target.value})} required />
+                                        <label className="form-label text-muted small fw-bold">Course Unit Name</label>
+                                        <input type="text" className="form-control" placeholder="e.g. Loops in Java" value={formData.courseUnitName} onChange={e => setFormData({...formData, courseUnitName: e.target.value})} required />
                                     </div>
                                     <div className="mb-4">
                                         <label className="form-label text-muted small fw-bold">Description / Where you need help</label>

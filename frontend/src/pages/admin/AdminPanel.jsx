@@ -332,9 +332,7 @@ const AdminPanel = () => {
                 <button className={`admin-nav-link ${activeTab === 'content' ? 'active' : ''}`} onClick={() => setActiveTab('content')}>
                     Content Moderation
                 </button>
-                <button className={`admin-nav-link ${activeTab === 'reports' ? 'active' : ''}`} onClick={() => setActiveTab('reports')}>
-                    Reports & Complaints
-                </button>
+
             </div>
 
             {/* TAB CONTENT: OVERVIEW */}
@@ -853,7 +851,7 @@ const AdminPanel = () => {
                                         {/* Lost Items Render */}
                                         {contentTab === 'lost_item' && content.lost_items.map(item => (
                                             <tr key={item.lost_id}>
-                                                <td className="fw-semibold">{item.item_name}</td>
+                                                <td className="fw-semibold">{item.lostItemName}</td>
                                                 <td>{item.email}</td>
                                                 <td>
                                                     <span className={`badge ${item.status === 'hidden' ? 'bg-warning text-dark' : (item.status === 'removed' ? 'bg-danger' : 'bg-success')}`}>
@@ -902,7 +900,7 @@ const AdminPanel = () => {
                                         {contentTab === 'marketplace' && content.marketplace.map(item => (
                                             <tr key={item.id}>
                                                 <td className="fw-semibold">
-                                                    <div>{item.item_name}</div>
+                                                    <div>{item.title}</div>
                                                     <small className="text-muted">${item.price}</small>
                                                 </td>
                                                 <td>{item.email}</td>
@@ -954,7 +952,7 @@ const AdminPanel = () => {
                                             <tr key={note.id}>
                                                 <td className="fw-semibold">
                                                     <div>{note.title}</div>
-                                                    <small className="text-muted">{note.course_code}</small>
+                                                    <small className="text-muted">{note.courseUnitID}</small>
                                                 </td>
                                                 <td>{note.email}</td>
                                                 <td>
@@ -1007,68 +1005,7 @@ const AdminPanel = () => {
                 </div>
             )}
 
-            {/* TAB CONTENT: REPORTS */}
-            {activeTab === 'reports' && (
-                <div>
-                    <div className="card border-0 shadow-sm">
-                        <div className="card-body p-4">
-                            <div className="table-responsive">
-                                <table className="table align-middle table-hover">
-                                    <thead className="table-light">
-                                        <tr>
-                                            <th>Reporter</th>
-                                            <th>Content Type</th>
-                                            <th>Content ID</th>
-                                            <th>Reason</th>
-                                            <th>Status</th>
-                                            <th>Reported Date</th>
-                                            <th className="text-end">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {reports.map(report => (
-                                            <tr key={report.id}>
-                                                <td className="fw-semibold">
-                                                    <div>{report.reporter_name}</div>
-                                                    <small className="text-muted">{report.reporter_email}</small>
-                                                </td>
-                                                <td>{report.content_type.toUpperCase()}</td>
-                                                <td>{report.content_id}</td>
-                                                <td>{report.reason}</td>
-                                                <td>
-                                                    <span className={`badge ${report.status === 'pending' ? 'bg-warning text-dark' : (report.status === 'resolved' ? 'bg-success' : 'bg-secondary')}`}>
-                                                        {report.status.toUpperCase()}
-                                                    </span>
-                                                </td>
-                                                <td>{new Date(report.created_at).toLocaleDateString()}</td>
-                                                <td className="text-end">
-                                                    {report.status === 'pending' ? (
-                                                        <div className="d-flex justify-content-end gap-2">
-                                                            <button className="btn btn-sm btn-success d-flex align-items-center gap-1" onClick={() => handleReportAction(report.id, 'resolved')}>
-                                                                <CheckCircle size={12} /> Resolve
-                                                            </button>
-                                                            <button className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1" onClick={() => handleReportAction(report.id, 'ignored')}>
-                                                                Ignore
-                                                            </button>
-                                                        </div>
-                                                    ) : (
-                                                        <span className="text-muted small">Closed</span>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                        {reports.length === 0 && (
-                                            <tr>
-                                                <td colSpan="7" className="text-center text-muted py-5">No reports or complaints filed.</td>
-                                            </tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
+
         </div>
     );
 };

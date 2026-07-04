@@ -40,9 +40,9 @@ try {
     }
 
     $stmtReq = $db->prepare("
-        SELECT plr.*, cu.name as courseUnitName
+        SELECT plr.*, cu.courseUnitName as course_unit_name
         FROM Peer_learning_request plr
-        LEFT JOIN Course_units cu ON plr.courseCode = cu.courseCode
+        LEFT JOIN Course_units cu ON plr.courseUnitID = cu.courseUnitID
         WHERE plr.requestID = ?
         LIMIT 1
     ");
@@ -56,8 +56,8 @@ try {
     $courseId = $repData['courseID'];
     $currentYear = $repData['std_year'];
     
-    $topic = $requestData['topic'] ?? 'N/A';
-    $unitName = $requestData['courseUnitName'] ?? 'General Topic';
+    $topic = $requestData['courseUnitName'] ?? 'N/A';
+    $unitName = $requestData['course_unit_name'] ?? 'General Topic';
     $yearStr = $requestData['std_year'] ? "Year {$requestData['std_year']}" : '';
     $semStr = $requestData['semester'] ? "Semester {$requestData['semester']}" : '';
 

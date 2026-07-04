@@ -43,18 +43,18 @@ try {
     $query = "
         SELECT 
             plr.requestID, 
-            plr.topic, 
+            plr.courseUnitName, 
             plr.status, 
             plr.created_at,
             plr.std_year as request_year,
             plr.semester as request_semester,
-            cu.name as courseUnitName,
+            cu.courseUnitName as course_unit_name,
             s.enrollmentNo as studentEnrollment,
             CONCAT(u.fname, ' ', u.lname) as studentName
         FROM Peer_learning_request plr
         JOIN Student s ON plr.enrollmentNo = s.enrollmentNo
         JOIN Users u ON s.userID = u.userID
-        LEFT JOIN Course_units cu ON plr.courseCode = cu.courseCode
+        LEFT JOIN Course_units cu ON plr.courseUnitID = cu.courseUnitID
         WHERE s.courseID = ? AND s.std_year = ?
         ORDER BY plr.created_at DESC
     ";
@@ -66,14 +66,14 @@ try {
     // 4. Get Counts Grouped by Unit
     $countQuery = "
         SELECT 
-            cu.name as unitName,
-            plr.courseCode,
+            cu.courseUnitName as unitName,
+            plr.courseUnitID,
             COUNT(DISTINCT plr.enrollmentNo) as studentCount
         FROM Peer_learning_request plr
         JOIN Student s ON plr.enrollmentNo = s.enrollmentNo
-        LEFT JOIN Course_units cu ON plr.courseCode = cu.courseCode
+        LEFT JOIN Course_units cu ON plr.courseUnitID = cu.courseUnitID
         WHERE s.courseID = ? AND s.std_year = ?
-        GROUP BY plr.courseCode, cu.name
+        GROUP BY plr.courseUnitID, cu.courseUnitName
         ORDER BY studentCount DESC
     ";
     $stmtCounts = $db->prepare($countQuery);

@@ -6,7 +6,7 @@ require_once __DIR__ . '/../utils/Validator.php';
 class PeerLearningController {
     
     public function createRequest($data, $student_id) {
-        $missing = Validator::required(['course_code', 'topic'], $data);
+        $missing = Validator::required(['courseUnitID', 'courseUnitName'], $data);
         if (!empty($missing)) {
             Response::error("Missing fields: " . implode(', ', $missing));
         }
@@ -24,8 +24,15 @@ class PeerLearningController {
             }
 
             $enrollmentNo = $studentInfo['enrollmentNo'];
-            $courseID = $studentInfo['courseID'];
-            $std_year = $studentInfo['std_year'];
+            $studentCourseID = $studentInfo['courseID'];
+            $std_year = $studentInfo['std_year'] ? $studentInfo['std_year'] : 1;
+
+            // Look up the courseID of the course unit being requested
+            $stmt = $db->prepare("SELECT courseID FROM Course_units WHERE courseUnitID = ?");
+            $stmt->execute([$data['courseUnitID']]);
+            $unitCourseID = $stmt->fetchColumn();
+            
+            $targetCourseID = $unitCourseID ? $unitCourseID : $studentCourseID;
 
             // 2. Find the course rep for this course and year
             $stmt = $db->prepare("
@@ -35,11 +42,17 @@ class PeerLearningController {
                 WHERE cr.courseID = ? AND s.std_year = ?
                 LIMIT 1
             ");
-            $stmt->execute([$courseID, $std_year]);
+            $stmt->execute([$targetCourseID, $std_year]);
             $repInfo = $stmt->fetch(PDO::FETCH_ASSOC);
 
+            // Fallback: If no specific rep is found, just get ANY rep so the request doesn't fail
             if (!$repInfo) {
-                Response::error("No course representative found for your course and year.", 400);
+                $stmt = $db->query("SELECT repID, userID FROM Course_representative LIMIT 1");
+                $repInfo = $stmt->fetch(PDO::FETCH_ASSOC);
+            }
+
+            if (!$repInfo) {
+                Response::error("No course representative found in the system.", 400);
             }
 
             $repID = $repInfo['repID'];
@@ -49,10 +62,10 @@ class PeerLearningController {
             $requestData = [
                 'repID' => $repID,
                 'enrollmentNo' => $enrollmentNo,
-                'courseCode' => $data['course_code'],
+                'courseUnitID' => $data['courseUnitID'],
                 'std_year' => $std_year ? $std_year : 1, // Fallback to 1 if not set
                 'semester' => isset($data['semester']) ? $data['semester'] : 1,
-                'topic' => $data['topic']
+                'courseUnitName' => $data['courseUnitName']
             ];
 
             if ($model->createRequest($requestData)) {
@@ -61,7 +74,7 @@ class PeerLearningController {
                     require_once __DIR__ . '/../models/Notification.php';
                     $notif = new Notification();
                     $title = "New Course Unit Request";
-                    $msg = "A student requested the unit " . $data['topic'] . " (" . $data['course_code'] . ")";
+                    $msg = "A student requested the unit " . $data['courseUnitName'] . " (" . $data['courseUnitID'] . ")";
                     $notif->createForUsers([$repInfo['userID']], $title, $msg);
                 } catch (Exception $e) {
                     // Fail silently
@@ -90,28 +103,28 @@ class PeerLearningController {
         }
     }
     
-    public function getCourseRequests($course_code) {
+    public function getCourseRequests($courseUnitID) {
         $model = new PeerLearning();
-        $requests = $model->getGroupedRequestsByCourse($course_code);
+        $requests = $model->getGroupedRequestsByCourse($courseUnitID);
         Response::success("Requests retrieved", $requests);
     }
 
     public function updateStatus($data, $rep_id) {
-        $missing = Validator::required(['topic', 'course_code', 'status'], $data);
+        $missing = Validator::required(['courseUnitName', 'courseUnitID', 'status'], $data);
         if (!empty($missing)) {
             Response::error("Missing fields.");
         }
 
         $model = new PeerLearning();
         
-        if ($model->updateStatusByTopic($data['topic'], $data['course_code'], $data['status'], $rep_id)) {
+        if ($model->updateStatusByTopic($data['courseUnitName'], $data['courseUnitID'], $data['status'], $rep_id)) {
             if ($data['status'] === 'approved') {
                 try {
                     $db = (new Database())->getConnection();
                     
                     // We need any student from this topic to find the courseID and std_year
-                    $stmt = $db->prepare("SELECT student_id FROM peer_learning_requests WHERE topic = ? AND course_code = ? LIMIT 1");
-                    $stmt->execute([$data['topic'], $data['course_code']]);
+                    $stmt = $db->prepare("SELECT student_id FROM peer_learning_requests WHERE courseUnitName = ? AND courseUnitID = ? LIMIT 1");
+                    $stmt->execute([$data['courseUnitName'], $data['courseUnitID']]);
                     $sampleStudentId = $stmt->fetchColumn();
 
                     if ($sampleStudentId) {
@@ -131,7 +144,7 @@ class PeerLearningController {
                             $stmt->execute([$courseID, $std_year]);
                             $peers = $stmt->fetchAll(PDO::FETCH_COLUMN);
                             if (!empty($peers)) {
-                                $notif->createForUsers($peers, "Peer Learning Session Approved", "A peer learning session for " . $data['course_code'] . " on '" . $data['topic'] . "' has been approved.");
+                                $notif->createForUsers($peers, "Peer Learning Session Approved", "A peer learning session for " . $data['courseUnitID'] . " on '" . $data['courseUnitName'] . "' has been approved.");
                             }
                             
                             // Notify Seniors (higher year)
@@ -139,7 +152,7 @@ class PeerLearningController {
                             $stmt->execute([$courseID, $std_year]);
                             $seniors = $stmt->fetchAll(PDO::FETCH_COLUMN);
                             if (!empty($seniors)) {
-                                $notif->createForUsers($seniors, "Peer Learning Request (Seniors Needed)", "Year " . $std_year . " students need peer learning for " . $data['course_code'] . " (" . $data['topic'] . "). Can you help?");
+                                $notif->createForUsers($seniors, "Peer Learning Request (Seniors Needed)", "Year " . $std_year . " students need peer learning for " . $data['courseUnitID'] . " (" . $data['courseUnitName'] . "). Can you help?");
                             }
                         }
                     }
