@@ -197,6 +197,7 @@ class AuthController extends BaseController {
                         'id' => $user['userID'],
                         'role' => $requestedRole
                     ]);
+                    $this->setAuthCookie($token);
 
                     Response::success("Login successful", [
                         'token' => $token,
@@ -277,6 +278,7 @@ class AuthController extends BaseController {
                 'id' => $user['userID'],
                 'role' => $user['role']
             ]);
+            $this->setAuthCookie($token);
 
             Response::success("Email verified successfully! Welcome to UniCore.", [
                 'token' => $token,
@@ -522,6 +524,7 @@ class AuthController extends BaseController {
             'id' => $updatedUser['userID'],
             'role' => $updatedUser['role']
         ]);
+        $this->setAuthCookie($token);
 
         Response::success("Profile updated successfully", [
             'token' => $token,
@@ -544,10 +547,103 @@ class AuthController extends BaseController {
 
         $stmt = $db->prepare("UPDATE Course_representative SET hash_password = ?, is_first_login = 0 WHERE userID = ?");
         if ($stmt->execute([$hashed, $data['user_id']])) {
-            Response::success("Password updated successfully. Please log in with your new password.");
+            Response::success("Password changed successfully! Please login with your new password.");
         } else {
             Response::error("Failed to update password.", 500);
         }
+    }
+
+    private function setAuthCookie($token) {
+        setcookie(
+            'auth_token', 
+            $token, 
+            [
+                'expires' => time() + 86400 * 30, // 30 days
+                'path' => '/',
+                'secure' => false,
+                'httponly' => true,
+                'samesite' => 'Lax'
+            ]
+        );
+    }
+
+    public function logout() {
+        setcookie('auth_token', '', [
+            'expires' => time() - 3600,
+            'path' => '/',
+            'secure' => false,
+            'httponly' => true,
+            'samesite' => 'Lax'
+        ]);
+        Response::success("Logged out successfully");
+    }
+
+    public function me() {
+        error_log("me() endpoint hit by " . $_SERVER['REMOTE_ADDR']);
+        require_once __DIR__ . '/../utils/AuthMiddleware.php';
+        try {
+            $decoded = AuthMiddleware::authenticate(true);
+            if (!$decoded) {
+                Response::success("Not authenticated", ['user' => null]);
+            }
+        } catch (Exception $e) {
+            error_log("me() auth failed: " . $e->getMessage());
+            Response::success("Not authenticated", ['user' => null]);
+        }
+        $userID = $decoded['id'];
+        $role = $decoded['role'];
+        error_log("me() authenticated user $userID as $role");
+
+        $db = (new Database())->getConnection();
+        require_once __DIR__ . '/../models/User.php';
+        $userModel = new User();
+        $user = $userModel->findById($userID);
+
+        if (!$user) {
+            Response::error("User not found", 404);
+        }
+
+        $userData = [
+            'id' => $user['userID'],
+            'email' => $user['email'],
+            'first_name' => $user['fname'],
+            'last_name' => $user['lname'],
+            'phone_number' => $user['phoneNum'],
+            'lost_item_sms_notification' => isset($user['lost_item_sms_notification']) ? (int)$user['lost_item_sms_notification'] : 0,
+            'peer_learning_app_notification' => isset($user['peer_learning_app_notification']) ? (int)$user['peer_learning_app_notification'] : 1,
+            'has_seen_lost_item_popup' => isset($user['has_seen_lost_item_popup']) ? (int)$user['has_seen_lost_item_popup'] : 0,
+            'role' => $role
+        ];
+
+        if ($role === 'student' || $role === 'rep') {
+            require_once __DIR__ . '/../models/Student.php';
+            $studentModel = new Student();
+            $profile = $studentModel->getProfile($userID);
+            if ($profile) {
+                $userData['enrollment_no'] = $profile['enrollmentNo'];
+                $userData['course_id'] = $profile['courseID'];
+                $userData['std_year'] = $profile['std_year'];
+            }
+        } elseif ($role === 'staff') {
+            $stmt = $db->prepare("SELECT staffID as enrollment_no, dept as department FROM Staff WHERE userID = ?");
+            $stmt->execute([$userID]);
+            $profile = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($profile) {
+                $userData['enrollment_no'] = $profile['enrollment_no'];
+                $userData['department'] = $profile['department'];
+            }
+        } elseif ($role === 'admin') {
+            $stmt = $db->prepare("SELECT adminID FROM Admin WHERE userID = ?");
+            $stmt->execute([$userID]);
+            $profile = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($profile) {
+                $userData['admin_id'] = $profile['adminID'];
+            }
+        }
+
+        Response::success("User session retrieved", [
+            'user' => $userData
+        ]);
     }
 }
 ?>

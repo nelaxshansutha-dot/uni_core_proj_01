@@ -23,10 +23,9 @@ const ImageUploader = ({ label, value, onChange }) => {
         try {
             const form = new FormData();
             form.append('image', file);
-            const token = localStorage.getItem('token');
             const res = await fetch(`${BASE_URL}/upload.php`, {
                 method: 'POST',
-                headers: { Authorization: `Bearer ${token}` },
+                credentials: 'include',
                 body: form
             });
             const json = await res.json();
@@ -333,16 +332,7 @@ const Marketplace = () => {
                                                     </button>
                                                 )}
 
-                                                {/* Buyer: contact */}
-                                                {!isMine && item.status === 'available' && (
-                                                    <a
-                                                        href={`tel:${item.phone_number}`}
-                                                        className="btn btn-primary btn-sm rounded-pill d-flex align-items-center justify-content-center gap-1"
-                                                        onClick={(e) => e.stopPropagation()}
-                                                    >
-                                                        <Phone size={14} /> Contact Seller
-                                                    </a>
-                                                )}
+
                                             </div>
                                         </div>
                                     </div>
@@ -416,6 +406,11 @@ const Marketplace = () => {
                                                 placeholder="e.g. 1500"
                                                 value={formData.price}
                                                 onChange={handleChange}
+                                                onKeyDown={(e) => {
+                                                    if (['e', 'E', '+', '-'].includes(e.key)) {
+                                                        e.preventDefault();
+                                                    }
+                                                }}
                                                 required
                                             />
                                         </div>

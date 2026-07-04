@@ -1,9 +1,9 @@
 import React, { useContext, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
-import { LogOut, User } from 'lucide-react';
+import { LogOut, User, Menu } from 'lucide-react';
 
-const Topbar = () => {
+const Topbar = ({ toggleSidebar }) => {
     const { user, logout } = useContext(AuthContext);
     const navigate = useNavigate();
     const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -21,8 +21,18 @@ const Topbar = () => {
     };
 
     return (
-        <div className="topbar d-flex justify-content-between align-items-center px-4 py-3 sticky-top z-3 bg-white border-bottom shadow-sm">
-            <h5 className="m-0 text-dark fw-semibold">Welcome back, {user?.first_name || 'User'}!</h5>
+        <div className="topbar d-flex justify-content-between align-items-center px-3 px-md-4 py-3 sticky-top z-3 bg-white border-bottom shadow-sm">
+            <div className="d-flex align-items-center gap-3">
+                <button 
+                    className="btn btn-light d-md-none d-flex align-items-center justify-content-center p-2 border shadow-sm rounded"
+                    onClick={toggleSidebar}
+                    aria-label="Toggle Sidebar"
+                >
+                    <Menu size={20} />
+                </button>
+                <h5 className="m-0 text-dark fw-semibold d-none d-sm-block">Welcome back, {user?.first_name || 'User'}!</h5>
+                <h5 className="m-0 text-dark fw-semibold d-block d-sm-none">Hi, {user?.first_name || 'User'}!</h5>
+            </div>
             
             <div className="d-flex align-items-center gap-3">
 

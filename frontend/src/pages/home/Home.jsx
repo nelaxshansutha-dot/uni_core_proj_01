@@ -10,6 +10,9 @@ import {
   MapPin,
   Sparkles,
   CheckCircle,
+  Mail,
+  Phone,
+  Clock,
 } from 'lucide-react';
 import HomeNavbar from '../../components/layout/HomeNavbar';
 import HomeFooter from '../../components/layout/HomeFooter';
@@ -167,6 +170,41 @@ const Home = () => {
                 <p className="step-desc">{step.desc}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Contact Us ── */}
+      <section id="contact" className="contact-section">
+        <div className="container">
+          <div className="section-header">
+            <h2 className="section-title">Need More Help?</h2>
+            <p className="section-subtitle">
+              We're here to support you. Reach out to our admin team using any of the contact methods below.
+            </p>
+          </div>
+
+          <div className="contact-grid">
+            <div className="contact-card">
+              <div className="contact-icon"><Mail size={24} /></div>
+              <h3 className="contact-title">Send us an email</h3>
+              <p className="contact-desc">admin@unicore.uwu.ac.lk</p>
+              <p className="contact-subdesc">We typically reply within 24 hours.</p>
+            </div>
+            
+            <div className="contact-card">
+              <div className="contact-icon"><Phone size={24} /></div>
+              <h3 className="contact-title">Call us</h3>
+              <p className="contact-desc">+94 55 222 6622</p>
+              <p className="contact-subdesc">Available 8am-4pm, Monday to Friday.</p>
+            </div>
+
+            <div className="contact-card">
+              <div className="contact-icon"><Clock size={24} /></div>
+              <h3 className="contact-title">Admin Office Hours</h3>
+              <p className="contact-desc">8:00 AM - 4:00 PM</p>
+              <p className="contact-subdesc">University premises, Weekdays only.</p>
+            </div>
           </div>
         </div>
       </section>

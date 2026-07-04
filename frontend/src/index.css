@@ -342,6 +342,23 @@ a.text-primary:hover {
 
   .sidebar {
     min-height: auto;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease-in-out;
+    left: 0;
+  }
+  
+  .sidebar.show {
+    transform: translateX(0);
+  }
+}
+
+@media (min-width: 768px) {
+  .sidebar {
+    transform: translateX(0) !important;
+    transition: none;
+  }
+  .dashboard-content-wrapper {
+    margin-left: 250px;
   }
 }
 
