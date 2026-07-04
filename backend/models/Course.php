@@ -15,24 +15,24 @@ class Course extends BaseModel {
 
     // Abstraction: Implement abstract create method from BaseModel
     public function create($data) {
-        $query = "INSERT INTO " . $this->table . " (courseCode, courseID, name, year, semester) VALUES (:courseCode, :courseID, :name, :year, :semester)";
+        $query = "INSERT INTO " . $this->table . " (courseUnitID, courseID, courseUnitName, academicYear, semester) VALUES (:courseUnitID, :courseID, :courseUnitName, :academicYear, :semester)";
         $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':courseCode', $data['courseCode']);
+        $stmt->bindParam(':courseUnitID', $data['courseUnitID']);
         $stmt->bindParam(':courseID', $data['courseID']);
-        $stmt->bindParam(':name', $data['name']);
-        $stmt->bindParam(':year', $data['year']);
+        $stmt->bindParam(':courseUnitName', $data['courseUnitName']);
+        $stmt->bindParam(':academicYear', $data['academicYear']);
         $stmt->bindParam(':semester', $data['semester']);
         return $stmt->execute();
     }
 
-    // Polymorphism: Override default findById to query using courseCode
+    // Polymorphism: Override default findById to query using courseUnitID
     public function findById($id) {
-        return $this->findByIdBase($id, 'courseCode');
+        return $this->findByIdBase($id, 'courseUnitID');
     }
 
     public function getModulesByCourseYearSemester($courseID, $year, $semester) {
         $query = "SELECT * FROM " . $this->table . " 
-                  WHERE courseID = :courseID AND year = :year AND semester = :semester";
+                  WHERE courseID = :courseID AND academicYear = :year AND semester = :semester";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':courseID', $courseID);
         $stmt->bindParam(':year', $year);

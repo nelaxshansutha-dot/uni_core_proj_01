@@ -10,7 +10,7 @@ class DashboardController {
 
         // 1. Fetch latest Lost Items (max 5)
         $stmt = $db->prepare("
-            SELECT lostID as id, item_name as title, 'lost_item' as type, created_at
+            SELECT lostID as id, lostItemName as title, 'lost_item' as type, created_at
             FROM Lost_items
             ORDER BY created_at DESC
             LIMIT 5
@@ -24,7 +24,7 @@ class DashboardController {
 
         // 2. Fetch latest Marketplace products (max 5)
         $stmt = $db->prepare("
-            SELECT id, item_name as title, 'marketplace' as type, created_at
+            SELECT productID as id, productName as title, 'marketplace' as type, created_at
             FROM marketplace
             ORDER BY created_at DESC
             LIMIT 5

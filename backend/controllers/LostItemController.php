@@ -16,7 +16,7 @@ class LostItemController {
     public function createItem($data, $file, $user_id) {
 
         $missing = Validator::required([
-            'item_name',
+            'lostItemName',
             'description',
             'last_seen_datetime',
             'last_seen_place',
@@ -60,7 +60,7 @@ class LostItemController {
         // ---------------- DATA ----------------
         $itemData = [
             'user_id' => $user_id,
-            'item_name' => $data['item_name'],
+            'lostItemName' => $data['lostItemName'],
             'description' => $data['description'],
             'last_seen_datetime' => $data['last_seen_datetime'],
             'last_seen_place' => $data['last_seen_place'],
@@ -80,7 +80,7 @@ class LostItemController {
                 $allUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                 if (!empty($allUsers)) {
-                    $smsMessage = "UniCore Alert: A new lost item '" . $data['item_name'] . "' has been reported at " . $data['last_seen_place'] . ". Contact: " . $data['contact_number'];
+                    $smsMessage = "UniCore Alert: A new lost item '" . $data['lostItemName'] . "' has been reported at " . $data['last_seen_place'] . ". Contact: " . $data['contact_number'];
                     foreach ($allUsers as $user) {
                         SMSService::sendSMS($user['phoneNum'], $smsMessage);
                     }
@@ -99,7 +99,7 @@ class LostItemController {
     public function updateItem($data, $file, $user_id) {
         $missing = Validator::required([
             'update_id',
-            'item_name',
+            'lostItemName',
             'description',
             'last_seen_datetime',
             'last_seen_place',
@@ -143,7 +143,7 @@ class LostItemController {
         $itemData = [
             'lost_id' => $data['update_id'],
             'user_id' => $user_id,
-            'item_name' => $data['item_name'],
+            'lostItemName' => $data['lostItemName'],
             'description' => $data['description'],
             'last_seen_datetime' => $data['last_seen_datetime'],
             'last_seen_place' => $data['last_seen_place'],

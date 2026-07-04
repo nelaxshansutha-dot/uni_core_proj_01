@@ -35,22 +35,22 @@ try {
 
     $insertCount = 0;
     foreach ($units as $unit) {
-        $courseCode = $unit[0];
+        $courseUnitID = $unit[0];
         $name = $unit[1];
 
         // Check if unit exists
-        $checkStmt = $db->prepare("SELECT courseCode FROM Course_units WHERE courseCode = :courseCode");
-        $checkStmt->execute([':courseCode' => $courseCode]);
+        $checkStmt = $db->prepare("SELECT courseUnitID FROM Course_units WHERE courseUnitID = :courseUnitID");
+        $checkStmt->execute([':courseUnitID' => $courseUnitID]);
         
         if (!$checkStmt->fetch()) {
-            $insertStmt = $db->prepare("INSERT INTO Course_units (courseCode, courseID, name, year, semester) VALUES (:courseCode, :courseID, :name, 1, 1)");
+            $insertStmt = $db->prepare("INSERT INTO Course_units (courseUnitID, courseID, courseUnitName, academicYear, semester) VALUES (:courseUnitID, :courseID, :name, 1, 1)");
             $insertStmt->execute([
-                ':courseCode' => $courseCode,
+                ':courseUnitID' => $courseUnitID,
                 ':courseID' => $courseID,
                 ':name' => $name
             ]);
             $insertCount++;
-            echo "Inserted unit: $name ($courseCode)\n";
+            echo "Inserted unit: $name ($courseUnitID)\n";
         }
     }
     

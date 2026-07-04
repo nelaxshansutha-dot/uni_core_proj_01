@@ -23,12 +23,12 @@ try {
     // Currently, Peer_learning_request has: requestID, repID, enrollmentNo, topic, status, created_at.
     // The prompt mentions: RequestID, StudentID, Year, Semester, CourseUnitID, CreatedAt.
     // We already have enrollmentNo, which identifies the student.
-    // We'll add courseCode (from Course_units), std_year, and semester if missing.
+    // We'll add courseUnitID (from Course_units), std_year, and semester if missing.
     $sql2 = "ALTER TABLE Peer_learning_request 
-             ADD COLUMN courseCode VARCHAR(20) NULL AFTER enrollmentNo,
-             ADD COLUMN std_year INT NULL AFTER courseCode,
+             ADD COLUMN courseUnitID VARCHAR(20) NULL AFTER enrollmentNo,
+             ADD COLUMN std_year INT NULL AFTER courseUnitID,
              ADD COLUMN semester INT NULL AFTER std_year,
-             ADD FOREIGN KEY (courseCode) REFERENCES Course_units(courseCode) ON DELETE CASCADE";
+             ADD FOREIGN KEY (courseUnitID) REFERENCES Course_units(courseUnitID) ON DELETE CASCADE";
     
     try {
         $db->exec($sql2);

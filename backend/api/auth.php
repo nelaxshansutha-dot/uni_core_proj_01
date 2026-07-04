@@ -33,6 +33,14 @@ if ($method === 'POST') {
         require_once __DIR__ . '/../utils/AuthMiddleware.php';
         $user = AuthMiddleware::authenticate();
         $controller->updateProfile($data, $user['id'], $user['role']);
+    } else if ($action === 'logout') {
+        $controller->logout();
+    } else {
+        Response::error("Invalid action.", 404);
+    }
+} else if ($method === 'GET') {
+    if ($action === 'me') {
+        $controller->me();
     } else {
         Response::error("Invalid action.", 404);
     }

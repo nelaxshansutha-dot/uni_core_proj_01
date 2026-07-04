@@ -23,10 +23,9 @@ const ImageUploader = ({ label, value, onChange }) => {
         try {
             const form = new FormData();
             form.append('image', file);
-            const token = localStorage.getItem('token');
             const res = await fetch(`${BASE_URL}/upload.php`, {
                 method: 'POST',
-                headers: { Authorization: `Bearer ${token}` },
+                credentials: 'include',
                 body: form
             });
             const json = await res.json();
@@ -87,7 +86,7 @@ const Marketplace = () => {
     const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
     const emptyForm = {
-        item_name: '',
+        productName: '',
         condition_type: 'new',
         description: '',
         price: '',
@@ -132,7 +131,7 @@ const Marketplace = () => {
         setEditingItem(item);
         setFormData({
             productID: item.productID,
-            item_name: item.item_name,
+            productName: item.productName,
             condition_type: item.condition_type,
             description: item.description,
             price: item.price,
@@ -240,7 +239,7 @@ const Marketplace = () => {
                                         {images.length > 0 ? (
                                             <div className="market-img-grid" data-count={Math.min(images.length, 4)}>
                                                 {images.slice(0, 4).map((url, i) => (
-                                                    <img key={i} src={url} alt={item.item_name} className="market-thumb" />
+                                                    <img key={i} src={url} alt={item.productName} className="market-thumb" />
                                                 ))}
                                             </div>
                                         ) : (
@@ -262,7 +261,7 @@ const Marketplace = () => {
 
                                             {/* Name & Price */}
                                             <div className="d-flex justify-content-between align-items-start mb-1">
-                                                <h5 className="fw-bold m-0 text-dark" style={{ fontSize: '1rem' }}>{item.item_name}</h5>
+                                                <h5 className="fw-bold m-0 text-dark" style={{ fontSize: '1rem' }}>{item.productName}</h5>
                                                 <span className="fw-bold text-primary ms-2" style={{ whiteSpace: 'nowrap' }}>Rs. {parseFloat(item.price).toLocaleString()}</span>
                                             </div>
 
@@ -333,16 +332,7 @@ const Marketplace = () => {
                                                     </button>
                                                 )}
 
-                                                {/* Buyer: contact */}
-                                                {!isMine && item.status === 'available' && (
-                                                    <a
-                                                        href={`tel:${item.phone_number}`}
-                                                        className="btn btn-primary btn-sm rounded-pill d-flex align-items-center justify-content-center gap-1"
-                                                        onClick={(e) => e.stopPropagation()}
-                                                    >
-                                                        <Phone size={14} /> Contact Seller
-                                                    </a>
-                                                )}
+
                                             </div>
                                         </div>
                                     </div>
@@ -381,9 +371,9 @@ const Marketplace = () => {
                                             <input
                                                 type="text"
                                                 className="form-control"
-                                                name="item_name"
+                                                name="productName"
                                                 placeholder="e.g. Calculus Textbook, Laptop Stand…"
-                                                value={formData.item_name}
+                                                value={formData.productName}
                                                 onChange={handleChange}
                                                 required
                                             />
@@ -416,6 +406,11 @@ const Marketplace = () => {
                                                 placeholder="e.g. 1500"
                                                 value={formData.price}
                                                 onChange={handleChange}
+                                                onKeyDown={(e) => {
+                                                    if (['e', 'E', '+', '-'].includes(e.key)) {
+                                                        e.preventDefault();
+                                                    }
+                                                }}
                                                 required
                                             />
                                         </div>
@@ -576,7 +571,7 @@ const Marketplace = () => {
                                             {detailImages.length > 0 ? (
                                                 <img
                                                     src={detailImages[activeImageIndex]}
-                                                    alt={selectedItem.item_name}
+                                                    alt={selectedItem.productName}
                                                     style={{ maxWidth: '100%', maxHeight: '280px', objectFit: 'contain', borderRadius: '10px' }}
                                                 />
                                             ) : (
@@ -615,7 +610,7 @@ const Marketplace = () => {
                                     <div className="col-md-6 p-4 d-flex flex-column justify-content-between" style={{ backgroundColor: '#fff' }}>
                                         <div>
                                             <div className="d-flex justify-content-between align-items-start mb-3">
-                                                <h4 className="fw-bold text-dark m-0">{selectedItem.item_name}</h4>
+                                                <h4 className="fw-bold text-dark m-0">{selectedItem.productName}</h4>
                                                 <button type="button" className="btn-close" onClick={() => setSelectedItem(null)} />
                                             </div>
 

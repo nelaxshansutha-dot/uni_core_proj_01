@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import logo from '../../assets/logo.jpg';
 
-const Sidebar = () => {
+const Sidebar = ({ isOpen, setIsOpen }) => {
     const { user } = useContext(AuthContext);
     const location = useLocation();
 
@@ -29,7 +29,7 @@ const Sidebar = () => {
     };
 
     return (
-        <div className="sidebar d-flex flex-column p-3 position-fixed shadow-sm" style={{ width: '250px', zIndex: 1000 }}>
+        <div className={`sidebar d-flex flex-column p-3 position-fixed shadow-sm ${isOpen ? 'show' : ''}`} style={{ width: '250px', zIndex: 1050 }}>
             <div className="d-flex align-items-center mb-4 px-2 mt-2">
                 <div className="bg-white rounded p-1 me-2 d-flex align-items-center justify-content-center" style={{ width: '40px', height: '40px' }}>
                     <img src={logo} alt="UniCore Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
@@ -78,15 +78,7 @@ const Sidebar = () => {
                                 Content Moderation
                             </Link>
                         </li>
-                        <li>
-                            <Link 
-                                to="/admin?tab=reports" 
-                                className={`nav-link d-flex align-items-center gap-3 ${isActive('/admin', 'reports') ? 'active' : ''}`}
-                            >
-                                <AlertTriangle size={20} />
-                                Reports &amp; Complaints
-                            </Link>
-                        </li>
+
                         <li className="mt-4">
                             <div className="text-uppercase text-secondary small fw-bold px-3 mb-2">System</div>
                         </li>

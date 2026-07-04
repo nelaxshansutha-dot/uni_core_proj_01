@@ -16,8 +16,8 @@ if ($method === 'GET') {
     if ($action === 'my-requests' && in_array($user['role'], ['student', 'rep'])) {
         $controller->getStudentRequests($user['id']);
     } else if ($action === 'course-requests' && $user['role'] === 'rep') {
-        if (!isset($_GET['course_code'])) Response::error("Missing course_code");
-        $controller->getCourseRequests($_GET['course_code']);
+        if (!isset($_GET['courseUnitID'])) Response::error("Missing courseUnitID");
+        $controller->getCourseRequests($_GET['courseUnitID']);
     } else {
         Response::error("Invalid action or permissions.", 403);
     }

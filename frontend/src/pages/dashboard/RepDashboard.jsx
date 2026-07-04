@@ -94,70 +94,19 @@ const RepDashboard = () => {
                 {unitCounts.length === 0 ? (
                     <div className="col-12 text-muted">No course units have been requested yet.</div>
                 ) : (
-                    unitCounts.map((unit, idx) => (
-                        <div key={idx} className="col-12 col-md-4">
-                            <div className="card shadow-sm border-0 border-start border-primary border-4 h-100">
-                                <div className="card-body">
-                                    <h5 className="card-title fw-bold mb-1">{unit.unitName || unit.courseCode}</h5>
-                                    <span className="badge bg-light text-dark mb-3">{unit.courseCode}</span>
-                                    <div className="d-flex align-items-center mt-auto">
+                    unitCounts.map((unit) => (
+                        <div className="col-md-6 col-lg-3" key={unit.courseUnitID}>
+                            <div className="card shadow-sm border-0 h-100">
+                                <div className="card-body p-4 text-center">
+                                    <div className="mb-3">
+                                        <TrendingUp className="text-primary" size={32} />
+                                    </div>
+                                    <h5 className="card-title fw-bold mb-1">{unit.unitName || unit.courseUnitID}</h5>
+                                    <span className="badge bg-light text-dark mb-3">{unit.courseUnitID}</span>
+                                    <div className="d-flex align-items-center mt-auto justify-content-center">
                                         <Users className="text-primary me-2" size={24} />
                                         <span className="fs-4 fw-bold text-dark">{unit.studentCount}</span>
                                         <span className="text-muted ms-2 mt-1">Student(s) requested</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    ))
-                )}
-            </div>
-
-            <h4 className="fw-bold mb-3 border-top pt-4 text-dark">Individual Peer Learning Requests</h4>
-            <div className="row g-4">
-                {requests.length === 0 ? (
-                    <div className="col-12 text-center py-5">
-                        <BookOpen size={48} className="text-muted mb-3 opacity-50" />
-                        <h4 className="text-muted">No Kuppy Requests Found</h4>
-                        <p className="text-muted">There are no peer learning requests for your batch right now.</p>
-                    </div>
-                ) : (
-                    requests.map((req) => (
-                        <div key={req.requestID} className="col-12 col-md-6 col-lg-4">
-                            <div className="card h-100 shadow-sm border-0">
-                                <div className="card-body">
-                                    <div className="d-flex justify-content-between align-items-start mb-3">
-                                        <span className={`badge ${req.status === 'pending' ? 'bg-warning' : 'bg-success'}`}>
-                                            {req.status.toUpperCase()}
-                                        </span>
-                                        <span className="text-muted small d-flex align-items-center">
-                                            <Clock size={14} className="me-1" />
-                                            {new Date(req.created_at).toLocaleDateString()}
-                                        </span>
-                                    </div>
-                                    
-                                    <h5 className="card-title fw-bold mb-2 text-primary">
-                                        {req.courseUnitName || 'General Topic'}
-                                    </h5>
-                                    <p className="card-text mb-3 fw-medium">Topic: {req.topic}</p>
-                                    
-                                    <div className="d-flex align-items-center mb-4 text-muted small">
-                                        <User size={16} className="me-2" />
-                                        <span>Requested by: {req.studentName} ({req.studentEnrollment})</span>
-                                    </div>
-
-                                    <div className="d-flex gap-2 mt-auto">
-                                        <button 
-                                            className="btn btn-outline-primary btn-sm flex-grow-1 d-flex align-items-center justify-content-center"
-                                            onClick={() => handleAction('share_classmates', req.requestID)}
-                                        >
-                                            <Share2 size={16} className="me-1" /> Classmates
-                                        </button>
-                                        <button 
-                                            className="btn btn-outline-secondary btn-sm flex-grow-1 d-flex align-items-center justify-content-center"
-                                            onClick={() => handleAction('forward_seniors', req.requestID)}
-                                        >
-                                            <Send size={16} className="me-1" /> Seniors
-                                        </button>
                                     </div>
                                 </div>
                             </div>

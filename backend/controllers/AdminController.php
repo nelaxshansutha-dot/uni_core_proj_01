@@ -297,7 +297,7 @@ class AdminController {
         $notes = [];
 
         if (empty($type) || $type === 'lost_item') {
-            $stmt = $db->query("SELECT l.lostID as lost_id, l.item_name, l.last_seen_date, l.last_seen_time, l.item_image, l.contact_no, l.created_at, u.email, s.enrollmentNo as enrollment_no
+            $stmt = $db->query("SELECT l.lostID as lost_id, l.lostItemName, l.last_seen_date, l.last_seen_time, l.item_image, l.contact_number as contact_no, l.created_at, l.status, l.is_flagged, u.email, s.enrollmentNo as enrollment_no
                                 FROM Lost_items l 
                                 JOIN Users u ON l.userID = u.userID 
                                 LEFT JOIN Student s ON u.userID = s.userID
@@ -306,7 +306,7 @@ class AdminController {
         }
 
         if (empty($type) || $type === 'marketplace') {
-            $stmt = $db->query("SELECT m.productID as id, m.item_name as title, m.price, m.location, m.image_url as product_image, m.phone_number as contact_no, m.created_at, u.email, s.enrollmentNo as enrollment_no
+            $stmt = $db->query("SELECT m.productID as id, m.productName as title, m.price, m.location, m.image_url as product_image, m.phone_number as contact_no, m.created_at, m.status, m.is_flagged, u.email, s.enrollmentNo as enrollment_no
                                 FROM marketplace m 
                                 JOIN Users u ON m.userID = u.userID 
                                 LEFT JOIN Student s ON u.userID = s.userID
@@ -315,7 +315,7 @@ class AdminController {
         }
 
         if (empty($type) || $type === 'notes') {
-            $stmt = $db->query("SELECT n.noteID as id, n.title, n.courseCode, n.file_url, n.created_at, u.email, s.enrollmentNo as enrollment_no
+            $stmt = $db->query("SELECT n.noteID as id, n.title, n.courseUnitID, n.file_url, n.created_at, n.status, n.is_flagged, u.email, s.enrollmentNo as enrollment_no
                                 FROM Notes n 
                                 JOIN Student s ON n.enrollmentNo = s.enrollmentNo
                                 JOIN Users u ON s.userID = u.userID 

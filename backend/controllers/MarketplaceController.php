@@ -12,7 +12,7 @@ class MarketplaceController {
     }
 
     public function createItem($data, $user_id) {
-        $missing = Validator::required(['item_name', 'description', 'price', 'condition_type', 'location', 'phone_number'], $data);
+        $missing = Validator::required(['productName', 'description', 'price', 'condition_type', 'location', 'phone_number'], $data);
         if (!empty($missing)) {
             Response::error("Missing fields: " . implode(', ', $missing));
             return;
@@ -31,7 +31,7 @@ class MarketplaceController {
         $model = new Marketplace();
         $itemData = [
             'userID'         => $user_id,
-            'item_name'      => $data['item_name'],
+            'productName'      => $data['productName'],
             'description'    => $data['description'],
             'price'          => $data['price'],
             'condition_type' => $data['condition_type'],
@@ -67,7 +67,7 @@ class MarketplaceController {
     }
 
     public function updateListing($data, $user_id) {
-        $missing = Validator::required(['productID', 'item_name', 'description', 'price', 'condition_type', 'location', 'phone_number'], $data);
+        $missing = Validator::required(['productID', 'productName', 'description', 'price', 'condition_type', 'location', 'phone_number'], $data);
         if (!empty($missing)) {
             Response::error("Missing fields: " . implode(', ', $missing));
             return;
@@ -85,7 +85,7 @@ class MarketplaceController {
         $model = new Marketplace();
         $itemData = [
             'productID'      => $data['productID'],
-            'item_name'      => $data['item_name'],
+            'productName'      => $data['productName'],
             'description'    => $data['description'],
             'price'          => $data['price'],
             'condition_type' => $data['condition_type'],

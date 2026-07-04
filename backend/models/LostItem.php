@@ -18,7 +18,7 @@ class LostItem extends BaseModel {
         $query = "INSERT INTO Lost_items
         (
             userID,
-            item_name,
+            lostItemName,
             description,
             last_seen_datetime,
             last_seen_place,
@@ -28,7 +28,7 @@ class LostItem extends BaseModel {
         VALUES
         (
             :userID,
-            :item_name,
+            :lostItemName,
             :description,
             :last_seen_datetime,
             :last_seen_place,
@@ -39,7 +39,7 @@ class LostItem extends BaseModel {
         $stmt = $this->conn->prepare($query);
 
         $stmt->bindParam(':userID', $data['user_id']);
-        $stmt->bindParam(':item_name', $data['item_name']);
+        $stmt->bindParam(':lostItemName', $data['lostItemName']);
         $stmt->bindParam(':description', $data['description']);
         $stmt->bindParam(':last_seen_datetime', $data['last_seen_datetime']);
         $stmt->bindParam(':last_seen_place', $data['last_seen_place']);
@@ -77,7 +77,7 @@ class LostItem extends BaseModel {
 
     public function update($data) {
         $query = "UPDATE " . $this->table . " SET 
-                  item_name = :item_name, 
+                  lostItemName = :lostItemName, 
                   description = :description, 
                   last_seen_datetime = :last_seen_datetime, 
                   last_seen_place = :last_seen_place, 
@@ -91,7 +91,7 @@ class LostItem extends BaseModel {
 
         $stmt = $this->conn->prepare($query);
 
-        $stmt->bindParam(':item_name', $data['item_name']);
+        $stmt->bindParam(':lostItemName', $data['lostItemName']);
         $stmt->bindParam(':description', $data['description']);
         $stmt->bindParam(':last_seen_datetime', $data['last_seen_datetime']);
         $stmt->bindParam(':last_seen_place', $data['last_seen_place']);

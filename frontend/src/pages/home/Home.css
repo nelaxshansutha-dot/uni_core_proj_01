@@ -348,6 +348,74 @@
 }
 
 /* ================================================================
+   CONTACT SECTION
+================================================================ */
+.contact-section {
+  padding: 80px 0;
+  position: relative;
+  z-index: 1;
+}
+
+.contact-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.contact-card {
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 18px;
+  padding: 36px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.contact-card:hover {
+  background: rgba(255, 255, 255, 0.045);
+  border-color: rgba(255, 255, 255, 0.12);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.15);
+}
+
+.contact-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(199, 130, 183, 0.15), rgba(122, 61, 112, 0.25));
+  color: #d896c9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.contact-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.contact-desc {
+  font-size: 0.95rem;
+  color: #e8c5e2;
+  font-weight: 500;
+  margin: 0;
+}
+
+.contact-subdesc {
+  font-size: 0.85rem;
+  color: #9e7d9b;
+  margin: 0;
+}
+
+/* ================================================================
    CTA BANNER SECTION
 ================================================================ */
 .cta-section {
@@ -425,7 +493,8 @@
   .features-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  .steps-grid {
+  .steps-grid,
+  .contact-grid {
     grid-template-columns: repeat(2, 1fr);
   }
 }
@@ -435,11 +504,9 @@
     padding: 110px 0 72px;
   }
 
-  .features-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .steps-grid {
+  .features-grid,
+  .steps-grid,
+  .contact-grid {
     grid-template-columns: 1fr;
   }
 

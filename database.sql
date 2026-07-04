@@ -21,7 +21,7 @@ CREATE TABLE Users (
 );
 
 CREATE TABLE Admin (
-    AdminID INT AUTO_INCREMENT PRIMARY KEY,
+    adminID INT AUTO_INCREMENT PRIMARY KEY,
     userID INT NOT NULL,
     FOREIGN KEY (userID) REFERENCES Users(userID) ON DELETE CASCADE
 );
@@ -42,10 +42,10 @@ CREATE TABLE Course (
 );
 
 CREATE TABLE Course_units (
-    courseCode VARCHAR(20) PRIMARY KEY,
+    courseUnitID VARCHAR(20) PRIMARY KEY,
     courseID INT NOT NULL,
-    name VARCHAR(100) NOT NULL,
-    year INT NOT NULL,
+    courseUnitName VARCHAR(100) NOT NULL,
+    academicYear INT NOT NULL,
     semester INT NOT NULL,
     FOREIGN KEY (courseID) REFERENCES Course(courseID) ON DELETE CASCADE
 );
@@ -103,7 +103,7 @@ CREATE TABLE App_notification (
 CREATE TABLE Lost_items (
     lostID INT AUTO_INCREMENT PRIMARY KEY,
     userID INT NOT NULL,
-    item_name VARCHAR(100) NOT NULL,
+    lostItemName VARCHAR(100) NOT NULL,
     last_seen_date DATE NOT NULL,
     last_seen_time TIME NOT NULL,
     item_image VARCHAR(255),
@@ -125,7 +125,7 @@ CREATE TABLE SMS_notification (
 CREATE TABLE marketplace (
     productID INT AUTO_INCREMENT PRIMARY KEY,
     userID INT NOT NULL,
-    item_name VARCHAR(100) NOT NULL,
+    productName VARCHAR(100) NOT NULL,
     description TEXT NULL,
     price DECIMAL(10,2) NOT NULL,
     condition_type VARCHAR(20) NOT NULL DEFAULT 'new',
@@ -145,20 +145,20 @@ CREATE TABLE Notes (
     noteID INT AUTO_INCREMENT PRIMARY KEY,
     enrollmentNo VARCHAR(50) NOT NULL,
     courseID INT NOT NULL,
-    courseCode VARCHAR(20) NOT NULL,
+    courseUnitID VARCHAR(20) NOT NULL,
     title VARCHAR(100) NOT NULL,
     file_url VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (enrollmentNo) REFERENCES Student(enrollmentNo) ON DELETE CASCADE,
     FOREIGN KEY (courseID) REFERENCES Course(courseID) ON DELETE CASCADE,
-    FOREIGN KEY (courseCode) REFERENCES Course_units(courseCode) ON DELETE CASCADE
+    FOREIGN KEY (courseUnitID) REFERENCES Course_units(courseUnitID) ON DELETE CASCADE
 );
 
 CREATE TABLE Peer_learning_request (
     requestID INT AUTO_INCREMENT PRIMARY KEY,
     repID INT NOT NULL,
     enrollmentNo VARCHAR(50) NOT NULL,
-    topic VARCHAR(200) NOT NULL,
+    courseUnitName VARCHAR(200) NOT NULL,
     status ENUM('pending', 'approved', 'rejected', 'completed') DEFAULT 'pending',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (repID) REFERENCES Course_representative(repID) ON DELETE CASCADE,
