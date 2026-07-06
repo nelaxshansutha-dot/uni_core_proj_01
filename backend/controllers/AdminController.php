@@ -312,7 +312,9 @@ class AdminController {
                 $mail->send();
             } catch (Exception $e) {
                 // Log email failure but don't fail the whole request
-                file_put_contents(__DIR__ . '/../admin_log.txt', "Failed to send email to {$data['email']}: {$mail->ErrorInfo}\n", FILE_APPEND);
+                $logMsg = date('Y-m-d H:i:s') . " | Failed to send email to {$data['email']}: {$mail->ErrorInfo}\n";
+                $logMsg .= "Local Dev Credentials - Rep ID: {$data['rep_id']}, Temp Password: {$data['password']}\n";
+                file_put_contents(__DIR__ . '/../admin_log.txt', $logMsg, FILE_APPEND);
             }
 
             Response::success("Successfully assigned student as Course Representative and sent credential email.");

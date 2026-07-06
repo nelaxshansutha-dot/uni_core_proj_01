@@ -90,10 +90,7 @@ const Home = () => {
         <div className="hero-glow glow-2" />
 
         <div className="container hero-container">
-          <div className="hero-badge">
-            <Sparkles size={14} />
-            <span>Introducing UniCore v1.0</span>
-          </div>
+         
 
           <h1 className="hero-title">
             Your Smart Campus <br />
