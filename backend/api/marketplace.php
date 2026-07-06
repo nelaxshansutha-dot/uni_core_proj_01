@@ -1,17 +1,17 @@
 <?php
 require_once __DIR__ . '/../config/Cors.php';
+Cors::enable();
 require_once __DIR__ . '/../controllers/MarketplaceController.php';
 require_once __DIR__ . '/../utils/AuthMiddleware.php';
 require_once __DIR__ . '/../utils/Response.php';
 
-Cors::enable();
 
 $method = $_SERVER['REQUEST_METHOD'];
 $controller = new MarketplaceController();
 
-// if ($method === 'GET') {
-//     $controller->getItems();
-// } else {
+if ($method === 'GET') {
+    $controller->getItems();
+ } else {
     // All write operations require authentication
     $user = AuthMiddleware::authenticate();
 
@@ -33,5 +33,6 @@ $controller = new MarketplaceController();
     } else {
         Response::error("Method not allowed.", 405);
     }
+ }
 
 ?>

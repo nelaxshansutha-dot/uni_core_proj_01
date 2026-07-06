@@ -245,33 +245,6 @@ const Settings = () => {
                                         />
                                     </div>
 
-                                    {/* Student Fields */}
-                                    {(user?.role === 'student' || user?.role === 'rep') && (
-                                        <>
-                                            <div className="col-md-6">
-                                                <label className="form-label text-dark fw-semibold">Course</label>
-                                                <input
-                                                    type="text"
-                                                    className="form-control"
-                                                    name="course"
-                                                    placeholder="e.g. Computer Science & Technology"
-                                                    value={formData.course}
-                                                    onChange={handleChange}
-                                                />
-                                            </div>
-                                            <div className="col-md-6">
-                                                <label className="form-label text-dark fw-semibold">Academic Year</label>
-                                                <input
-                                                    type="number"
-                                                    className="form-control"
-                                                    name="year"
-                                                    placeholder="e.g. 1, 2, 3, 4"
-                                                    value={formData.year}
-                                                    onChange={handleChange}
-                                                />
-                                            </div>
-                                        </>
-                                    )}
 
                                     {/* Staff Fields */}
                                     {user?.role === 'staff' && (

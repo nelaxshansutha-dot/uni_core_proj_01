@@ -1,9 +1,9 @@
 <?php
 require_once __DIR__ . '/../config/Cors.php';
+Cors::enable();
+
 require_once __DIR__ . '/../controllers/AuthController.php';
 require_once __DIR__ . '/../utils/Response.php';
-
-Cors::enable();
 
 $method = $_SERVER['REQUEST_METHOD'];
 $action = isset($_GET['action']) ? $_GET['action'] : '';
