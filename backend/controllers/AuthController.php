@@ -125,17 +125,25 @@ class AuthController extends BaseController {
         $requestedRole = isset($data['role']) ? $data['role'] : 'student';
 
         if ($user) {
+            // Check if user is active
+            if (isset($user['is_active']) && $user['is_active'] == 0) {
+                Response::error("Your account has been deactivated. Please contact an administrator.");
+            }
+
             $isAuthenticated = false;
             
             // If logging in as a rep, verify against Course_representative password
             if ($requestedRole === 'rep') {
-                if ($user['role'] === 'rep') {
-                    $db = (new Database())->getConnection();
-                    $stmt = $db->prepare("SELECT hash_password, is_first_login FROM Course_representative WHERE userID = ?");
-                    $stmt->execute([$user['userID']]);
-                    $repData = $stmt->fetch(PDO::FETCH_ASSOC);
-                    
-                    if ($repData && password_verify($data['password'], $repData['hash_password'])) {
+                $db = (new Database())->getConnection();
+                $stmt = $db->prepare("SELECT hash_password, is_first_login, is_active FROM Course_representative WHERE userID = ?");
+                $stmt->execute([$user['userID']]);
+                $repData = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                if ($repData) {
+                    if (isset($repData['is_active']) && $repData['is_active'] == 0) {
+                        Response::error("Your Representative account has been deactivated. Please contact an administrator.");
+                    }
+                    if (password_verify($data['password'], $repData['hash_password'])) {
                         if (isset($repData['is_first_login']) && $repData['is_first_login'] == 1) {
                             Response::success("First login password change required", [
                                 "action" => "force_reset", 

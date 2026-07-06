@@ -49,7 +49,7 @@ const HomeFooter = () => {
               <h4 className="footer-col-title">Company</h4>
               <ul className="footer-link-list">
                 <li><Link to="/about">About</Link></li>
-                <li><Link to="/contact">Contact</Link></li>
+                <li><a href="#contact">Contact</a></li>
                 <li><Link to="/register">Register</Link></li>
                 <li><Link to="/login">Sign In</Link></li>
               </ul>

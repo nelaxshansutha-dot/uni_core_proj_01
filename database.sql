@@ -16,6 +16,7 @@ CREATE TABLE Users (
     hash_password VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     is_verified BOOLEAN DEFAULT FALSE,
+    is_active BOOLEAN DEFAULT TRUE,
     role ENUM('student', 'staff', 'rep', 'admin') NOT NULL DEFAULT 'student',
     last_login TIMESTAMP NULL
 );

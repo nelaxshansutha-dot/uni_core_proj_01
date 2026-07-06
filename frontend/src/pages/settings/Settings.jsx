@@ -155,11 +155,13 @@ const Settings = () => {
                         <div className="row g-3">
                             {/* Enrollment / ID (ReadOnly) */}
                             <div className="col-md-6">
-                                <label className="form-label text-muted text-uppercase fw-bold" style={{ fontSize: '0.75rem' }}>Enrollment No / Staff ID</label>
+                                <label className="form-label text-muted text-uppercase fw-bold" style={{ fontSize: '0.75rem' }}>
+                                    {user?.role === 'admin' ? 'Admin ID' : 'Enrollment No / Staff ID'}
+                                </label>
                                 <input
                                     type="text"
                                     className="form-control bg-light text-muted"
-                                    value={user?.enrollment_no || ''}
+                                    value={user?.role === 'admin' ? (user?.admin_id || '') : (user?.enrollment_no || '')}
                                     readOnly
                                     disabled
                                 />

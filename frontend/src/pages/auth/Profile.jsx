@@ -134,11 +134,13 @@ const Profile = () => {
                                         <div className="form-text">Email address cannot be changed.</div>
                                     </div>
                                     <div className="col-md-6">
-                                        <label className="form-label text-muted small fw-bold">Enrollment No / Staff ID</label>
+                                        <label className="form-label text-muted small fw-bold">
+                                            {profile.role === 'admin' ? 'Admin ID' : 'Enrollment No / Staff ID'}
+                                        </label>
                                         <input
                                             type="text"
                                             className="form-control bg-light"
-                                            value={profile.enrollment_no || ''}
+                                            value={profile.role === 'admin' ? (profile.admin_id || '') : (profile.enrollment_no || '')}
                                             disabled
                                         />
                                     </div>

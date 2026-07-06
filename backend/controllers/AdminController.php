@@ -45,7 +45,7 @@ class AdminController {
                        s.enrollmentNo as enrollment_no, 
                        st.staffID as staff_id,
                        u.email, u.phoneNum as phone_number, u.role, u.is_verified, 
-                       1 as is_active, u.created_at, 
+                       u.is_active, u.created_at, 
                        u.fname as first_name, u.lname as last_name,
                        s.courseID as course, s.std_year as year,
                        st.dept as department
@@ -65,12 +65,53 @@ class AdminController {
             $params[':q'] = "%" . $query . "%";
         }
 
-        $sql .= " ORDER BY u.userID DESC";
+        // Fetch main user accounts
         $stmt = $db->prepare($sql);
         $stmt->execute($params);
         $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        Response::success("Users retrieved", $users);
+        // Fetch secondary rep accounts
+        $repSql = "SELECT CONCAT('rep_', cr.userID) as id, 
+                          s.enrollmentNo as enrollment_no, 
+                          NULL as staff_id,
+                          u.email, u.phoneNum as phone_number, 'rep' as role, u.is_verified, 
+                          cr.is_active, u.created_at, 
+                          u.fname as first_name, u.lname as last_name,
+                          s.courseID as course, s.std_year as year,
+                          NULL as department
+                   FROM Course_representative cr
+                   JOIN Users u ON cr.userID = u.userID
+                   LEFT JOIN Student s ON cr.userID = s.userID
+                   WHERE 1=1";
+                   
+        $repParams = [];
+        if (!empty($role) && $role !== 'rep') {
+            // If filtering for non-rep roles, don't fetch reps
+            $repSql .= " AND 1=0"; 
+        }
+        if (!empty($query)) {
+            $repSql .= " AND (s.enrollmentNo LIKE :q OR u.email LIKE :q OR u.fname LIKE :q OR u.lname LIKE :q)";
+            $repParams[':q'] = "%" . $query . "%";
+        }
+        $repStmt = $db->prepare($repSql);
+        $repStmt->execute($repParams);
+        $reps = $repStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Merge arrays
+        $allUsers = array_merge($users, $reps);
+
+        // Sort by created_at descending (approximate sorting)
+        usort($allUsers, function($a, $b) {
+            return strtotime($b['created_at']) - strtotime($a['created_at']);
+        });
+
+        // Cast tinyint to boolean for frontend so '0' doesn't evaluate as truthy
+        foreach ($allUsers as &$u) {
+            $u['is_active'] = (bool)$u['is_active'];
+            $u['is_verified'] = (bool)$u['is_verified'];
+        }
+
+        Response::success("Users retrieved", $allUsers);
     }
 
     public function createUser($data, $adminId) {
@@ -104,8 +145,8 @@ class AdminController {
                 $studentModel->create([
                     'userID' => $user_id,
                     'enrollmentNo' => $data['enrollment_no'],
-                    'courseID' => $data['course'] ?? null,
-                    'std_year' => $data['year'] ?? null
+                    'courseID' => !empty($data['course']) ? $data['course'] : null,
+                    'std_year' => !empty($data['year']) ? $data['year'] : null
                 ]);
             } else if ($data['role'] === 'staff') {
                 $staffModel = new Staff();
@@ -127,9 +168,13 @@ class AdminController {
             Response::error("Missing fields: " . implode(', ', $missing));
         }
 
+        // Handle rep_ prefix if they edit the rep row
+        $isRepRow = strpos((string)$id, 'rep_') === 0;
+        $realId = $isRepRow ? (int)str_replace('rep_', '', $id) : (int)$id;
+
         $db = (new Database())->getConnection();
         $stmt = $db->prepare("SELECT role FROM Users WHERE userID = ?");
-        $stmt->execute([$id]);
+        $stmt->execute([$realId]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$user) {
             Response::error("User not found", 404);
@@ -139,17 +184,12 @@ class AdminController {
         try {
             $phone = isset($data['phone_number']) ? $data['phone_number'] : null;
             $stmt = $db->prepare("UPDATE Users SET email = ?, phoneNum = ?, fname = ?, lname = ? WHERE userID = ?");
-            $stmt->execute([$data['email'], $phone, $data['first_name'], $data['last_name'], $id]);
+            $stmt->execute([$data['email'], $phone, $data['first_name'], $data['last_name'], $realId]);
 
-            if ($user['role'] === 'student' || $user['role'] === 'rep') {
-                $course = isset($data['course']) ? $data['course'] : null;
-                $year = isset($data['year']) ? (int)$data['year'] : null;
-                $stmt = $db->prepare("UPDATE Student SET courseID = ?, std_year = ? WHERE userID = ?");
-                $stmt->execute([$course, $year, $id]);
-            } else if ($user['role'] === 'staff') {
+            if ($user['role'] === 'staff') {
                 $dept = isset($data['department']) ? $data['department'] : '';
                 $stmt = $db->prepare("UPDATE Staff SET dept = ? WHERE userID = ?");
-                $stmt->execute([$dept, $id]);
+                $stmt->execute([$dept, $realId]);
             }
 
             $db->commit();
@@ -161,6 +201,22 @@ class AdminController {
     }
 
     public function toggleUserStatus($id, $data, $adminId) {
+        if (!isset($data['is_active'])) {
+            Response::error("Missing is_active flag");
+        }
+        $db = (new Database())->getConnection();
+        $isActive = $data['is_active'] ? 1 : 0;
+        
+        if (strpos((string)$id, 'rep_') === 0) {
+            $realId = (int)str_replace('rep_', '', $id);
+            $stmt = $db->prepare("UPDATE Course_representative SET is_active = ? WHERE userID = ?");
+            $stmt->execute([$isActive, $realId]);
+        } else {
+            $realId = (int)$id;
+            $stmt = $db->prepare("UPDATE Users SET is_active = ? WHERE userID = ?");
+            $stmt->execute([$isActive, $realId]);
+        }
+        
         Response::success("User status updated successfully.");
     }
 
@@ -180,14 +236,14 @@ class AdminController {
     }
 
     public function assignRep($data, $adminId) {
-        $missing = Validator::required(['user_id', 'fname', 'lname', 'email', 'rep_id', 'password', 'course', 'year'], $data);
+        $missing = Validator::required(['user_id', 'fname', 'lname', 'email', 'rep_id', 'password'], $data);
         if (!empty($missing)) {
             Response::error("Missing fields: " . implode(', ', $missing));
         }
 
         $db = (new Database())->getConnection();
         
-        $stmt = $db->prepare("SELECT u.*, s.enrollmentNo FROM Users u JOIN Student s ON u.userID = s.userID WHERE u.userID = ?");
+        $stmt = $db->prepare("SELECT u.*, s.enrollmentNo, s.courseID FROM Users u JOIN Student s ON u.userID = s.userID WHERE u.userID = ?");
         $stmt->execute([$data['user_id']]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -197,35 +253,13 @@ class AdminController {
 
         $hashed = password_hash($data['password'], PASSWORD_BCRYPT);
         $phone = isset($data['phone']) ? $data['phone'] : null;
+        $courseId = $user['courseID']; // Use existing student course ID
 
         $db->beginTransaction();
         try {
-            // Resolve Course ID from String/Int
-            $courseId = null;
-            if (!empty($data['course'])) {
-                if (is_numeric($data['course'])) {
-                    $courseId = (int)$data['course'];
-                } else {
-                    $stmt = $db->prepare("SELECT courseID FROM Course WHERE courseName = ? LIMIT 1");
-                    $stmt->execute([$data['course']]);
-                    $c = $stmt->fetch(PDO::FETCH_ASSOC);
-                    if ($c) {
-                        $courseId = $c['courseID'];
-                    } else {
-                        $stmt = $db->prepare("INSERT INTO Course (courseName) VALUES (?)");
-                        $stmt->execute([$data['course']]);
-                        $courseId = $db->lastInsertId();
-                    }
-                }
-            }
-
-            // Update User details
-            $stmt = $db->prepare("UPDATE Users SET role = 'rep', fname = ?, lname = ?, phoneNum = ?, email = ? WHERE userID = ?");
+            // Update User details (keep existing role, usually student)
+            $stmt = $db->prepare("UPDATE Users SET fname = ?, lname = ?, phoneNum = ?, email = ? WHERE userID = ?");
             $stmt->execute([$data['fname'], $data['lname'], $phone, $data['email'], $data['user_id']]);
-
-            // Update Student details
-            $stmt = $db->prepare("UPDATE Student SET courseID = ?, std_year = ? WHERE userID = ?");
-            $stmt->execute([$courseId, (int)$data['year'], $data['user_id']]);
 
             // Create Course Rep record or Update if exists
             $stmt = $db->prepare("INSERT INTO Course_representative (userID, enrollmentNo, courseID, hash_password, is_first_login, rep_id_string) 
@@ -323,6 +357,16 @@ class AdminController {
             $notes = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
 
+        foreach ($lostItems as &$item) {
+            $item['is_flagged'] = (bool)$item['is_flagged'];
+        }
+        foreach ($marketplace as &$item) {
+            $item['is_flagged'] = (bool)$item['is_flagged'];
+        }
+        foreach ($notes as &$item) {
+            $item['is_flagged'] = (bool)$item['is_flagged'];
+        }
+
         Response::success("Content retrieved", [
             'lost_items' => $lostItems,
             'marketplace' => $marketplace,
@@ -331,7 +375,32 @@ class AdminController {
     }
 
     public function updateContentStatus($data, $adminId) {
-        Response::success("Content status updated successfully.");
+        if (!isset($data['content_type']) || !isset($data['content_id']) || !isset($data['status'])) {
+            Response::error("Missing required fields.", 400);
+        }
+
+        $db = (new Database())->getConnection();
+        $type = $data['content_type'];
+        $id = (int)$data['content_id'];
+        $status = $data['status'];
+
+        try {
+            if ($type === 'lost_item') {
+                $stmt = $db->prepare("UPDATE Lost_items SET status = ?, is_flagged = 0 WHERE lostID = ?");
+                $stmt->execute([$status, $id]);
+            } else if ($type === 'marketplace') {
+                $stmt = $db->prepare("UPDATE marketplace SET status = ?, is_flagged = 0 WHERE productID = ?");
+                $stmt->execute([$status, $id]);
+            } else if ($type === 'notes') {
+                $stmt = $db->prepare("UPDATE Notes SET status = ?, is_flagged = 0 WHERE noteID = ?");
+                $stmt->execute([$status, $id]);
+            } else {
+                Response::error("Invalid content type.");
+            }
+            Response::success("Content status updated successfully.");
+        } catch (Exception $e) {
+            Response::error("Failed to update content status: " . $e->getMessage(), 500);
+        }
     }
 
     public function getReports() {
