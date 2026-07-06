@@ -1,10 +1,10 @@
 <?php
 require_once __DIR__ . '/../config/Cors.php';
+Cors::enable();
 require_once __DIR__ . '/../config/Database.php';
 require_once __DIR__ . '/../utils/Response.php';
 require_once __DIR__ . '/../utils/AuthMiddleware.php';
 
-Cors::enable();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     Response::error("Method not allowed", 405);

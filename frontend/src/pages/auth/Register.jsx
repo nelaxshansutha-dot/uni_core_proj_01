@@ -24,7 +24,13 @@ const Register = () => {
     const navigate = useNavigate();
 
     const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        const { name, value } = e.target;
+        if (name === 'phone_number') {
+            if (value !== '' && !/^[0-9]{0,10}$/.test(value)) {
+                return;
+            }
+        }
+        setFormData({ ...formData, [name]: value });
         if (error) setError('');
     };
 
@@ -52,10 +58,10 @@ const Register = () => {
         return 'Staff must use a Gmail address ending with @gmail.com';
     }, [formData.role]);
 
-    // Phone number validation — digits, +, spaces, hyphens only (7–15 digits)
+    // Phone number validation — starts with 0, exactly 10 digits
     const phoneValid = useMemo(() => {
         if (!formData.phone_number) return null;
-        return /^[+]?[0-9][\s\-]?([0-9][\s\-]?){6,14}$/.test(formData.phone_number.trim());
+        return /^0[0-9]{9}$/.test(formData.phone_number.trim());
     }, [formData.phone_number]);
 
     const handleSubmit = async (e) => {
@@ -65,7 +71,7 @@ const Register = () => {
 
         // Client-side validation
         if (!phoneValid) {
-            setError('Please enter a valid phone number (digits only, 7–15 digits).');
+            setError('Please enter a valid phone number (must start with 0 and be exactly 10 digits).');
             setLoading(false);
             return;
         }
@@ -198,21 +204,24 @@ const Register = () => {
                                     type="tel"
                                     className={`form-control${phoneValid === false ? ' is-invalid' : phoneValid === true ? ' is-valid' : ''}`}
                                     name="phone_number"
-                                    placeholder="e.g. +94 77 123 4567"
+                                    placeholder="e.g. 0771234567"
+                                    maxLength="10"
+                                    pattern="^0[0-9]{9}$"
+                                    title="Phone number must start with 0 and be exactly 10 digits."
                                     value={formData.phone_number}
                                     onChange={handleChange}
                                     required
                                 />
                                 {phoneValid === false ? (
                                     <div className="invalid-feedback d-flex align-items-center gap-1">
-                                        <XCircle size={13} /> Enter a valid phone number (digits only, 7–15 digits).
+                                        <XCircle size={13} /> Enter a valid phone number (must start with 0 and be exactly 10 digits).
                                     </div>
                                 ) : phoneValid === true ? (
                                     <div className="valid-feedback d-flex align-items-center gap-1">
                                         <CheckCircle size={13} /> Valid phone number
                                     </div>
                                 ) : (
-                                    <div className="form-hint">Enter your phone number (digits only)</div>
+                                    <div className="form-hint">Enter your phone number (starts with 0, 10 digits)</div>
                                 )}
                             </div>
 

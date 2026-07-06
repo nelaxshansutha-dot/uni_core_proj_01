@@ -155,6 +155,11 @@ const Marketplace = () => {
             return;
         }
 
+        if (!/^0[0-9]{9}$/.test(formData.phone_number)) {
+            setSubmitError('Phone number must start with 0 and be exactly 10 digits.');
+            return;
+        }
+
         setSubmitting(true);
         try {
             let res;
@@ -437,10 +442,13 @@ const Marketplace = () => {
                                                 className="form-control"
                                                 name="phone_number"
                                                 placeholder="e.g. 0771234567"
+                                                maxLength="10"
+                                                pattern="^0[0-9]{9}$"
+                                                title="Phone number must start with 0 and be exactly 10 digits."
                                                 value={formData.phone_number}
                                                 onChange={(e) => {
                                                     const val = e.target.value;
-                                                    if (val === '' || /^[0-9]+$/.test(val)) {
+                                                    if (val === '' || /^[0-9]{0,10}$/.test(val)) {
                                                         setFormData(prev => ({
                                                             ...prev,
                                                             phone_number: val

@@ -154,33 +154,7 @@ const Profile = () => {
                                         />
                                     </div>
 
-                                    {(profile.role === 'student' || profile.role === 'rep') && (
-                                        <>
-                                            <div className="col-md-8">
-                                                <label className="form-label text-muted small fw-bold">Course / Degree program</label>
-                                                <input
-                                                    type="text"
-                                                    className="form-control"
-                                                    name="course"
-                                                    placeholder="e.g. Computer Science & Technology"
-                                                    value={profile.course || ''}
-                                                    onChange={handleChange}
-                                                />
-                                            </div>
-                                            <div className="col-md-4">
-                                                <label className="form-label text-muted small fw-bold">Year</label>
-                                                <input
-                                                    type="number"
-                                                    className="form-control"
-                                                    name="year"
-                                                    min="1"
-                                                    max="5"
-                                                    value={profile.year || ''}
-                                                    onChange={handleChange}
-                                                />
-                                            </div>
-                                        </>
-                                    )}
+
 
                                     {profile.role === 'staff' && (
                                         <div className="col-md-12">

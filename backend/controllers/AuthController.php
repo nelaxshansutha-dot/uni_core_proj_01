@@ -502,13 +502,15 @@ class AuthController extends BaseController {
             $profile = $stmt->fetch(PDO::FETCH_ASSOC);
         }
 
+        $finalRole = $logged_in_role ? $logged_in_role : $updatedUser['role'];
+
         $userData = [
             'id' => $updatedUser['userID'],
             'enrollment_no' => $updatedUser['enrollment_no'] ?? null,
             'email' => $updatedUser['email'],
             'first_name' => $updatedUser['fname'],
             'last_name' => $updatedUser['lname'],
-            'role' => $updatedUser['role'],
+            'role' => $finalRole,
             'phone_number' => $updatedUser['phoneNum'],
             'lost_item_sms_notification' => isset($updatedUser['lost_item_sms_notification']) ? (int)$updatedUser['lost_item_sms_notification'] : 0,
             'peer_learning_app_notification' => isset($updatedUser['peer_learning_app_notification']) ? (int)$updatedUser['peer_learning_app_notification'] : 1,
@@ -522,7 +524,7 @@ class AuthController extends BaseController {
         require_once __DIR__ . '/../utils/JWT.php';
         $token = JWT::generate([
             'id' => $updatedUser['userID'],
-            'role' => $updatedUser['role']
+            'role' => $finalRole
         ]);
         $this->setAuthCookie($token);
 

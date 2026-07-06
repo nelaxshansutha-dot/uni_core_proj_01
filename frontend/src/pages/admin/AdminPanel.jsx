@@ -585,29 +585,7 @@ const AdminPanel = () => {
                                                     />
                                                 </div>
 
-                                                {/* Role-Specific Fields */}
-                                                {(userForm.role === 'student' || userForm.role === 'rep') && (
-                                                    <>
-                                                        <div className="col-md-6">
-                                                            <label className="form-label">Course</label>
-                                                            <input 
-                                                                type="text" 
-                                                                className="form-control" 
-                                                                value={userForm.course}
-                                                                onChange={(e) => setUserForm({ ...userForm, course: e.target.value })}
-                                                            />
-                                                        </div>
-                                                        <div className="col-md-6">
-                                                            <label className="form-label">Year</label>
-                                                            <input 
-                                                                type="number" 
-                                                                className="form-control" 
-                                                                value={userForm.year}
-                                                                onChange={(e) => setUserForm({ ...userForm, year: e.target.value })}
-                                                            />
-                                                        </div>
-                                                    </>
-                                                )}
+
                                                 {userForm.role === 'staff' && (
                                                     <div className="col-12">
                                                         <label className="form-label">Department</label>
@@ -753,31 +731,7 @@ const AdminPanel = () => {
                                                 </div>
                                             </div>
 
-                                            <div className="mb-3">
-                                                <label className="form-label">Course / Program</label>
-                                                <input 
-                                                    type="text" 
-                                                    className="form-control" 
-                                                    value={repForm.course}
-                                                    onChange={(e) => setRepForm({ ...repForm, course: e.target.value })}
-                                                    placeholder="e.g. Computer Science"
-                                                    required 
-                                                />
-                                            </div>
 
-                                            <div className="mb-3">
-                                                <label className="form-label">Academic Year</label>
-                                                <select 
-                                                    className="form-select" 
-                                                    value={repForm.year} 
-                                                    onChange={(e) => setRepForm({ ...repForm, year: e.target.value })}
-                                                >
-                                                    <option value="1">Year 1</option>
-                                                    <option value="2">Year 2</option>
-                                                    <option value="3">Year 3</option>
-                                                    <option value="4">Year 4</option>
-                                                </select>
-                                            </div>
 
                                             <div className="mb-3">
                                                 <label className="form-label">Rep ID</label>

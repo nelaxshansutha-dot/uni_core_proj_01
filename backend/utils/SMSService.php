@@ -7,22 +7,21 @@ class SMSService {
             return false;
         }
 
-        // Clean phone number (e.g. remove spaces, dashes, + signs)
         $phoneNumber = preg_replace('/[^0-9]/', '', $phoneNumber);
 
-        // Convert leading 0 to 94 if local Sri Lankan number
+        
         if (substr($phoneNumber, 0, 1) === '0') {
             $phoneNumber = '94' . substr($phoneNumber, 1);
         }
 
         $apiToken = "4810|NgGYVtUHjSS98YTck7nLSlYG9NgjUiv5agw5Enje1071d5c9";
         
-        // Target endpoint
+        
         $url = "https://app.text.lk/api/v3/sms/send";
 
         $payload = [
             'recipient' => $phoneNumber,
-            'sender_id' => 'TextLKDemo', // text.lk authorized sandbox sender ID
+            'sender_id' => 'TextLKDemo', 
             'message' => $message
         ];
 
@@ -41,7 +40,6 @@ class SMSService {
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
 
-        // Log the response internally for debugging/auditing
         file_put_contents(__DIR__ . '/../sms_log.txt', "[" . date('Y-m-d H:i:s') . "] TO: $phoneNumber | HTTP: $httpCode | RESP: $response | MSG: $message\n", FILE_APPEND);
 
         return ($httpCode === 200 || $httpCode === 201);
