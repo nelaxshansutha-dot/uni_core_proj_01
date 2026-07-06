@@ -96,15 +96,15 @@
 }
 
 .btn-nav-register {
-  color: white;
+  color: #4f1742;
   text-decoration: none;
   font-size: 0.9rem;
   font-weight: 600;
   padding: 8px 20px;
   border-radius: 8px;
-  background: linear-gradient(135deg, #c782b7, #9c588c);
+  background: #ffffff;
   border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 4px 14px rgba(199, 130, 183, 0.3);
+  box-shadow: 1px solid rgba(255, 255, 255, 0.12);
   transition: all 0.25s ease;
   margin-left: 4px;
 }

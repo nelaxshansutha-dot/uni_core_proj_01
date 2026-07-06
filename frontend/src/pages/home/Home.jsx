@@ -90,10 +90,7 @@ const Home = () => {
         <div className="hero-glow glow-2" />
 
         <div className="container hero-container">
-          <div className="hero-badge">
-            <Sparkles size={14} />
-            <span>Introducing UniCore v1.0</span>
-          </div>
+          
 
           <h1 className="hero-title">
             Your Smart Campus <br />
@@ -101,8 +98,8 @@ const Home = () => {
           </h1>
 
           <p className="hero-subtitle">
-            Navigate university life with ease. UniCore brings together Marketplace, Lost &amp; Found,
-            Notes Hub, and Peer Learning into one clean, powerful dashboard.
+            Simplify your university experience with UniCore. Access Lost Items, Marketplace, Notes Sharing, and Peer Learning Request. 
+            all in one powerful, easy-to-use platform.
           </p>
 
           <div className="hero-actions">
