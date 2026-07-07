@@ -140,16 +140,13 @@ class AdminController extends BaseController {
             Response::error("Failed to update user: " . $e->getMessage(), 500);
         }
     }
-    }
 
-    public function toggleUserStatus($id, $data, $adminId) {
+        public function toggleUserStatus($id, $data, $adminId) {
         if (!isset($data['is_active'])) {
-            Response::error("Missing is_active flag");
+            Response::error('Missing is_active flag');
         }
         $isActive = $data['is_active'] ? 1 : 0;
-        
         $userModel = new User();
-        
         $realId = (int)str_replace('rep_', '', $id);
         if (strpos((string)$id, 'rep_') === 0) {
             $courseRepModel = new CourseRep();
@@ -157,22 +154,19 @@ class AdminController extends BaseController {
         } else {
             $userModel->toggleStatus($realId, $isActive);
         }
-        
-        // If deactivating, send email
         if ($isActive === 0 && !empty($data['reason'])) {
             $user = $userModel->findById($realId);
             if ($user && !empty($user['email'])) {
                 MailService::sendDeactivationEmail($user['email'], $data['reason']);
             }
         }
-        
-        Response::success("User status updated successfully.");
+        Response::success('User status updated successfully.');
     }
 
     public function searchStudents($query) {
         $userModel = new User();
         $students = $userModel->searchStudents($query);
-        Response::success("Students found", $students);
+        Response::success('Students found', $students);
     }
 
     public function assignRep($data, $adminId) {

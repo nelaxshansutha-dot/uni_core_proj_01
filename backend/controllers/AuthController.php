@@ -9,11 +9,13 @@ require_once __DIR__ . '/../config/Database.php';
 require_once __DIR__ . '/../utils/MailService.php';
 require_once __DIR__ . '/../utils/JWT.php';
 
-class AuthController extends BaseController {
-    
-    private function validateEmailDomain($email, $role) {
+class AuthController extends BaseController
+{
+
+    private function validateEmailDomain($email, $role)
+    {
         $domain = strtolower(substr($email, strpos($email, '@') + 1));
-        
+
         if ($role === User::ROLE_STUDENT) {
             if ($domain !== 'std.uwu.ac.lk') {
                 return "Students must register with a university email ending in @std.uwu.ac.lk. Please use your student email.";
@@ -26,7 +28,8 @@ class AuthController extends BaseController {
         return null;
     }
 
-    public function register($data) {
+    public function register($data)
+    {
         if (isset($data['role']) && $data['role'] === User::ROLE_ADMIN) {
             Response::error("Forbidden: Cannot register as an administrator.", 403);
         }
@@ -62,7 +65,7 @@ class AuthController extends BaseController {
         }
 
         $userModel = new User();
-        
+
         if ($userModel->findByEnrollment($data['enrollment_no'])) {
             Response::error("This ID is already registered. Try logging in instead.");
         }
@@ -85,9 +88,9 @@ class AuthController extends BaseController {
             if ($data['role'] === User::ROLE_STUDENT) {
                 require_once __DIR__ . '/../models/Student.php';
                 $studentModel = new Student();
-                
+
                 $courseID = !empty($data['course']) ? $data['course'] : Student::extractCourseFromEnrollment($data['enrollment_no']);
-                
+
                 $studentModel->create([
                     'userID' => $user_id,
                     'enrollmentNo' => $data['enrollment_no'],
@@ -119,12 +122,13 @@ class AuthController extends BaseController {
         }
     }
 
-    public function login($data) {
+    public function login($data)
+    {
         Validator::validateRequired(['enrollment_no', 'password'], $data);
 
         $userModel = new User();
         $user = $userModel->findByEnrollment($data['enrollment_no']);
-        
+
         $requestedRole = isset($data['role']) ? $data['role'] : User::ROLE_STUDENT;
 
         if ($user) {
@@ -134,14 +138,14 @@ class AuthController extends BaseController {
             }
 
             $isAuthenticated = false;
-            
+
             // If logging in as a rep, verify against Course_representative password
             if ($requestedRole === User::ROLE_REP) {
                 $db = (new Database())->getConnection();
                 $stmt = $db->prepare("SELECT hash_password, is_first_login, is_active FROM Course_representative WHERE userID = ?");
                 $stmt->execute([$user['userID']]);
                 $repData = $stmt->fetch(PDO::FETCH_ASSOC);
-                
+
                 if ($repData) {
                     if (isset($repData['is_active']) && $repData['is_active'] == 0) {
                         Response::error("Your Representative account has been deactivated. Please contact an administrator.");
@@ -149,7 +153,7 @@ class AuthController extends BaseController {
                     if (password_verify($data['password'], $repData['hash_password'])) {
                         if (isset($repData['is_first_login']) && $repData['is_first_login'] == 1) {
                             Response::success("First login password change required", [
-                                "action" => "force_reset", 
+                                "action" => "force_reset",
                                 "user_id" => $user['userID']
                             ]);
                         }
@@ -173,7 +177,7 @@ class AuthController extends BaseController {
             if ($isAuthenticated) {
                 $userModel->updateLoginTime($user['userID']);
                 $db = (new Database())->getConnection();
-            
+
                 if ($user['is_verified']) {
                     $profile = null;
                     if ($user['role'] === User::ROLE_STUDENT || $user['role'] === User::ROLE_REP) {
@@ -224,7 +228,7 @@ class AuthController extends BaseController {
 
                     MailService::sendOTP($user['email'], $otp);
 
-                    Response::error ("Account not verified. A new OTP has been sent to your email.", 403, [ 'user_id' => $user['userID'],'email' => $user['email'],'needs_verification' => true ]);
+                    Response::error("Account not verified. A new OTP has been sent to your email.", 403, ['user_id' => $user['userID'], 'email' => $user['email'], 'needs_verification' => true]);
                 }
             } else {
                 Response::error("Invalid ID or password.", 401);
@@ -234,7 +238,8 @@ class AuthController extends BaseController {
         }
     }
 
-    public function verifyOtp($data) {
+    public function verifyOtp($data)
+    {
         Validator::validateRequired(['user_id', 'otp'], $data);
 
         $db = (new Database())->getConnection();
@@ -244,7 +249,7 @@ class AuthController extends BaseController {
 
         if ($otpRecord) {
             $db->prepare("DELETE FROM OTP_verification WHERE userID = ?")->execute([$data['user_id']]);
-            
+
             $userModel = new User();
             $userModel->markAsVerified($data['user_id']);
 
@@ -293,7 +298,8 @@ class AuthController extends BaseController {
         }
     }
 
-    public function forgotPassword($data) {
+    public function forgotPassword($data)
+    {
         Validator::validateRequired(['email'], $data);
 
         $userModel = new User();
@@ -319,7 +325,8 @@ class AuthController extends BaseController {
         ]);
     }
 
-    public function resendOtp($data) {
+    public function resendOtp($data)
+    {
         Validator::validateRequired(['user_id'], $data);
 
         $userModel = new User();
@@ -349,7 +356,8 @@ class AuthController extends BaseController {
         ]);
     }
 
-    public function verifyResetOtp($data) {
+    public function verifyResetOtp($data)
+    {
         Validator::validateRequired(['user_id', 'otp'], $data);
 
         $db = (new Database())->getConnection();
@@ -373,7 +381,8 @@ class AuthController extends BaseController {
         }
     }
 
-    public function resetPassword($data) {
+    public function resetPassword($data)
+    {
         Validator::validateRequired(['user_id', 'reset_token', 'new_password', 'confirm_password'], $data);
 
         if ($data['new_password'] !== $data['confirm_password']) {
@@ -399,7 +408,8 @@ class AuthController extends BaseController {
         Response::success("Password has been reset successfully! You can now log in with your new password.");
     }
 
-    public function updateProfile($data, $user_id, $logged_in_role = null) {
+    public function updateProfile($data, $user_id, $logged_in_role = null)
+    {
         $required = ['first_name', 'last_name', 'email', 'phone_number'];
         Validator::validateRequired($required, $data);
 
@@ -452,12 +462,12 @@ class AuthController extends BaseController {
             $phone = isset($data['phone_number']) ? $data['phone_number'] : null;
             $smsPref = isset($data['lost_item_sms_notification']) ? (int)$data['lost_item_sms_notification'] : 0;
             $peerPref = isset($data['peer_learning_app_notification']) ? (int)$data['peer_learning_app_notification'] : 1;
-            
+
             if ($is_rep_password && !empty($data['new_password'])) {
                 // Update general profile in Users table without modifying hash_password
                 $stmt = $db->prepare("UPDATE Users SET fname = ?, lname = ?, email = ?, phoneNum = ?, lost_item_sms_notification = ?, peer_learning_app_notification = ? WHERE userID = ?");
                 $stmt->execute([$data['first_name'], $data['last_name'], $data['email'], $phone, $smsPref, $peerPref, $user_id]);
-                
+
                 // Update password in Course_representative table
                 $stmt = $db->prepare("UPDATE Course_representative SET hash_password = ? WHERE userID = ?");
                 $stmt->execute([$password_hash, $user_id]);
@@ -527,7 +537,8 @@ class AuthController extends BaseController {
         ]);
     }
 
-    public function forceChangeRepPassword($data) {
+    public function forceChangeRepPassword($data)
+    {
         Validator::validateRequired(['user_id', 'new_password'], $data);
 
         if (strlen($data['new_password']) < 6) {
@@ -545,10 +556,11 @@ class AuthController extends BaseController {
         }
     }
 
-    private function setAuthCookie($token) {
+    private function setAuthCookie($token)
+    {
         setcookie(
-            'auth_token', 
-            $token, 
+            'auth_token',
+            $token,
             [
                 'expires' => time() + 86400 * 30, // 30 days
                 'path' => '/',
@@ -559,7 +571,8 @@ class AuthController extends BaseController {
         );
     }
 
-    public function logout() {
+    public function logout()
+    {
         setcookie('auth_token', '', [
             'expires' => time() - 3600,
             'path' => '/',
@@ -570,7 +583,8 @@ class AuthController extends BaseController {
         Response::success("Logged out successfully");
     }
 
-    public function me() {
+    public function me()
+    {
         error_log("me() endpoint hit by " . $_SERVER['REMOTE_ADDR']);
         require_once __DIR__ . '/../utils/AuthMiddleware.php';
         try {
@@ -638,4 +652,3 @@ class AuthController extends BaseController {
         ]);
     }
 }
-?>

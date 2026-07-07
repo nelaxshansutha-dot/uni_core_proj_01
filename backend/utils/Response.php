@@ -18,8 +18,8 @@ class Response {
         self::json('success', $message, $data, 200);
     }
 
-    public static function error($message, $httpCode = 400) {
-        self::json('error', $message, null, $httpCode);
+    public static function error($message, $httpCode = 400, $data = null) {
+        self::json('error', $message, $data, $httpCode);
     }
 }
 ?>

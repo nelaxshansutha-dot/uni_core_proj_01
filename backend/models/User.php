@@ -101,7 +101,6 @@ class User extends BaseModel {
     }
 
     public function updateLoginTime($id) //Admin dashboard- last active time
-    
     {
         $query = "UPDATE " . $this->table . " SET last_login = CURRENT_TIMESTAMP WHERE userID = :id";
         $stmt = $this->conn->prepare($query);
@@ -110,7 +109,6 @@ class User extends BaseModel {
     }
 
     public function updateProfileFields($id, $phoneNum) //upadte phone number in profile
-    
     {
         $query = "UPDATE " . $this->table . " SET phoneNum = :phone WHERE userID = :id";
         $stmt = $this->conn->prepare($query);
@@ -124,6 +122,16 @@ class User extends BaseModel {
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':smsPref', $smsPref, PDO::PARAM_INT);
         $stmt->bindParam(':popupSeen', $popupSeen, PDO::PARAM_INT);
+        $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+        return $stmt->execute();
+    }
+
+    public function updateProfile($id, $data) {
+        $query = "UPDATE " . $this->table . " SET fname = :fname, lname = :lname, email = :email WHERE userID = :id";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':fname', $data['first_name']);
+        $stmt->bindParam(':lname', $data['last_name']);
+        $stmt->bindParam(':email', $data['email']);
         $stmt->bindParam(':id', $id, PDO::PARAM_INT);
         return $stmt->execute();
     }
