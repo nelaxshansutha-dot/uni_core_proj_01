@@ -9,6 +9,11 @@ class CourseRep extends BaseModel {
         return "Course_representative";
     }
 
+    // Encapsulation: Define the primary key internally
+    protected function getPrimaryKey() {
+        return "repID";
+    }
+
     public function __construct() {
         parent::__construct();
     }
@@ -30,10 +35,7 @@ class CourseRep extends BaseModel {
         return false;
     }
 
-    // Polymorphism: Override findById to query using repID
-    public function findById($id) {
-        return $this->findByIdBase($id, 'repID');
-    }
+    
 
     public function deleteByUserId($userID) {
         $query = "DELETE FROM " . $this->table . " WHERE userID = :userID";

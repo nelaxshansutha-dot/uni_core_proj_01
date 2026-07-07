@@ -12,6 +12,11 @@ class Notification extends BaseModel {
         return "notifications";
     }
 
+    // Encapsulation: Define the primary key internally
+    protected function getPrimaryKey() {
+        return "id";
+    }
+
     public function __construct() {
         parent::__construct();
     }
@@ -27,10 +32,7 @@ class Notification extends BaseModel {
         }
     }
 
-    // Polymorphism: Override default findById to retrieve notification by ID
-    public function findById($id) {
-        return $this->findByIdBase($id, 'id');
-    }
+    
 
     public function createGlobal($title, $message) {
         $this->conn->beginTransaction();

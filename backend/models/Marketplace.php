@@ -9,6 +9,11 @@ class Marketplace extends BaseModel {
         return "marketplace";
     }
 
+    // Encapsulation: Define the primary key internally
+    protected function getPrimaryKey() {
+        return "productID";
+    }
+
     public function __construct() {
         parent::__construct();
     }
@@ -141,6 +146,13 @@ class Marketplace extends BaseModel {
     public function updateAdminStatus($id, $status) {
         $stmt = $this->conn->prepare("UPDATE " . $this->table . " SET status = ?, is_flagged = 0 WHERE productID = ?");
         return $stmt->execute([$status, $id]);
+    }
+
+    public function getLatestItems($limit = 5) {
+        $query = "SELECT productID as id, productName as title, 'marketplace' as type, created_at FROM " . $this->table . " ORDER BY created_at DESC LIMIT " . intval($limit);
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }
 ?>

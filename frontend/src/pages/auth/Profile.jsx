@@ -179,6 +179,7 @@ const Profile = () => {
                                     Preferences
                                 </h5>
 
+                                {profile.role !== 'rep' && (
                                 <div className="card bg-light border-0 p-3 mb-3">
                                     <div className="form-check form-switch d-flex align-items-center justify-content-between p-0">
                                         <div>
@@ -200,6 +201,7 @@ const Profile = () => {
                                         />
                                     </div>
                                 </div>
+                                )}
 
                                 <div className="card bg-light border-0 p-3 mb-4">
                                     <div className="form-check form-switch d-flex align-items-center justify-content-between p-0">

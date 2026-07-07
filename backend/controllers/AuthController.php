@@ -7,17 +7,18 @@ require_once __DIR__ . '/../utils/Response.php';
 require_once __DIR__ . '/../utils/Validator.php';
 require_once __DIR__ . '/../config/Database.php';
 require_once __DIR__ . '/../utils/MailService.php';
+require_once __DIR__ . '/../utils/JWT.php';
 
 class AuthController extends BaseController {
     
     private function validateEmailDomain($email, $role) {
         $domain = strtolower(substr($email, strpos($email, '@') + 1));
         
-        if ($role === 'student') {
+        if ($role === User::ROLE_STUDENT) {
             if ($domain !== 'std.uwu.ac.lk') {
                 return "Students must register with a university email ending in @std.uwu.ac.lk. Please use your student email.";
             }
-        } else if ($role === 'staff') {
+        } else if ($role === User::ROLE_STAFF) {
             if ($domain !== 'gmail.com') {
                 return "Staff must register with a Gmail address ending in @gmail.com.";
             }
@@ -26,17 +27,18 @@ class AuthController extends BaseController {
     }
 
     public function register($data) {
+        if (isset($data['role']) && $data['role'] === User::ROLE_ADMIN) {
+            Response::error("Forbidden: Cannot register as an administrator.", 403);
+        }
+
         $required = ['enrollment_no', 'email', 'password', 'confirm_password', 'role', 'first_name', 'last_name', 'phone_number'];
-        if ($data['role'] === 'staff') {
+        if ($data['role'] === User::ROLE_STAFF) {
             $required = array_merge($required, ['department']);
-        } else if ($data['role'] !== 'student') {
+        } else if ($data['role'] !== User::ROLE_STUDENT) {
             Response::error("Invalid role. Please select Student or Staff.");
         }
 
-        $missing = Validator::required($required, $data);
-        if (!empty($missing)) {
-            Response::error("Missing fields: " . implode(', ', $missing));
-        }
+        Validator::validateRequired($required, $data);
 
         if (!Validator::validateEmail($data['email'])) {
             Response::error("Invalid email format. Please enter a valid email address.");
@@ -80,15 +82,19 @@ class AuthController extends BaseController {
         $user_id = $userModel->create($userData);
 
         if ($user_id) {
-            if ($data['role'] === 'student') {
+            if ($data['role'] === User::ROLE_STUDENT) {
+                require_once __DIR__ . '/../models/Student.php';
                 $studentModel = new Student();
+                
+                $courseID = !empty($data['course']) ? $data['course'] : Student::extractCourseFromEnrollment($data['enrollment_no']);
+                
                 $studentModel->create([
                     'userID' => $user_id,
                     'enrollmentNo' => $data['enrollment_no'],
-                    'courseID' => null,
-                    'std_year' => null
+                    'courseID' => $courseID,
+                    'std_year' => !empty($data['year']) ? $data['year'] : null
                 ]);
-            } else if ($data['role'] === 'staff') {
+            } else if ($data['role'] === User::ROLE_STAFF) {
                 $staffModel = new Staff();
                 $staffModel->create([
                     'staffID' => $data['enrollment_no'],
@@ -114,15 +120,12 @@ class AuthController extends BaseController {
     }
 
     public function login($data) {
-        $missing = Validator::required(['enrollment_no', 'password'], $data);
-        if (!empty($missing)) {
-            Response::error("Please enter your ID and Password.");
-        }
+        Validator::validateRequired(['enrollment_no', 'password'], $data);
 
         $userModel = new User();
         $user = $userModel->findByEnrollment($data['enrollment_no']);
         
-        $requestedRole = isset($data['role']) ? $data['role'] : 'student';
+        $requestedRole = isset($data['role']) ? $data['role'] : User::ROLE_STUDENT;
 
         if ($user) {
             // Check if user is active
@@ -133,7 +136,7 @@ class AuthController extends BaseController {
             $isAuthenticated = false;
             
             // If logging in as a rep, verify against Course_representative password
-            if ($requestedRole === 'rep') {
+            if ($requestedRole === User::ROLE_REP) {
                 $db = (new Database())->getConnection();
                 $stmt = $db->prepare("SELECT hash_password, is_first_login, is_active FROM Course_representative WHERE userID = ?");
                 $stmt->execute([$user['userID']]);
@@ -157,9 +160,9 @@ class AuthController extends BaseController {
                 // Check the primary Users table password
                 if (password_verify($data['password'], $user['hash_password'])) {
                     // Prevent a staff member from logging in as student etc
-                    if ($requestedRole === 'staff' && $user['role'] !== 'staff') {
+                    if ($requestedRole === User::ROLE_STAFF && $user['role'] !== User::ROLE_STAFF) {
                         $isAuthenticated = false;
-                    } else if ($requestedRole === 'admin' && $user['role'] !== 'admin') {
+                    } else if ($requestedRole === User::ROLE_ADMIN && $user['role'] !== User::ROLE_ADMIN) {
                         $isAuthenticated = false;
                     } else {
                         $isAuthenticated = true;
@@ -173,11 +176,11 @@ class AuthController extends BaseController {
             
                 if ($user['is_verified']) {
                     $profile = null;
-                    if ($user['role'] === 'student' || $user['role'] === 'rep') {
+                    if ($user['role'] === User::ROLE_STUDENT || $user['role'] === User::ROLE_REP) {
                         $stmt = $db->prepare("SELECT enrollmentNo as enrollment_no, courseID, std_year as year FROM Student WHERE userID = ?");
                         $stmt->execute([$user['userID']]);
                         $profile = $stmt->fetch(PDO::FETCH_ASSOC);
-                    } else if ($user['role'] === 'staff') {
+                    } else if ($user['role'] === User::ROLE_STAFF) {
                         $stmt = $db->prepare("SELECT staffID as enrollment_no, dept as department FROM Staff WHERE userID = ?");
                         $stmt->execute([$user['userID']]);
                         $profile = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -212,7 +215,7 @@ class AuthController extends BaseController {
                         'user' => $userData,
                         'verified' => true,
                         'action' => 'dashboard',
-                        'redirect' => $requestedRole === 'rep' ? 'rep_dashboard' : 'student_dashboard'
+                        'redirect' => $requestedRole === User::ROLE_REP ? 'rep_dashboard' : 'student_dashboard'
                     ]);
                 } else {
                     $otp = rand(100000, 999999);
@@ -221,11 +224,7 @@ class AuthController extends BaseController {
 
                     MailService::sendOTP($user['email'], $otp);
 
-                    Response::error("Account not verified. A new OTP has been sent to your email.", 403, [
-                        'user_id' => $user['userID'],
-                        'email' => $user['email'],
-                        'needs_verification' => true
-                    ]);
+                    Response::error ("Account not verified. A new OTP has been sent to your email.", 403, [ 'user_id' => $user['userID'],'email' => $user['email'],'needs_verification' => true ]);
                 }
             } else {
                 Response::error("Invalid ID or password.", 401);
@@ -236,10 +235,7 @@ class AuthController extends BaseController {
     }
 
     public function verifyOtp($data) {
-        $missing = Validator::required(['user_id', 'otp'], $data);
-        if (!empty($missing)) {
-            Response::error("Please enter the OTP code.");
-        }
+        Validator::validateRequired(['user_id', 'otp'], $data);
 
         $db = (new Database())->getConnection();
         $stmt = $db->prepare("SELECT * FROM OTP_verification WHERE userID = ? AND otp_code = ? AND expired_at > NOW() ORDER BY otpID DESC LIMIT 1");
@@ -254,11 +250,11 @@ class AuthController extends BaseController {
 
             $user = $userModel->findById($data['user_id']);
             $profile = null;
-            if ($user['role'] === 'student' || $user['role'] === 'rep') {
+            if ($user['role'] === User::ROLE_STUDENT || $user['role'] === User::ROLE_REP) {
                 $stmt = $db->prepare("SELECT enrollmentNo as enrollment_no, courseID, std_year as year FROM Student WHERE userID = ?");
                 $stmt->execute([$data['user_id']]);
                 $profile = $stmt->fetch(PDO::FETCH_ASSOC);
-            } else if ($user['role'] === 'staff') {
+            } else if ($user['role'] === User::ROLE_STAFF) {
                 $stmt = $db->prepare("SELECT staffID as enrollment_no, dept as department FROM Staff WHERE userID = ?");
                 $stmt->execute([$data['user_id']]);
                 $profile = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -298,10 +294,7 @@ class AuthController extends BaseController {
     }
 
     public function forgotPassword($data) {
-        $missing = Validator::required(['email'], $data);
-        if (!empty($missing)) {
-            Response::error("Please enter your registered email address.");
-        }
+        Validator::validateRequired(['email'], $data);
 
         $userModel = new User();
         $user = $userModel->findByEmail($data['email']);
@@ -327,10 +320,7 @@ class AuthController extends BaseController {
     }
 
     public function resendOtp($data) {
-        $missing = Validator::required(['user_id'], $data);
-        if (!empty($missing)) {
-            Response::error("user_id is required.");
-        }
+        Validator::validateRequired(['user_id'], $data);
 
         $userModel = new User();
         $user = $userModel->findById($data['user_id']);
@@ -360,10 +350,7 @@ class AuthController extends BaseController {
     }
 
     public function verifyResetOtp($data) {
-        $missing = Validator::required(['user_id', 'otp'], $data);
-        if (!empty($missing)) {
-            Response::error("Please enter the OTP code.");
-        }
+        Validator::validateRequired(['user_id', 'otp'], $data);
 
         $db = (new Database())->getConnection();
         $stmt = $db->prepare("SELECT * FROM OTP_verification WHERE userID = ? AND otp_code = ? AND expired_at > NOW() ORDER BY otpID DESC LIMIT 1");
@@ -387,10 +374,7 @@ class AuthController extends BaseController {
     }
 
     public function resetPassword($data) {
-        $missing = Validator::required(['user_id', 'reset_token', 'new_password', 'confirm_password'], $data);
-        if (!empty($missing)) {
-            Response::error("Please fill in all fields.");
-        }
+        Validator::validateRequired(['user_id', 'reset_token', 'new_password', 'confirm_password'], $data);
 
         if ($data['new_password'] !== $data['confirm_password']) {
             Response::error("Passwords do not match.");
@@ -416,10 +400,11 @@ class AuthController extends BaseController {
     }
 
     public function updateProfile($data, $user_id, $logged_in_role = null) {
-        $required = ['first_name', 'last_name', 'email'];
-        $missing = Validator::required($required, $data);
-        if (!empty($missing)) {
-            Response::error("Missing fields: " . implode(', ', $missing));
+        $required = ['first_name', 'last_name', 'email', 'phone_number'];
+        Validator::validateRequired($required, $data);
+
+        if (!preg_match('/^[0-9]+$/', $data['phone_number'])) {
+            Response::error("Phone number must contain only numbers.");
         }
 
         $db = (new Database())->getConnection();
@@ -441,7 +426,7 @@ class AuthController extends BaseController {
         }
 
         $password_hash = $user['hash_password'];
-        $is_rep_password = ($logged_in_role === 'rep');
+        $is_rep_password = ($logged_in_role === User::ROLE_REP);
 
         if ($is_rep_password) {
             $stmt = $db->prepare("SELECT hash_password FROM Course_representative WHERE userID = ?");
@@ -481,12 +466,12 @@ class AuthController extends BaseController {
                 $stmt->execute([$data['first_name'], $data['last_name'], $data['email'], $phone, $password_hash, $smsPref, $peerPref, $user_id]);
             }
 
-            if ($user['role'] === 'student' || $user['role'] === 'rep') {
+            if ($user['role'] === User::ROLE_STUDENT || $user['role'] === User::ROLE_REP) {
                 $course = (isset($data['course']) && $data['course'] !== '' && is_numeric($data['course'])) ? (int)$data['course'] : null;
                 $year = (isset($data['year']) && $data['year'] !== '' && is_numeric($data['year'])) ? (int)$data['year'] : null;
                 $stmt = $db->prepare("UPDATE Student SET courseID = ?, std_year = ? WHERE userID = ?");
                 $stmt->execute([$course, $year, $user_id]);
-            } else if ($user['role'] === 'staff') {
+            } else if ($user['role'] === User::ROLE_STAFF) {
                 $department = isset($data['department']) ? $data['department'] : '';
                 $stmt = $db->prepare("UPDATE Staff SET dept = ? WHERE userID = ?");
                 $stmt->execute([$department, $user_id]);
@@ -500,11 +485,11 @@ class AuthController extends BaseController {
 
         $updatedUser = $userModel->findById($user_id);
         $profile = null;
-        if ($updatedUser['role'] === 'student' || $updatedUser['role'] === 'rep') {
+        if ($updatedUser['role'] === User::ROLE_STUDENT || $updatedUser['role'] === User::ROLE_REP) {
             $stmt = $db->prepare("SELECT enrollmentNo as enrollment_no, courseID, std_year as year FROM Student WHERE userID = ?");
             $stmt->execute([$user_id]);
             $profile = $stmt->fetch(PDO::FETCH_ASSOC);
-        } else if ($updatedUser['role'] === 'staff') {
+        } else if ($updatedUser['role'] === User::ROLE_STAFF) {
             $stmt = $db->prepare("SELECT staffID as enrollment_no, dept as department FROM Staff WHERE userID = ?");
             $stmt->execute([$user_id]);
             $profile = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -543,10 +528,7 @@ class AuthController extends BaseController {
     }
 
     public function forceChangeRepPassword($data) {
-        $missing = Validator::required(['user_id', 'new_password'], $data);
-        if (!empty($missing)) {
-            Response::error("Missing fields: " . implode(', ', $missing));
-        }
+        Validator::validateRequired(['user_id', 'new_password'], $data);
 
         if (strlen($data['new_password']) < 6) {
             Response::error("Password must be at least 6 characters long.");
@@ -625,7 +607,7 @@ class AuthController extends BaseController {
             'role' => $role
         ];
 
-        if ($role === 'student' || $role === 'rep') {
+        if ($role === User::ROLE_STUDENT || $role === User::ROLE_REP) {
             require_once __DIR__ . '/../models/Student.php';
             $studentModel = new Student();
             $profile = $studentModel->getProfile($userID);
@@ -634,7 +616,7 @@ class AuthController extends BaseController {
                 $userData['course_id'] = $profile['courseID'];
                 $userData['std_year'] = $profile['std_year'];
             }
-        } elseif ($role === 'staff') {
+        } elseif ($role === User::ROLE_STAFF) {
             $stmt = $db->prepare("SELECT staffID as enrollment_no, dept as department FROM Staff WHERE userID = ?");
             $stmt->execute([$userID]);
             $profile = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -642,7 +624,7 @@ class AuthController extends BaseController {
                 $userData['enrollment_no'] = $profile['enrollment_no'];
                 $userData['department'] = $profile['department'];
             }
-        } elseif ($role === 'admin') {
+        } elseif ($role === User::ROLE_ADMIN) {
             $stmt = $db->prepare("SELECT adminID FROM Admin WHERE userID = ?");
             $stmt->execute([$userID]);
             $profile = $stmt->fetch(PDO::FETCH_ASSOC);

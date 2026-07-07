@@ -18,7 +18,7 @@ if ($method === 'GET') {
         $year = isset($_GET['year']) ? $_GET['year'] : '';
         $semester = isset($_GET['semester']) ? $_GET['semester'] : '';
         
-        $controller->getModules($courseID, $year, $semester);
+        $controller->getModules($courseID, $year, $semester, $user['id']);
     } else {
         Response::error("Invalid action.", 400);
     }

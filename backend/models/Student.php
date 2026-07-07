@@ -9,6 +9,11 @@ class Student extends BaseModel {
         return "Student";
     }
 
+    // Encapsulation: Define the primary key internally
+    protected function getPrimaryKey() {
+        return "enrollmentNo";
+    }
+
     public function __construct() {
         parent::__construct();
     }
@@ -28,10 +33,7 @@ class Student extends BaseModel {
         return $stmt->execute();
     }
     
-    // Polymorphism: Override default findById to query using enrollmentNo
-    public function findById($id) {
-        return $this->findByIdBase($id, 'enrollmentNo');
-    }
+    
     
     public function getProfile($user_id) {
         $query = "SELECT s.*, u.email, u.role, u.fname, u.lname, u.phoneNum FROM " . $this->table . " s JOIN Users u ON s.userID = u.userID WHERE s.userID = :userID LIMIT 1";

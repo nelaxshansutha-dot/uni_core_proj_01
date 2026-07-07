@@ -23,8 +23,8 @@ const Login = () => {
 
     const getIdLabel = () => {
         switch (role) {
-            case 'admin': return 'Admin Email';
-            case 'staff': return 'Staff Email';
+            case 'admin': return 'Admin ID';
+            case 'staff': return 'Staff ID';
             case 'rep': return 'Rep ID';
             case 'student':
             default: return 'Enrollment Number';
@@ -33,8 +33,8 @@ const Login = () => {
 
     const getIdPlaceholder = () => {
         switch (role) {
-            case 'admin': return 'e.g. admin@unicore.com';
-            case 'staff': return 'e.g. staff@unicore.com';
+            case 'admin': return 'e.g. admin123';
+            case 'staff': return 'e.g. staff123';
             case 'rep': return 'e.g. REP_UWU/CST/21/0042';
             case 'student':
             default: return 'e.g. UWU/CST/21/0042';

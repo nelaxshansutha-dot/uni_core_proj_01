@@ -5,18 +5,18 @@ require_once __DIR__ . '/../models/Staff.php';
 require_once __DIR__ . '/../models/CourseRep.php';
 require_once __DIR__ . '/../models/LostItem.php';
 require_once __DIR__ . '/../models/Marketplace.php';
-require_once __DIR__ . '/../models/Note.php';
 require_once __DIR__ . '/../utils/Response.php';
 require_once __DIR__ . '/../utils/Validator.php';
 require_once __DIR__ . '/../utils/MailService.php';
 
-class AdminController {
+require_once __DIR__ . '/BaseController.php';
+
+class AdminController extends BaseController {
 
     public function getDashboardStats() {
         $userModel = new User();
         $lostItemModel = new LostItem();
         $marketplaceModel = new Marketplace();
-        $noteModel = new Note();
 
         $stats = [
             'totalUsers' => (int)$userModel->countAll(),
@@ -24,7 +24,7 @@ class AdminController {
             'totalReps' => (int)$userModel->countReps(),
             'lostCount' => (int)$lostItemModel->countAll(),
             'marketCount' => (int)$marketplaceModel->countAll(),
-            'notesCount' => (int)$noteModel->countAll()
+            'notesCount' => 0
         ];
         
         $stats['hidden_posts'] = 0;
@@ -52,10 +52,7 @@ class AdminController {
     }
 
     public function createUser($data, $adminId) {
-        $missing = Validator::required(['enrollment_no', 'email', 'password', 'role', 'first_name', 'last_name'], $data);
-        if (!empty($missing)) {
-            Response::error("Missing fields: " . implode(', ', $missing));
-        }
+        Validator::validateRequired(['enrollment_no', 'email', 'password', 'role', 'first_name', 'last_name'], $data);
 
         $userModel = new User();
         if ($userModel->findByEnrollment($data['enrollment_no']) || $userModel->findByEmail($data['email'])) {
@@ -78,10 +75,12 @@ class AdminController {
 
             if ($data['role'] === 'student' || $data['role'] === 'rep') {
                 $studentModel = new Student();
+                $courseID = !empty($data['course']) ? $data['course'] : Student::extractCourseFromEnrollment($data['enrollment_no']);
+                
                 $studentModel->create([
                     'userID' => $user_id,
                     'enrollmentNo' => $data['enrollment_no'],
-                    'courseID' => !empty($data['course']) ? $data['course'] : null,
+                    'courseID' => $courseID,
                     'std_year' => !empty($data['year']) ? $data['year'] : null
                 ]);
             } else if ($data['role'] === 'staff') {
@@ -99,10 +98,7 @@ class AdminController {
     }
 
     public function updateUser($id, $data, $adminId) {
-        $missing = Validator::required(['email', 'first_name', 'last_name'], $data);
-        if (!empty($missing)) {
-            Response::error("Missing fields: " . implode(', ', $missing));
-        }
+        Validator::validateRequired(['email', 'first_name', 'last_name'], $data);
 
         // Handle rep_ prefix if they edit the rep row
         $isRepRow = strpos((string)$id, 'rep_') === 0;
@@ -114,12 +110,36 @@ class AdminController {
             Response::error("User not found", 404);
         }
 
+        $db = (new Database())->getConnection();
+        $db->beginTransaction();
+
         try {
-            $userModel->updateAdminProfile($realId, $role, $data);
+            // 1. Update Core User Info
+            $userModel->updateProfile($realId, $data);
+
+            // 2. Update Role-Specific Info
+            if ($role === User::ROLE_STAFF) {
+                $dept = isset($data['department']) ? $data['department'] : '';
+                $staffModel = new Staff();
+                $staffModel->updateAdminProfile($realId, $dept);
+            } else if ($role === User::ROLE_STUDENT || $role === User::ROLE_REP) {
+                require_once __DIR__ . '/../models/Student.php';
+                $studentModel = new Student();
+                
+                $enrollmentNo = isset($data['enrollment_no']) ? $data['enrollment_no'] : null;
+                $courseID = isset($data['course']) ? $data['course'] : null;
+                $std_year = isset($data['year']) ? $data['year'] : null;
+                
+                $studentModel->updateAdminProfile($realId, $enrollmentNo, $courseID, $std_year);
+            }
+
+            $db->commit();
             Response::success("User updated successfully.");
         } catch (Exception $e) {
+            $db->rollBack();
             Response::error("Failed to update user: " . $e->getMessage(), 500);
         }
+    }
     }
 
     public function toggleUserStatus($id, $data, $adminId) {
@@ -156,10 +176,7 @@ class AdminController {
     }
 
     public function assignRep($data, $adminId) {
-        $missing = Validator::required(['user_id', 'fname', 'lname', 'email', 'rep_id', 'password'], $data);
-        if (!empty($missing)) {
-            Response::error("Missing fields: " . implode(', ', $missing));
-        }
+        Validator::validateRequired(['user_id', 'fname', 'lname', 'email', 'rep_id', 'password'], $data);
 
         $userModel = new User();
         
@@ -197,9 +214,6 @@ class AdminController {
         if (empty($type) || $type === 'marketplace') {
             $content['marketplace'] = (new Marketplace())->getAdminContent();
         }
-        if (empty($type) || $type === 'notes') {
-            $content['notes'] = (new Note())->getAdminContent();
-        }
 
         Response::success("Content retrieved", $content);
     }
@@ -218,8 +232,6 @@ class AdminController {
                 (new LostItem())->updateAdminStatus($id, $status);
             } else if ($type === 'marketplace') {
                 (new Marketplace())->updateAdminStatus($id, $status);
-            } else if ($type === 'notes') {
-                (new Note())->updateAdminStatus($id, $status);
             } else {
                 Response::error("Invalid content type.");
             }

@@ -9,6 +9,11 @@ class Course extends BaseModel {
         return "Course_units";
     }
 
+    // Encapsulation: Define the primary key internally
+    protected function getPrimaryKey() {
+        return "courseUnitID";
+    }
+
     public function __construct() {
         parent::__construct();
     }
@@ -25,10 +30,7 @@ class Course extends BaseModel {
         return $stmt->execute();
     }
 
-    // Polymorphism: Override default findById to query using courseUnitID
-    public function findById($id) {
-        return $this->findByIdBase($id, 'courseUnitID');
-    }
+    
 
     public function getModulesByCourseYearSemester($courseID, $year, $semester) {
         $query = "SELECT * FROM " . $this->table . " 

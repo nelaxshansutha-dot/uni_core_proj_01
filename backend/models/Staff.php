@@ -9,6 +9,11 @@ class Staff extends BaseModel {
         return "Staff";
     }
 
+    // Encapsulation: Define the primary key internally
+    protected function getPrimaryKey() {
+        return "staffID";
+    }
+
     public function __construct() {
         parent::__construct();
     }
@@ -25,9 +30,10 @@ class Staff extends BaseModel {
         return $stmt->execute();
     }
 
-    // Polymorphism: Override findById to query using staffID
-    public function findById($id) {
-        return $this->findByIdBase($id, 'staffID');
+    
+    public function updateAdminProfile($realId, $dept) {
+        $stmt = $this->conn->prepare("UPDATE Staff SET dept = ? WHERE userID = ?");
+        return $stmt->execute([$dept, $realId]);
     }
 }
 ?>

@@ -20,6 +20,14 @@ class Validator {
         return $missing;
     }
 
+    public static function validateRequired($fields, $data) {
+        $missing = self::required($fields, $data);
+        if (!empty($missing)) {
+            require_once __DIR__ . '/Response.php';
+            Response::error("Missing fields: " . implode(', ', $missing));
+        }
+    }
+
     public static function validateEmail($email) {
         return filter_var($email, FILTER_VALIDATE_EMAIL);
     }

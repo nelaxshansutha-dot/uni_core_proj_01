@@ -4,9 +4,18 @@ require_once __DIR__ . '/../config/Database.php';
 require_once __DIR__ . '/BaseModel.php';
 
 class User extends BaseModel {
+    public const ROLE_ADMIN = 'admin';
+    public const ROLE_STUDENT = 'student';
+    public const ROLE_REP = 'rep';
+    public const ROLE_STAFF = 'staff';
 
     protected function getTableName() {
         return "Users";
+    }
+
+    // Encapsulation: Define the primary key internally
+    protected function getPrimaryKey() {
+        return "userID";
     }
 
     public function __construct() {

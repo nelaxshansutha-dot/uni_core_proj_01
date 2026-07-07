@@ -2,35 +2,28 @@
 require_once __DIR__ . '/../config/Database.php';
 require_once __DIR__ . '/../utils/Response.php';
 
-class DashboardController {
+require_once __DIR__ . '/BaseController.php';
+
+class DashboardController extends BaseController {
     
     public function getRecentActivity($user) {
-        $db = (new Database())->getConnection();
         $activities = [];
 
         // 1. Fetch latest Lost Items (max 5)
-        $stmt = $db->prepare("
-            SELECT lostID as id, lostItemName as title, 'lost_item' as type, created_at
-            FROM Lost_items
-            ORDER BY created_at DESC
-            LIMIT 5
-        ");
-        $stmt->execute();
-        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        require_once __DIR__ . '/../models/LostItem.php';
+        $lostItemModel = new LostItem();
+        $lostItems = $lostItemModel->getLatestItems(5);
+        foreach ($lostItems as $row) {
             $row['description'] = "A lost item '" . $row['title'] . "' was reported.";
             $row['link'] = "/lost-items";
             $activities[] = $row;
         }
 
         // 2. Fetch latest Marketplace products (max 5)
-        $stmt = $db->prepare("
-            SELECT productID as id, productName as title, 'marketplace' as type, created_at
-            FROM marketplace
-            ORDER BY created_at DESC
-            LIMIT 5
-        ");
-        $stmt->execute();
-        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        require_once __DIR__ . '/../models/Marketplace.php';
+        $marketplaceModel = new Marketplace();
+        $marketplaceItems = $marketplaceModel->getLatestItems(5);
+        foreach ($marketplaceItems as $row) {
             $row['description'] = "New product '" . $row['title'] . "' added to marketplace.";
             $row['link'] = "/marketplace";
             $activities[] = $row;
@@ -38,14 +31,10 @@ class DashboardController {
 
         // 3. Fetch latest Notes (if user is student/rep)
         if ($user['role'] === 'student' || $user['role'] === 'rep') {
-            $stmt = $db->prepare("
-                SELECT noteID as id, title, 'note' as type, created_at
-                FROM Notes
-                ORDER BY created_at DESC
-                LIMIT 5
-            ");
-            $stmt->execute();
-            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            require_once __DIR__ . '/../models/Note.php';
+            $noteModel = new Note();
+            $notes = $noteModel->getLatestNotes(5);
+            foreach ($notes as $row) {
                 $row['description'] = "New note '" . $row['title'] . "' was uploaded.";
                 $row['link'] = "/notes";
                 $activities[] = $row;

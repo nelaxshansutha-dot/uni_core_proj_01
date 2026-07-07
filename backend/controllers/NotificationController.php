@@ -2,7 +2,9 @@
 require_once __DIR__ . '/../models/Notification.php';
 require_once __DIR__ . '/../utils/Response.php';
 
-class NotificationController {
+require_once __DIR__ . '/BaseController.php';
+
+class NotificationController extends BaseController {
     
     public function getUserNotifications($user_id) {
         $model = new Notification();

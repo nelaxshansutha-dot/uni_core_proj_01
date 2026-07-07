@@ -1,9 +1,14 @@
 <?php
+require_once __DIR__ . '/../config/Database.php';
 require_once __DIR__ . '/../models/PeerLearning.php';
 require_once __DIR__ . '/../utils/Response.php';
 require_once __DIR__ . '/../utils/Validator.php';
 
-class PeerLearningController {
+require_once __DIR__ . '/../models/CourseRep.php';
+require_once __DIR__ . '/../models/Notification.php';
+require_once __DIR__ . '/BaseController.php';
+
+class PeerLearningController extends BaseController {
     
     public function createRequest($data, $student_id) {
         $missing = Validator::required(['courseUnitID', 'courseUnitName'], $data);
@@ -164,6 +169,121 @@ class PeerLearningController {
             Response::success("Status updated.");
         } else {
             Response::error("Failed to update status. Only assigned rep can do this.", 403);
+        }
+    }
+
+    public function getRepDashboardData($userId) {
+        try {
+            require_once __DIR__ . '/../models/CourseRep.php';
+            $repModel = new CourseRep();
+            $repData = $repModel->getRepCourseAndYear($userId);
+            
+            if (!$repData || !$repData['courseID'] || !$repData['std_year']) {
+                $this->errorResponse("Representative course/year mapping not found.", 400);
+            }
+
+            $courseId = $repData['courseID'];
+            $year = $repData['std_year'];
+
+            $model = new PeerLearning();
+            $requests = $model->getRepDashboardRequests($courseId, $year);
+            $unitCounts = $model->getRepDashboardUnitCounts($courseId, $year);
+
+            $this->jsonResponse([
+                'status' => 'success',
+                'message' => 'Requests fetched successfully',
+                'data' => [
+                    'rep_context' => [
+                        'courseID' => $courseId,
+                        'std_year' => $year
+                    ],
+                    'requests' => $requests,
+                    'unit_counts' => $unitCounts
+                ]
+            ]);
+        } catch (Exception $e) {
+            $this->errorResponse("Server error: " . $e->getMessage(), 500);
+        }
+    }
+
+    public function shareRequest($data, $userId) {
+        try {
+            if (!isset($data['action']) || !isset($data['request_id'])) {
+                $this->errorResponse("Missing required parameters: action and request_id", 400);
+            }
+
+            require_once __DIR__ . '/../models/CourseRep.php';
+            $repModel = new CourseRep();
+            $repData = $repModel->getRepCourseAndYear($userId);
+
+            if (!$repData) {
+                $this->errorResponse("Representative profile not found.", 404);
+            }
+
+            $model = new PeerLearning();
+            $requestData = $model->findById($data['request_id']);
+
+            if (!$requestData) {
+                $this->errorResponse("Peer learning request not found.", 404);
+            }
+
+            $courseId = $repData['courseID'];
+            $currentYear = $repData['std_year'];
+            
+            $topic = $requestData['courseUnitName'] ?? 'N/A';
+            $yearStr = $requestData['std_year'] ? "Year {$requestData['std_year']}" : '';
+            $semStr = $requestData['semester'] ? "Semester {$requestData['semester']}" : '';
+
+            require_once __DIR__ . '/../models/Notification.php';
+            $notifModel = new Notification();
+
+            if ($data['action'] === 'share_classmates') {
+                $db = (new Database())->getConnection();
+                $stmtUsers = $db->prepare("
+                    SELECT userID FROM Student 
+                    WHERE courseID = ? AND std_year = ? AND userID != ?
+                ");
+                $stmtUsers->execute([$courseId, $currentYear, $userId]);
+                $classmates = $stmtUsers->fetchAll(PDO::FETCH_COLUMN);
+
+                if (empty($classmates)) {
+                    $this->jsonResponse(["status" => "success", "message" => "No classmates found to notify.", "data" => ["notified_count" => 0]]);
+                }
+
+                $title = "New Kuppy Session Request";
+                $message = "A new Peer Learning (Kuppy) session request has been created for ($topic).";
+                $notifModel->createForUsers($classmates, $title, $message);
+
+                $this->jsonResponse(["status" => "success", "message" => "Successfully shared with classmates.", "data" => ["notified_count" => count($classmates)]]);
+
+            } else if ($data['action'] === 'forward_seniors') {
+                $targetYear = $currentYear + 1;
+                $db = (new Database())->getConnection();
+                $stmtSeniors = $db->prepare("
+                    SELECT cr.userID 
+                    FROM Course_representative cr
+                    JOIN Student s ON cr.enrollmentNo = s.enrollmentNo
+                    WHERE cr.courseID = ? AND s.std_year = ? AND cr.userID != ?
+                ");
+                $stmtSeniors->execute([$courseId, $targetYear, $userId]);
+                $seniors = $stmtSeniors->fetchAll(PDO::FETCH_COLUMN);
+
+                if (empty($seniors)) {
+                    $this->jsonResponse(["status" => "success", "message" => "No senior representatives found for year {$targetYear}.", "data" => ["notified_count" => 0]]);
+                }
+
+                $title = "Junior Rep Request";
+                $message = "Please help arrange a Kuppy session for ($topic) - $yearStr $semStr.";
+                $notifModel->createForUsers($seniors, $title, $message);
+
+                $this->jsonResponse(["status" => "success", "message" => "Successfully forwarded to senior reps.", "data" => ["notified_count" => count($seniors)]]);
+
+            } else {
+                $this->errorResponse("Invalid action specified.", 400);
+            }
+
+        } catch (Exception $e) {
+            $this->errorResponse("Server error: " . $e->getMessage(), 500);
         }
     }
 }
