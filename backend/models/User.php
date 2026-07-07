@@ -118,5 +118,99 @@ class User extends BaseModel {
         $stmt->bindParam(':id', $id, PDO::PARAM_INT);
         return $stmt->execute();
     }
+
+    // --- Admin specific methods below ---
+
+    public function countAll() {
+        return $this->conn->query("SELECT COUNT(*) FROM " . $this->table)->fetchColumn();
+    }
+
+    public function countVerified() {
+        return $this->conn->query("SELECT COUNT(*) FROM " . $this->table . " WHERE is_verified = 1")->fetchColumn();
+    }
+
+    public function countReps() {
+        return $this->conn->query("SELECT COUNT(*) FROM " . $this->table . " WHERE role = 'rep'")->fetchColumn();
+    }
+
+    public function getAllWithDetails($query, $role) {
+        $sql = "SELECT u.userID as id, 
+                       s.enrollmentNo as enrollment_no, 
+                       st.staffID as staff_id,
+                       u.email, u.phoneNum as phone_number, u.role, u.is_verified, 
+                       u.is_active, u.created_at, 
+                       u.fname as first_name, u.lname as last_name,
+                       s.courseID as course, s.std_year as year,
+                       st.dept as department
+                FROM Users u
+                LEFT JOIN Student s ON u.userID = s.userID
+                LEFT JOIN Staff st ON u.userID = st.userID
+                WHERE 1=1";
+        
+        $params = [];
+        if (!empty($role)) {
+            $sql .= " AND u.role = :role";
+            $params[':role'] = $role;
+        }
+        if (!empty($query)) {
+            $sql .= " AND (s.enrollmentNo LIKE :q OR u.email LIKE :q OR u.fname LIKE :q OR u.lname LIKE :q)";
+            $params[':q'] = "%" . $query . "%";
+        }
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getRole($userId) {
+        $stmt = $this->conn->prepare("SELECT role FROM Users WHERE userID = ?");
+        $stmt->execute([$userId]);
+        return $stmt->fetchColumn();
+    }
+
+    public function updateAdminProfile($realId, $role, $data) {
+        $this->conn->beginTransaction();
+        try {
+            $phone = isset($data['phone_number']) ? $data['phone_number'] : null;
+            $stmt = $this->conn->prepare("UPDATE Users SET email = ?, phoneNum = ?, fname = ?, lname = ? WHERE userID = ?");
+            $stmt->execute([$data['email'], $phone, $data['first_name'], $data['last_name'], $realId]);
+
+            if ($role === 'staff') {
+                $dept = isset($data['department']) ? $data['department'] : '';
+                $stmt = $this->conn->prepare("UPDATE Staff SET dept = ? WHERE userID = ?");
+                $stmt->execute([$dept, $realId]);
+            }
+
+            $this->conn->commit();
+            return true;
+        } catch (Exception $e) {
+            $this->conn->rollBack();
+            throw $e;
+        }
+    }
+
+    public function toggleStatus($realId, $isActive) {
+        $stmt = $this->conn->prepare("UPDATE Users SET is_active = ? WHERE userID = ?");
+        return $stmt->execute([$isActive, $realId]);
+    }
+
+    public function searchStudents($query) {
+        $q = "%" . $query . "%";
+        $sql = "SELECT u.userID as id, s.enrollmentNo as enrollment_no, u.email, u.phoneNum as phone_number, u.role, u.fname as first_name, u.lname as last_name, s.courseID as course, s.std_year as year 
+                FROM Users u 
+                JOIN Student s ON u.userID = s.userID 
+                WHERE (s.enrollmentNo LIKE :q OR u.fname LIKE :q OR u.lname LIKE :q) 
+                AND u.role IN ('student', 'rep')";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':q', $q);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getStudentDetails($userId) {
+        $stmt = $this->conn->prepare("SELECT u.*, s.enrollmentNo, s.courseID FROM Users u JOIN Student s ON u.userID = s.userID WHERE u.userID = ?");
+        $stmt->execute([$userId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
 }
 ?>

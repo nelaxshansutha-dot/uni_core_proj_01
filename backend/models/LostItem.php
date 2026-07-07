@@ -119,5 +119,30 @@ class LostItem extends BaseModel {
         }
         return $stmt->execute();
     }
+
+    // --- Admin specific methods below ---
+
+    public function countAll() {
+        return $this->conn->query("SELECT COUNT(*) FROM " . $this->table)->fetchColumn();
+    }
+
+    public function getAdminContent() {
+        $query = "SELECT l.lostID as lost_id, l.lostItemName, l.last_seen_date, l.last_seen_time, l.item_image, l.contact_number as contact_no, l.created_at, l.status, l.is_flagged, u.email, s.enrollmentNo as enrollment_no
+                  FROM " . $this->table . " l 
+                  JOIN Users u ON l.userID = u.userID 
+                  LEFT JOIN Student s ON u.userID = s.userID
+                  ORDER BY l.lostID DESC";
+        $stmt = $this->conn->query($query);
+        $lostItems = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($lostItems as &$item) {
+            $item['is_flagged'] = (bool)$item['is_flagged'];
+        }
+        return $lostItems;
+    }
+
+    public function updateAdminStatus($id, $status) {
+        $stmt = $this->conn->prepare("UPDATE " . $this->table . " SET status = ?, is_flagged = 0 WHERE lostID = ?");
+        return $stmt->execute([$status, $id]);
+    }
 }
 ?>
