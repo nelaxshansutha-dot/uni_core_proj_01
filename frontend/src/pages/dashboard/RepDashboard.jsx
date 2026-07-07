@@ -25,7 +25,7 @@ const RepDashboard = () => {
                 setError(response.data.message || 'Failed to fetch dashboard data.');
             }
         } catch (err) {
-            setError('Could not load peer learning requests. Please try again.');
+            console.error('Could not load peer learning requests.', err);
         } finally {
             setLoading(false);
         }

@@ -9,6 +9,11 @@ class LostItem extends BaseModel {
         return "Lost_items";
     }
 
+    // Encapsulation: Define the primary key internally
+    protected function getPrimaryKey() {
+        return "lostID";
+    }
+
     public function __construct() {
         parent::__construct();
     }
@@ -49,10 +54,7 @@ class LostItem extends BaseModel {
         return $stmt->execute();
     }
 
-    // Polymorphism: Override default findById to query using lostID
-    public function findById($id) {
-        return $this->findByIdBase($id, 'lostID');
-    }
+    
 
     public function getAll() {
         $query = "SELECT l.*, l.lostID as lost_id, l.userID as user_id, s.enrollmentNo as enrollment_no
@@ -118,6 +120,38 @@ class LostItem extends BaseModel {
             $stmt->bindParam(':lost_id', $lost_id);
         }
         return $stmt->execute();
+    }
+
+    // --- Admin specific methods below ---
+
+    public function countAll() {
+        return $this->conn->query("SELECT COUNT(*) FROM " . $this->table)->fetchColumn();
+    }
+
+    public function getAdminContent() {
+        $query = "SELECT l.lostID as lost_id, l.lostItemName, l.last_seen_date, l.last_seen_time, l.item_image, l.contact_number as contact_no, l.created_at, l.status, l.is_flagged, u.email, s.enrollmentNo as enrollment_no
+                  FROM " . $this->table . " l 
+                  JOIN Users u ON l.userID = u.userID 
+                  LEFT JOIN Student s ON u.userID = s.userID
+                  ORDER BY l.lostID DESC";
+        $stmt = $this->conn->query($query);
+        $lostItems = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($lostItems as &$item) {
+            $item['is_flagged'] = (bool)$item['is_flagged'];
+        }
+        return $lostItems;
+    }
+
+    public function updateAdminStatus($id, $status) {
+        $stmt = $this->conn->prepare("UPDATE " . $this->table . " SET status = ?, is_flagged = 0 WHERE lostID = ?");
+        return $stmt->execute([$status, $id]);
+    }
+
+    public function getLatestItems($limit = 5) {
+        $query = "SELECT lostID as id, lostItemName as title, 'lost_item' as type, created_at FROM " . $this->table . " ORDER BY created_at DESC LIMIT " . intval($limit);
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }
 ?>

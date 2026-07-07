@@ -4,7 +4,9 @@ require_once __DIR__ . '/../utils/Response.php';
 require_once __DIR__ . '/../utils/Validator.php';
 require_once __DIR__ . '/../config/Database.php';
 
-class ProfileController {
+require_once __DIR__ . '/BaseController.php';
+
+class ProfileController extends BaseController {
     public function getProfile($userId) {
         $db = (new Database())->getConnection();
         

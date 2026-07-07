@@ -134,11 +134,13 @@ const Profile = () => {
                                         <div className="form-text">Email address cannot be changed.</div>
                                     </div>
                                     <div className="col-md-6">
-                                        <label className="form-label text-muted small fw-bold">Enrollment No / Staff ID</label>
+                                        <label className="form-label text-muted small fw-bold">
+                                            {profile.role === 'admin' ? 'Admin ID' : 'Enrollment No / Staff ID'}
+                                        </label>
                                         <input
                                             type="text"
                                             className="form-control bg-light"
-                                            value={profile.enrollment_no || ''}
+                                            value={profile.role === 'admin' ? (profile.admin_id || '') : (profile.enrollment_no || '')}
                                             disabled
                                         />
                                     </div>
@@ -177,6 +179,7 @@ const Profile = () => {
                                     Preferences
                                 </h5>
 
+                                {profile.role !== 'rep' && (
                                 <div className="card bg-light border-0 p-3 mb-3">
                                     <div className="form-check form-switch d-flex align-items-center justify-content-between p-0">
                                         <div>
@@ -198,6 +201,7 @@ const Profile = () => {
                                         />
                                     </div>
                                 </div>
+                                )}
 
                                 <div className="card bg-light border-0 p-3 mb-4">
                                     <div className="form-check form-switch d-flex align-items-center justify-content-between p-0">

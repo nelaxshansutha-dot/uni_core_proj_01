@@ -1,8 +1,12 @@
 <?php
 
+require_once __DIR__ . '/../config/config.php';
+
 class JWT {
   
-    private static $secret = "uni_core_proj_01_secure_secret_key_123456_!@#";
+    private static function getSecret() {
+        return $_ENV['JWT_SECRET'];
+    }
 
     
     private static function base64UrlEncode($data) {
@@ -28,7 +32,7 @@ class JWT {
         $base64UrlHeader = self::base64UrlEncode($header);
         $base64UrlPayload = self::base64UrlEncode(json_encode($payload));
         
-        $signature = hash_hmac('sha256', $base64UrlHeader . "." . $base64UrlPayload, self::$secret, true);
+        $signature = hash_hmac('sha256', $base64UrlHeader . "." . $base64UrlPayload, self::getSecret(), true);
         $base64UrlSignature = self::base64UrlEncode($signature);
         
         return $base64UrlHeader . "." . $base64UrlPayload . "." . $base64UrlSignature;
@@ -48,7 +52,7 @@ class JWT {
         }
 
         $signature = self::base64UrlDecode($base64UrlSignature);
-        $expectedSignature = hash_hmac('sha256', $base64UrlHeader . "." . $base64UrlPayload, self::$secret, true);
+        $expectedSignature = hash_hmac('sha256', $base64UrlHeader . "." . $base64UrlPayload, self::getSecret(), true);
 
         // Constant-time string comparison to prevent timing attacks
         if (!hash_equals($signature, $expectedSignature)) {

@@ -9,6 +9,11 @@ class Marketplace extends BaseModel {
         return "marketplace";
     }
 
+    // Encapsulation: Define the primary key internally
+    protected function getPrimaryKey() {
+        return "productID";
+    }
+
     public function __construct() {
         parent::__construct();
     }
@@ -116,6 +121,38 @@ class Marketplace extends BaseModel {
             $stmt->bindParam(':productID', $productID);
         }
         return $stmt->execute();
+    }
+
+    // --- Admin specific methods below ---
+
+    public function countAll() {
+        return $this->conn->query("SELECT COUNT(*) FROM " . $this->table)->fetchColumn();
+    }
+
+    public function getAdminContent() {
+        $query = "SELECT m.productID as id, m.productName as title, m.price, m.location, m.image_url as product_image, m.phone_number as contact_no, m.created_at, m.status, m.is_flagged, u.email, s.enrollmentNo as enrollment_no
+                  FROM " . $this->table . " m 
+                  JOIN Users u ON m.userID = u.userID 
+                  LEFT JOIN Student s ON u.userID = s.userID
+                  ORDER BY m.productID DESC";
+        $stmt = $this->conn->query($query);
+        $marketplace = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($marketplace as &$item) {
+            $item['is_flagged'] = (bool)$item['is_flagged'];
+        }
+        return $marketplace;
+    }
+
+    public function updateAdminStatus($id, $status) {
+        $stmt = $this->conn->prepare("UPDATE " . $this->table . " SET status = ?, is_flagged = 0 WHERE productID = ?");
+        return $stmt->execute([$status, $id]);
+    }
+
+    public function getLatestItems($limit = 5) {
+        $query = "SELECT productID as id, productName as title, 'marketplace' as type, created_at FROM " . $this->table . " ORDER BY created_at DESC LIMIT " . intval($limit);
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }
 ?>

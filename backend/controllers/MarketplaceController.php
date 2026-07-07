@@ -3,7 +3,9 @@ require_once __DIR__ . '/../models/Marketplace.php';
 require_once __DIR__ . '/../utils/Response.php';
 require_once __DIR__ . '/../utils/Validator.php';
 
-class MarketplaceController {
+require_once __DIR__ . '/BaseController.php';
+
+class MarketplaceController extends BaseController {
     
     public function getItems() {
         $model = new Marketplace();
@@ -12,11 +14,7 @@ class MarketplaceController {
     }
 
     public function createItem($data, $user_id) {
-        $missing = Validator::required(['productName', 'description', 'price', 'condition_type', 'location', 'phone_number'], $data);
-        if (!empty($missing)) {
-            Response::error("Missing fields: " . implode(', ', $missing));
-            return;
-        }
+        Validator::validateRequired(['productName', 'description', 'price', 'condition_type', 'location', 'phone_number'], $data);
 
         if (!preg_match('/^[0-9]+$/', $data['phone_number'])) {
             Response::error("Phone number must contain only numbers.");
@@ -53,10 +51,7 @@ class MarketplaceController {
     }
 
     public function updateStatus($data, $user_id) {
-        $missing = Validator::required(['productID', 'status'], $data);
-        if (!empty($missing)) {
-             Response::error("Missing fields.");
-        }
+        Validator::validateRequired(['productID', 'status'], $data);
 
         $model = new Marketplace();
         if ($model->updateStatus($data['productID'], $user_id, $data['status'])) {
@@ -67,11 +62,7 @@ class MarketplaceController {
     }
 
     public function updateListing($data, $user_id) {
-        $missing = Validator::required(['productID', 'productName', 'description', 'price', 'condition_type', 'location', 'phone_number'], $data);
-        if (!empty($missing)) {
-            Response::error("Missing fields: " . implode(', ', $missing));
-            return;
-        }
+        Validator::validateRequired(['productID', 'productName', 'description', 'price', 'condition_type', 'location', 'phone_number'], $data);
 
         if (!preg_match('/^[0-9]+$/', $data['phone_number'])) {
             Response::error("Phone number must contain only numbers.");
@@ -106,10 +97,7 @@ class MarketplaceController {
     }
 
     public function deleteItem($data, $user_id) {
-        $missing = Validator::required(['productID'], $data);
-        if (!empty($missing)) {
-            Response::error("Missing item ID.");
-        }
+        Validator::validateRequired(['productID'], $data);
 
         $model = new Marketplace();
         if ($model->delete($data['productID'], $user_id)) {

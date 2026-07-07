@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import api from '../../services/api';
 import { 
     ShieldAlert, Search, UserCheck, Users, Activity, 
-    BookOpen, ShoppingBag, AlertTriangle, EyeOff, 
+    BookOpen, ShoppingBag, AlertTriangle, EyeOff, Eye,
     Trash2, RefreshCw, CheckCircle, UserPlus, Edit3, Shield, UserX
 } from 'lucide-react';
 
@@ -33,6 +33,12 @@ const AdminPanel = () => {
     const [roleFilter, setRoleFilter] = useState('');
     const [showUserModal, setShowUserModal] = useState(false);
     const [editingUser, setEditingUser] = useState(null);
+    
+    // Deactivate User Modal State
+    const [showDeactivateModal, setShowDeactivateModal] = useState(false);
+    const [deactivateUserTarget, setDeactivateUserTarget] = useState(null);
+    const [deactivateReason, setDeactivateReason] = useState('');
+    
     const [userForm, setUserForm] = useState({
         enrollment_no: '',
         email: '',
@@ -68,6 +74,16 @@ const AdminPanel = () => {
         marketplace: [],
         notes: []
     });
+    
+    const [showItemModal, setShowItemModal] = useState(false);
+    const [selectedViewItem, setSelectedViewItem] = useState(null);
+    const [viewItemType, setViewItemType] = useState('');
+    
+    const handleViewItem = (item, type) => {
+        setSelectedViewItem(item);
+        setViewItemType(type);
+        setShowItemModal(true);
+    };
 
     // Reports State
     const [reports, setReports] = useState([]);
@@ -186,9 +202,12 @@ const AdminPanel = () => {
         setShowUserModal(true);
     };
 
-    const toggleUserActiveStatus = async (userId, currentStatus) => {
+    const toggleUserActiveStatus = async (userId, currentStatus, reason = '') => {
         try {
-            const res = await api.patch(`/admin.php?action=users-status&id=${userId}`, { is_active: !currentStatus });
+            const payload = { is_active: !currentStatus };
+            if (reason) payload.reason = reason;
+            
+            const res = await api.patch(`/admin.php?action=users-status&id=${userId}`, payload);
             if (res.data.status === 'success') {
                 showFeedback('success', `User successfully ${!currentStatus ? 'activated' : 'deactivated'}.`);
                 fetchTabData();
@@ -196,6 +215,29 @@ const AdminPanel = () => {
         } catch (err) {
             showFeedback('danger', 'Error updating user status.');
         }
+    };
+    
+    const handleDeactivateClick = (user) => {
+        if (user.is_active) {
+            setDeactivateUserTarget(user);
+            setDeactivateReason('');
+            setShowDeactivateModal(true);
+        } else {
+            // Activating user doesn't require a reason
+            toggleUserActiveStatus(user.id, user.is_active);
+        }
+    };
+    
+    const confirmDeactivation = async (e) => {
+        e.preventDefault();
+        if (!deactivateReason.trim()) {
+            showFeedback('danger', 'Please provide a reason for deactivation.');
+            return;
+        }
+        await toggleUserActiveStatus(deactivateUserTarget.id, true, deactivateReason);
+        setShowDeactivateModal(false);
+        setDeactivateUserTarget(null);
+        setDeactivateReason('');
     };
 
     // Course Rep Operations
@@ -231,7 +273,7 @@ const AdminPanel = () => {
                 year: repForm.year
             });
             if (res.data.status === 'success') {
-                showFeedback('success', 'Successfully promoted student to Course Rep!');
+                showFeedback('success', `Successfully assigned! Credentials have been emailed to ${selectedStudent.enrollment_no}.`);
                 setSelectedStudent(null);
                 setRepStudents([]);
                 setRepSearch('');
@@ -241,6 +283,22 @@ const AdminPanel = () => {
             }
         } catch (err) {
             showFeedback('danger', err.response?.data?.message || 'Error promoting student.');
+        }
+    };
+
+    const handleDemoteRep = async (student) => {
+        if (!window.confirm(`Are you sure you want to demote ${student.first_name} back to a regular student?`)) return;
+        try {
+            const res = await api.patch(`/admin.php?action=users-status&id=rep_${student.id}`, { is_active: false });
+            if (res.data.status === 'success') {
+                showFeedback('success', `Successfully demoted ${student.first_name} to student.`);
+                setSelectedStudent(null);
+                setRepStudents([]);
+                setRepSearch('');
+                fetchTabData(); // refresh stats
+            }
+        } catch (err) {
+            showFeedback('danger', 'Error demoting rep.');
         }
     };
 
@@ -477,12 +535,9 @@ const AdminPanel = () => {
                                                 </td>
                                                 <td className="text-end">
                                                     <div className="d-flex justify-content-end gap-2">
-                                                        <button className="btn btn-sm btn-outline-primary" onClick={() => openEditModal(u)}>
-                                                            <Edit3 size={14} />
-                                                        </button>
                                                         <button 
                                                             className={`btn btn-sm ${u.is_active ? 'btn-outline-danger' : 'btn-outline-success'}`}
-                                                            onClick={() => toggleUserActiveStatus(u.id, u.is_active)}
+                                                            onClick={() => handleDeactivateClick(u)}
                                                         >
                                                             {u.is_active ? <UserX size={14} /> : <UserCheck size={14} />}
                                                         </button>
@@ -608,6 +663,44 @@ const AdminPanel = () => {
                             </div>
                         </div>
                     )}
+                    
+                    {/* MODAL FOR DEACTIVATE USER */}
+                    {showDeactivateModal && deactivateUserTarget && (
+                        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                            <div className="modal-dialog modal-dialog-centered">
+                                <div className="modal-content">
+                                    <div className="modal-header">
+                                        <h5 className="modal-title fw-bold text-danger">Deactivate User</h5>
+                                        <button type="button" className="btn-close" onClick={() => setShowDeactivateModal(false)}></button>
+                                    </div>
+                                    <form onSubmit={confirmDeactivation}>
+                                        <div className="modal-body">
+                                            <div className="mb-3">
+                                                <label className="form-label">User Email</label>
+                                                <input type="text" className="form-control" value={deactivateUserTarget.email} readOnly disabled />
+                                            </div>
+                                            <div className="mb-3">
+                                                <label className="form-label">Reason for Deactivation</label>
+                                                <textarea 
+                                                    className="form-control" 
+                                                    rows="3" 
+                                                    placeholder="Please provide a reason to deactivate this user..."
+                                                    value={deactivateReason}
+                                                    onChange={(e) => setDeactivateReason(e.target.value)}
+                                                    required
+                                                ></textarea>
+                                                <div className="form-text">This reason will be sent to the user via email.</div>
+                                            </div>
+                                        </div>
+                                        <div className="modal-footer">
+                                            <button type="button" className="btn btn-light" onClick={() => setShowDeactivateModal(false)}>Cancel</button>
+                                            <button type="submit" className="btn btn-danger">Confirm Deactivation</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -682,9 +775,15 @@ const AdminPanel = () => {
                                 <div className="card-body p-4">
                                     {selectedStudent ? (
                                         <form onSubmit={handleAssignRep}>
-                                            <div className="alert alert-info py-2 small mb-4">
-                                                Promoting <strong>{selectedStudent.first_name} {selectedStudent.last_name}</strong> ({selectedStudent.enrollment_no}) to Course Representative.
-                                            </div>
+                                            {selectedStudent.role === 'rep' ? (
+                                                <div className="alert alert-success py-2 small mb-4">
+                                                    <strong>{selectedStudent.first_name} {selectedStudent.last_name}</strong> ({selectedStudent.enrollment_no}) is <strong>already assigned</strong> as a Course Representative!
+                                                </div>
+                                            ) : (
+                                                <div className="alert alert-info py-2 small mb-4">
+                                                    Promoting <strong>{selectedStudent.first_name} {selectedStudent.last_name}</strong> ({selectedStudent.enrollment_no}) to Course Representative.
+                                                </div>
+                                            )}
 
                                             <div className="mb-3 row">
                                                 <div className="col-md-6">
@@ -754,12 +853,18 @@ const AdminPanel = () => {
                                                     placeholder="Set a dedicated password for the Rep dashboard..."
                                                     required 
                                                 />
-                                                <div className="form-text small">Credential PDF will be generated and emailed to the student.</div>
+                                                <div className="form-text small"> emailed to the student.</div>
                                             </div>
 
                                             <button type="submit" className="btn btn-warning w-100 py-2 fw-semibold d-flex align-items-center justify-content-center gap-2">
-                                                <UserCheck size={18} /> Assign & Generate PDF
+                                                <UserCheck size={18} /> {selectedStudent.role === 'rep' ? 'Update Credentials' : 'Assign'}
                                             </button>
+                                            
+                                            {selectedStudent.role === 'rep' && (
+                                                <button type="button" className="btn btn-outline-danger w-100 mt-2 py-2 fw-semibold d-flex align-items-center justify-content-center gap-2" onClick={() => handleDemoteRep(selectedStudent)}>
+                                                    <UserX size={18} /> Demote to Student
+                                                </button>
+                                            )}
                                         </form>
                                     ) : (
                                         <div className="text-center text-muted py-5">Select a student from the search list to proceed with promotion.</div>
@@ -824,6 +929,9 @@ const AdminPanel = () => {
                                                 <td>{new Date(item.created_at).toLocaleDateString()}</td>
                                                 <td className="text-end">
                                                     <div className="d-flex justify-content-end gap-2">
+                                                        <button className="btn btn-sm btn-outline-info" onClick={() => handleViewItem(item, 'lost_item')} title="View Details">
+                                                            <Eye size={14} />
+                                                        </button>
                                                         <button 
                                                             className={`btn btn-sm ${item.is_flagged ? 'btn-outline-success' : 'btn-outline-warning'}`}
                                                             onClick={() => handleContentFlag('lost_item', item.lost_id, !item.is_flagged)}
@@ -875,6 +983,9 @@ const AdminPanel = () => {
                                                 <td>{new Date(item.created_at).toLocaleDateString()}</td>
                                                 <td className="text-end">
                                                     <div className="d-flex justify-content-end gap-2">
+                                                        <button className="btn btn-sm btn-outline-info" onClick={() => handleViewItem(item, 'marketplace')} title="View Details">
+                                                            <Eye size={14} />
+                                                        </button>
                                                         <button 
                                                             className={`btn btn-sm ${item.is_flagged ? 'btn-outline-success' : 'btn-outline-warning'}`}
                                                             onClick={() => handleContentFlag('marketplace', item.id, !item.is_flagged)}
@@ -926,6 +1037,9 @@ const AdminPanel = () => {
                                                 <td>{new Date(note.created_at).toLocaleDateString()}</td>
                                                 <td className="text-end">
                                                     <div className="d-flex justify-content-end gap-2">
+                                                        <button className="btn btn-sm btn-outline-info" onClick={() => handleViewItem(note, 'notes')} title="View Details">
+                                                            <Eye size={14} />
+                                                        </button>
                                                         <button 
                                                             className={`btn btn-sm ${note.is_flagged ? 'btn-outline-success' : 'btn-outline-warning'}`}
                                                             onClick={() => handleContentFlag('notes', note.id, !note.is_flagged)}
@@ -960,6 +1074,61 @@ const AdminPanel = () => {
             )}
 
 
+            {/* View Item Modal */}
+            {showItemModal && selectedViewItem && (
+                <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} tabIndex="-1">
+                    <div className="modal-dialog modal-dialog-centered">
+                        <div className="modal-content border-0 shadow">
+                            <div className="modal-header">
+                                <h5 className="modal-title fw-bold">
+                                    {viewItemType === 'lost_item' ? 'Lost Item Details' : 
+                                     viewItemType === 'marketplace' ? 'Marketplace Item Details' : 'Shared Note Details'}
+                                </h5>
+                                <button type="button" className="btn-close" onClick={() => setShowItemModal(false)}></button>
+                            </div>
+                            <div className="modal-body">
+                                {viewItemType === 'lost_item' && (
+                                    <>
+                                        <h6 className="fw-bold fs-5 mb-3">{selectedViewItem.lostItemName}</h6>
+                                        {selectedViewItem.item_image && (
+                                            <img src={selectedViewItem.item_image.startsWith('http') ? selectedViewItem.item_image : `http://localhost/uni_core_proj_01/${selectedViewItem.item_image}`} alt={selectedViewItem.lostItemName} className="img-fluid rounded mb-3 w-100 object-fit-cover" style={{maxHeight: '250px'}} />
+                                        )}
+                                        <p><strong>Contact:</strong> {selectedViewItem.contact_no}</p>
+                                        <p><strong>Last Seen:</strong> {selectedViewItem.last_seen_date} {selectedViewItem.last_seen_time}</p>
+                                        <p><strong>Reported By:</strong> {selectedViewItem.email}</p>
+                                        <p><strong>Status:</strong> <span className="badge bg-secondary">{selectedViewItem.status}</span></p>
+                                    </>
+                                )}
+                                {viewItemType === 'marketplace' && (
+                                    <>
+                                        <h6 className="fw-bold fs-5 mb-3">{selectedViewItem.title}</h6>
+                                        {selectedViewItem.product_image && (
+                                            <img src={selectedViewItem.product_image.startsWith('http') ? selectedViewItem.product_image : `http://localhost/uni_core_proj_01/${selectedViewItem.product_image}`} alt={selectedViewItem.title} className="img-fluid rounded mb-3 w-100 object-fit-cover" style={{maxHeight: '250px'}} />
+                                        )}
+                                        <p><strong>Price:</strong> ${selectedViewItem.price}</p>
+                                        <p><strong>Location:</strong> {selectedViewItem.location}</p>
+                                        <p><strong>Contact:</strong> {selectedViewItem.contact_no}</p>
+                                        <p><strong>Posted By:</strong> {selectedViewItem.email}</p>
+                                        <p><strong>Status:</strong> <span className="badge bg-secondary">{selectedViewItem.status}</span></p>
+                                    </>
+                                )}
+                                {viewItemType === 'notes' && (
+                                    <>
+                                        <h6 className="fw-bold fs-5 mb-3">{selectedViewItem.title}</h6>
+                                        <p><strong>Course Unit:</strong> {selectedViewItem.courseUnitID}</p>
+                                        <p><strong>File:</strong> <a href={selectedViewItem.file_url?.startsWith('http') ? selectedViewItem.file_url : `http://localhost/uni_core_proj_01/${selectedViewItem.file_url}`} target="_blank" rel="noreferrer" className="btn btn-sm btn-outline-primary">View/Download File</a></p>
+                                        <p><strong>Shared By:</strong> {selectedViewItem.email}</p>
+                                        <p><strong>Status:</strong> <span className="badge bg-secondary">{selectedViewItem.status}</span></p>
+                                    </>
+                                )}
+                            </div>
+                            <div className="modal-footer">
+                                <button type="button" className="btn btn-secondary" onClick={() => setShowItemModal(false)}>Close</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

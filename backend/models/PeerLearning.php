@@ -9,6 +9,11 @@ class PeerLearning extends BaseModel {
         return "peer_learning_request";
     }
 
+    // Encapsulation: Define the primary key internally
+    protected function getPrimaryKey() {
+        return "requestID";
+    }
+
     public function __construct() {
         parent::__construct();
     }
@@ -18,10 +23,7 @@ class PeerLearning extends BaseModel {
         return $this->createRequest($data);
     }
 
-    // Polymorphism: Override default findById to query using requestID
-    public function findById($id) {
-        return $this->findByIdBase($id, 'requestID');
-    }
+    
 
     public function createRequest($data) {
         $query = "INSERT INTO " . $this->table . " (repID, enrollmentNo, courseUnitID, std_year, semester, courseUnitName) VALUES (:repID, :enrollmentNo, :courseUnitID, :std_year, :semester, :courseUnitName)";

@@ -1,9 +1,8 @@
 <?php
 require_once __DIR__ . '/../config/Database.php';
 
-// Abstraction: This class cannot be instantiated directly.
 abstract class BaseModel {
-    // Encapsulation: Database properties are protected, hiding direct connection details
+  
     protected $conn;
     protected $table;
 

@@ -5,7 +5,9 @@ require_once __DIR__ . '/../utils/Response.php';
 require_once __DIR__ . '/../utils/Validator.php';
 require_once __DIR__ . '/../utils/SMSService.php';
 
-class LostItemController {
+require_once __DIR__ . '/BaseController.php';
+
+class LostItemController extends BaseController {
 
     public function getItems() {
         $model = new LostItem();
@@ -15,18 +17,13 @@ class LostItemController {
 
     public function createItem($data, $file, $user_id) {
 
-        $missing = Validator::required([
+        Validator::validateRequired([
             'lostItemName',
             'description',
             'last_seen_datetime',
             'last_seen_place',
             'contact_number'
         ], $data);
-
-        if (!empty($missing)) {
-            Response::error("Missing fields: " . implode(', ', $missing));
-            return; // ✅ IMPORTANT
-        }
 
         if (!preg_match('/^[0-9]+$/', $data['contact_number'])) {
             Response::error("Contact number must contain only numbers.");
@@ -97,7 +94,7 @@ class LostItemController {
 
 
     public function updateItem($data, $file, $user_id) {
-        $missing = Validator::required([
+        Validator::validateRequired([
             'update_id',
             'lostItemName',
             'description',
@@ -105,11 +102,6 @@ class LostItemController {
             'last_seen_place',
             'contact_number'
         ], $data);
-
-        if (!empty($missing)) {
-            Response::error("Missing fields: " . implode(', ', $missing));
-            return;
-        }
 
         if (!preg_match('/^[0-9]+$/', $data['contact_number'])) {
             Response::error("Contact number must contain only numbers.");
