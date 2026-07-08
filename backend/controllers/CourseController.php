@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../models/Course.php';
 require_once __DIR__ . '/../utils/Response.php';
+require_once __DIR__ . '/../config/Database.php';
 
 require_once __DIR__ . '/BaseController.php';
 
@@ -10,24 +11,42 @@ class CourseController extends BaseController {
             Response::error("Missing year or semester.");
         }
         
-        // If courseID is empty, extract it from the student's enrollment number
-        if (empty($courseID) && $userID) {
+        // Always read courseID and std_year directly from the Student table
+        // The enrollment number segment (e.g. "CST") is NOT the courseID — the DB stores an integer FK
+        if ($userID) {
             $db = (new Database())->getConnection();
-            $stmt = $db->prepare("SELECT enrollmentNo FROM Student WHERE userID = ?");
+            $stmt = $db->prepare("SELECT courseID, std_year, enrollmentNo FROM Student WHERE userID = ?");
             $stmt->execute([$userID]);
-            $enrollmentNo = $stmt->fetchColumn();
-            
-            if ($enrollmentNo) {
-                // Parse uwu/cst/23/088 to extract 'cst'
-                $parts = explode('/', $enrollmentNo);
-                if (count($parts) >= 2) {
-                    $courseID = strtoupper(trim($parts[1]));
+            $studentRow = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($studentRow) {
+                $courseID = $studentRow['courseID'];
+
+                // Fallback: if courseID is NULL, extract course code from enrollment number and look up Course table
+                if (empty($courseID) && !empty($studentRow['enrollmentNo'])) {
+                    $parts = explode('/', strtoupper(trim($studentRow['enrollmentNo'])));
+                    if (count($parts) >= 2 && !empty($parts[1])) {
+                        $code = $parts[1]; // e.g. "CST"
+                        $stmt2 = $db->prepare("SELECT courseID FROM Course WHERE courseName LIKE ? LIMIT 1");
+                        $stmt2->execute(['%' . $code . '%']);
+                        $courseRow = $stmt2->fetch(PDO::FETCH_ASSOC);
+                        if ($courseRow) {
+                            $courseID = (int)$courseRow['courseID'];
+                            // Update the student record so future lookups are fast
+                            $db->prepare("UPDATE Student SET courseID = ? WHERE userID = ?")->execute([$courseID, $userID]);
+                        }
+                    }
+                }
+
+                // If year not provided by client, fall back to student's registered year
+                if (empty($year) && !empty($studentRow['std_year'])) {
+                    $year = $studentRow['std_year'];
                 }
             }
         }
-        
+
         if (empty($courseID)) {
-            Response::error("Could not determine your course from your enrollment number. Please provide a courseID.");
+            Response::error("Could not determine your course. Please update your profile with your course details.");
         }
 
         $model = new Course();

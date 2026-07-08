@@ -30,6 +30,11 @@ const Register = () => {
                 return;
             }
         }
+        if (name === 'first_name' || name === 'last_name') {
+            if (value !== '' && !/^[a-zA-Z\s]*$/.test(value)) {
+                return;
+            }
+        }
         setFormData({ ...formData, [name]: value });
         if (error) setError('');
     };
@@ -70,6 +75,13 @@ const Register = () => {
         setError('');
 
         // Client-side validation
+        const nameRegex = /^[a-zA-Z\s]+$/;
+        if (!nameRegex.test(formData.first_name.trim()) || !nameRegex.test(formData.last_name.trim())) {
+            setError('First name and last name must contain only letters and spaces.');
+            setLoading(false);
+            return;
+        }
+
         if (!phoneValid) {
             setError('Please enter a valid phone number (must start with 0 and be exactly 10 digits).');
             setLoading(false);

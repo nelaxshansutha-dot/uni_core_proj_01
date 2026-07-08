@@ -141,6 +141,11 @@ const AdminPanel = () => {
 
     const handleSaveUser = async (e) => {
         e.preventDefault();
+        const nameRegex = /^[a-zA-Z\s]+$/;
+        if (!nameRegex.test((userForm.first_name || '').trim()) || !nameRegex.test((userForm.last_name || '').trim())) {
+            showFeedback('danger', 'First name and last name must contain only letters and spaces.');
+            return;
+        }
         try {
             if (editingUser) {
                 // Update User
@@ -260,6 +265,11 @@ const AdminPanel = () => {
     const handleAssignRep = async (e) => {
         e.preventDefault();
         if (!selectedStudent) return;
+        const nameRegex = /^[a-zA-Z\s]+$/;
+        if (!nameRegex.test((repForm.fname || '').trim()) || !nameRegex.test((repForm.lname || '').trim())) {
+            showFeedback('danger', 'First name and last name must contain only letters and spaces.');
+            return;
+        }
         try {
             const res = await api.post('/admin.php?action=assign-rep', {
                 user_id: selectedStudent.id,
@@ -578,10 +588,11 @@ const AdminPanel = () => {
                                                     <label className="form-label">Email Address</label>
                                                     <input 
                                                         type="email" 
-                                                        className="form-control" 
+                                                        className={`form-control ${editingUser ? 'bg-light text-muted' : ''}`} 
                                                         value={userForm.email}
                                                         onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
                                                         required 
+                                                        disabled={!!editingUser}
                                                     />
                                                 </div>
                                                 {!editingUser && (
@@ -602,7 +613,7 @@ const AdminPanel = () => {
                                                         type="text" 
                                                         className="form-control" 
                                                         value={userForm.first_name}
-                                                        onChange={(e) => setUserForm({ ...userForm, first_name: e.target.value })}
+                                                        onChange={(e) => { if (/^[a-zA-Z\s]*$/.test(e.target.value)) setUserForm({ ...userForm, first_name: e.target.value }); }}
                                                         required 
                                                     />
                                                 </div>
@@ -612,7 +623,7 @@ const AdminPanel = () => {
                                                         type="text" 
                                                         className="form-control" 
                                                         value={userForm.last_name}
-                                                        onChange={(e) => setUserForm({ ...userForm, last_name: e.target.value })}
+                                                        onChange={(e) => { if (/^[a-zA-Z\s]*$/.test(e.target.value)) setUserForm({ ...userForm, last_name: e.target.value }); }}
                                                         required 
                                                     />
                                                 </div>
@@ -792,7 +803,7 @@ const AdminPanel = () => {
                                                         type="text" 
                                                         className="form-control" 
                                                         value={repForm.fname}
-                                                        onChange={(e) => setRepForm({ ...repForm, fname: e.target.value })}
+                                                        onChange={(e) => { if (/^[a-zA-Z\s]*$/.test(e.target.value)) setRepForm({ ...repForm, fname: e.target.value }); }}
                                                         required 
                                                     />
                                                 </div>
@@ -802,7 +813,7 @@ const AdminPanel = () => {
                                                         type="text" 
                                                         className="form-control" 
                                                         value={repForm.lname}
-                                                        onChange={(e) => setRepForm({ ...repForm, lname: e.target.value })}
+                                                        onChange={(e) => { if (/^[a-zA-Z\s]*$/.test(e.target.value)) setRepForm({ ...repForm, lname: e.target.value }); }}
                                                         required 
                                                     />
                                                 </div>
