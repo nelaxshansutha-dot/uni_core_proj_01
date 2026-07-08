@@ -54,6 +54,10 @@ class AdminController extends BaseController {
     public function createUser($data, $adminId) {
         Validator::validateRequired(['enrollment_no', 'email', 'password', 'role', 'first_name', 'last_name'], $data);
 
+        if (!Validator::validateName($data['first_name']) || !Validator::validateName($data['last_name'])) {
+            Response::error("First name and last name must contain only letters and spaces.");
+        }
+
         $userModel = new User();
         if ($userModel->findByEnrollment($data['enrollment_no']) || $userModel->findByEmail($data['email'])) {
             Response::error("Enrollment number or email is already registered.");
@@ -100,6 +104,10 @@ class AdminController extends BaseController {
     public function updateUser($id, $data, $adminId) {
         Validator::validateRequired(['email', 'first_name', 'last_name'], $data);
 
+        if (!Validator::validateName($data['first_name']) || !Validator::validateName($data['last_name'])) {
+            Response::error("First name and last name must contain only letters and spaces.");
+        }
+
         // Handle rep_ prefix if they edit the rep row
         $isRepRow = strpos((string)$id, 'rep_') === 0;
         $realId = $isRepRow ? (int)str_replace('rep_', '', $id) : (int)$id;
@@ -141,7 +149,7 @@ class AdminController extends BaseController {
         }
     }
 
-        public function toggleUserStatus($id, $data, $adminId) {
+    public function toggleUserStatus($id, $data, $adminId) {
         if (!isset($data['is_active'])) {
             Response::error('Missing is_active flag');
         }
@@ -171,6 +179,10 @@ class AdminController extends BaseController {
 
     public function assignRep($data, $adminId) {
         Validator::validateRequired(['user_id', 'fname', 'lname', 'email', 'rep_id', 'password'], $data);
+
+        if (!Validator::validateName($data['fname']) || !Validator::validateName($data['lname'])) {
+            Response::error("First name and last name must contain only letters and spaces.");
+        }
 
         $userModel = new User();
         

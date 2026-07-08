@@ -11,7 +11,8 @@ const PeerLearning = () => {
     const [showSemPopup, setShowSemPopup] = useState(user?.role === 'student');
     const [loading, setLoading] = useState(user?.role === 'rep' || (user?.role !== 'student'));
     const [showModal, setShowModal] = useState(false);
-    const [courseFilters, setCourseFilters] = useState({ courseID: '7', year: '1', semester: '1' });
+    const [courseFilters, setCourseFilters] = useState({ year: '1', semester: '1' });
+
     const [modules, setModules] = useState([]);
     
     const [formData, setFormData] = useState({
@@ -60,10 +61,13 @@ const PeerLearning = () => {
         e?.preventDefault();
         try {
             setLoading(true);
-            const res = await api.get(`/courses.php?action=modules&courseID=${courseFilters.courseID}&year=${courseFilters.year}&semester=${courseFilters.semester}`);
+            // courseID is intentionally omitted — backend auto-extracts it from the user's enrollment number
+            const res = await api.get(`/courses.php?action=modules&year=${courseFilters.year}&semester=${courseFilters.semester}`);
             if (res.data.status === 'success') {
                 setModules(res.data.data);
                 setShowSemPopup(false);
+            } else {
+                console.error(res.data.message);
             }
         } catch (err) {
             console.error(err);
@@ -72,11 +76,12 @@ const PeerLearning = () => {
         }
     };
 
+    // Always fetch requests on mount for any logged-in user
     useEffect(() => {
-        if (user?.role === 'rep' || !showSemPopup) {
+        if (user) {
             fetchRequests();
         }
-    }, [user, showSemPopup]);
+    }, [user]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -127,7 +132,7 @@ const PeerLearning = () => {
                 </div>
                 {user?.role === 'student' && !showSemPopup && (
                     <button className="btn btn-outline-primary rounded-pill px-4" onClick={() => setShowSemPopup(true)}>
-                        Change Semester
+                        Change Semester / Year
                     </button>
                 )}
             </div>
@@ -135,46 +140,55 @@ const PeerLearning = () => {
             {loading ? (
                 <div className="text-center mt-5"><div className="spinner-border text-primary"></div></div>
             ) : showSemPopup ? (
-                <div className="card border-0 shadow-sm mx-auto" style={{maxWidth: '500px'}}>
-                    <div className="card-body p-4">
-                        <h5 className="fw-bold mb-4">Select Course Details</h5>
-                        <form onSubmit={fetchModules}>
-                            <div className="mb-3">
-                                <label className="form-label text-muted small fw-bold">Course</label>
-                                <select className="form-select" value={courseFilters.courseID} onChange={e => setCourseFilters({...courseFilters, courseID: e.target.value})}>
-                                    <option value="7">CST</option>
-                                    <option value="8">SCT</option>
-                                    <option value="9">IIT</option>
-                                    <option value="10">MRT</option>
-                                    <option value="11">AQT</option>
-                                    <option value="12">PMT</option>
-                                    <option value="13">BBST</option>
-                                    <option value="14">ENM</option>
-                                    <option value="15">HRD</option>
-                                    <option value="16">HTE</option>
-                                    <option value="17">ET</option>
-                                </select>
-                            </div>
-                            <div className="mb-3">
-                                <label className="form-label text-muted small fw-bold">Year</label>
-                                <select className="form-select" value={courseFilters.year} onChange={e => setCourseFilters({...courseFilters, year: e.target.value})}>
-                                    <option value="1">Year 1</option>
-                                    <option value="2">Year 2</option>
-                                    <option value="3">Year 3</option>
-                                    <option value="4">Year 4</option>
-                                </select>
-                            </div>
-                            <div className="mb-4">
-                                <label className="form-label text-muted small fw-bold">Semester</label>
-                                <select className="form-select" value={courseFilters.semester} onChange={e => setCourseFilters({...courseFilters, semester: e.target.value})}>
-                                    <option value="1">Semester 1</option>
-                                    <option value="2">Semester 2</option>
-                                </select>
-                            </div>
-                            <button type="submit" className="btn btn-primary w-100 rounded-pill">Load Modules</button>
-                        </form>
+                <>
+                    <div className="card border-0 shadow-sm mx-auto mb-4" style={{maxWidth: '500px'}}>
+                        <div className="card-body p-4">
+                            <h5 className="fw-bold mb-1">Select Semester Details</h5>
+                            <p className="text-muted small mb-4">Your course is automatically detected from your profile.</p>
+                            <form onSubmit={fetchModules}>
+                                <div className="mb-3">
+                                    <label className="form-label text-muted small fw-bold">YEAR</label>
+                                    <select className="form-select" value={courseFilters.year} onChange={e => setCourseFilters({...courseFilters, year: e.target.value})}>
+                                        <option value="1">Year 1</option>
+                                        <option value="2">Year 2</option>
+                                        <option value="3">Year 3</option>
+                                        <option value="4">Year 4</option>
+                                    </select>
+                                </div>
+                                <div className="mb-4">
+                                    <label className="form-label text-muted small fw-bold">SEMESTER</label>
+                                    <select className="form-select" value={courseFilters.semester} onChange={e => setCourseFilters({...courseFilters, semester: e.target.value})}>
+                                        <option value="1">Semester 1</option>
+                                        <option value="2">Semester 2</option>
+                                    </select>
+                                </div>
+                                <button type="submit" className="btn btn-primary w-100 rounded-pill">Load Modules</button>
+                            </form>
+                        </div>
                     </div>
-                </div>
+
+                    {/* Always show existing requests even when popup is open */}
+                    {requests.length > 0 && (
+                        <>
+                            <h5 className="mb-3 fw-bold border-top pt-4">Your Requests</h5>
+                            <div className="row g-4">
+                                {requests.map((req, idx) => (
+                                    <div className="col-md-6" key={req.requestID || idx}>
+                                        <div className="card border-0 shadow-sm">
+                                            <div className="card-body p-4">
+                                                <div className="d-flex justify-content-between align-items-start mb-2">
+                                                    <h6 className="fw-bold m-0">{req.courseUnitName}</h6>
+                                                </div>
+                                                <span className="badge bg-secondary mb-2">{req.courseUnitID}</span>
+                                                <p className="text-muted small mb-0">{req.description}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </>
+                    )}
+                </>
             ) : user?.role === 'student' && modules.length > 0 ? (
                 <>
                     <h5 className="mb-3 fw-bold">Select a Module for Peer Learning</h5>
@@ -263,12 +277,6 @@ const PeerLearning = () => {
                                                 <h5 className="fw-bold m-0">{req.courseUnitName}</h5>
                                                 <span className="badge bg-secondary mt-1">{req.courseUnitID}</span>
                                             </div>
-                                            <span className={`badge rounded-pill ${
-                                                req.status === 'pending' ? 'bg-warning' : 
-                                                req.status === 'approved' ? 'bg-success' : 'bg-danger'
-                                            }`}>
-                                                {req.status.toUpperCase()}
-                                            </span>
                                         </div>
                                         
                                         {user?.role === 'rep' && req.request_count && (

@@ -43,14 +43,24 @@ class Student extends BaseModel {
     }
 
     public static function extractCourseFromEnrollment($enrollmentNo) {
-        // Basic extraction of course code from enrollment number
-        // Assuming format like UWU/CST/20/001 where CST maps to course ID 1
-        if (stripos($enrollmentNo, '/CST/') !== false) return 1;
-        if (stripos($enrollmentNo, '/IIT/') !== false) return 2;
-        if (stripos($enrollmentNo, '/SCT/') !== false) return 3;
-        if (stripos($enrollmentNo, '/MRT/') !== false) return 4;
-        
-        return null; // Return null if unable to determine
+        // Parse format like UWU/CST/23/088 — second segment is the course abbreviation
+        $parts = explode('/', strtoupper(trim($enrollmentNo)));
+        if (count($parts) < 2 || empty($parts[1])) {
+            return null;
+        }
+        $courseCode = $parts[1]; // e.g. "CST"
+
+        // Look up the numeric courseID from the Course table by matching the abbreviation in courseName
+        try {
+            require_once __DIR__ . '/../config/Database.php';
+            $db = (new Database())->getConnection();
+            $stmt = $db->prepare("SELECT courseID FROM Course WHERE courseName LIKE ? LIMIT 1");
+            $stmt->execute(['%' . $courseCode . '%']);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $row ? (int)$row['courseID'] : null;
+        } catch (Exception $e) {
+            return null;
+        }
     }
 
     public function updateAdminProfile($user_id, $enrollmentNo, $courseID, $std_year) {

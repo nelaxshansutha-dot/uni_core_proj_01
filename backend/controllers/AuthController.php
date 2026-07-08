@@ -43,6 +43,10 @@ class AuthController extends BaseController
 
         Validator::validateRequired($required, $data);
 
+        if (!Validator::validateName($data['first_name']) || !Validator::validateName($data['last_name'])) {
+            Response::error("First name and last name must contain only letters and spaces.");
+        }
+
         if (!Validator::validateEmail($data['email'])) {
             Response::error("Invalid email format. Please enter a valid email address.");
         }
@@ -412,6 +416,10 @@ class AuthController extends BaseController
     {
         $required = ['first_name', 'last_name', 'email', 'phone_number'];
         Validator::validateRequired($required, $data);
+
+        if (!Validator::validateName($data['first_name']) || !Validator::validateName($data['last_name'])) {
+            Response::error("First name and last name must contain only letters and spaces.");
+        }
 
         if (!preg_match('/^[0-9]+$/', $data['phone_number'])) {
             Response::error("Phone number must contain only numbers.");

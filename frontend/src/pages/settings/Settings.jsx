@@ -45,6 +45,11 @@ const Settings = () => {
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
+        if (name === 'first_name' || name === 'last_name') {
+            if (value !== '' && !/^[a-zA-Z\s]*$/.test(value)) {
+                return;
+            }
+        }
         setFormData({
             ...formData,
             [name]: type === 'checkbox' ? (checked ? 1 : 0) : value
@@ -60,6 +65,13 @@ const Settings = () => {
         setSuccess('');
 
         // Basic validations
+        const nameRegex = /^[a-zA-Z\s]+$/;
+        if (user?.role !== 'admin' && (!nameRegex.test((formData.first_name || '').trim()) || !nameRegex.test((formData.last_name || '').trim()))) {
+            setError('First name and last name must contain only letters and spaces.');
+            setLoading(false);
+            return;
+        }
+
         const isEmailEmpty = !formData.email;
         const isNameEmpty = user?.role !== 'admin' && (!formData.first_name || !formData.last_name);
 
@@ -186,11 +198,11 @@ const Settings = () => {
                                         <label className="form-label text-dark fw-semibold">Email Address</label>
                                         <input
                                             type="email"
-                                            className="form-control"
+                                            className="form-control bg-light text-muted"
                                             name="email"
                                             value={formData.email}
-                                            onChange={handleChange}
-                                            required
+                                            readOnly
+                                            disabled
                                         />
                                     </div>
                                 </>
@@ -227,11 +239,11 @@ const Settings = () => {
                                         <label className="form-label text-dark fw-semibold">Email Address</label>
                                         <input
                                             type="email"
-                                            className="form-control"
+                                            className="form-control bg-light text-muted"
                                             name="email"
                                             value={formData.email}
-                                            onChange={handleChange}
-                                            required
+                                            readOnly
+                                            disabled
                                         />
                                     </div>
 
