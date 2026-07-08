@@ -312,14 +312,14 @@ const handleDelete = async () => {
                                         className="btn btn-primary btn-lg w-100 rounded-pill"
                                         onClick={() => handlePreferenceSelection(true)}
                                     >
-                                        Accept & Subscribe
+                                        Accept
                                     </button>
                                     <button
                                         type="button"
                                         className="btn btn-light btn-lg w-100 rounded-pill text-secondary"
                                         onClick={() => handlePreferenceSelection(false)}
                                     >
-                                        Reject / Not Now
+                                        Reject
                                     </button>
                                 </div>
                             </div>
