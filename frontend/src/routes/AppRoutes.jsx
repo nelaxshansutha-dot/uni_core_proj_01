@@ -16,6 +16,7 @@ import RepDashboard from '../pages/dashboard/RepDashboard';
 import LostItems from '../pages/lost-items/LostItems';
 import Marketplace from '../pages/marketplace/Marketplace';
 import Notes from '../pages/notes/Notes';
+import NotesMonitoring from '../pages/notes/NotesMonitoring';
 import PeerLearning from '../pages/peer-learning/PeerLearning';
 import Notifications from '../pages/notifications/Notifications';
 import Profile from '../pages/auth/Profile';
@@ -43,6 +44,7 @@ const AppRoutes = () => {
                     {/* Course Rep Only Route */}
                     <Route element={<RoleBasedRoute allowedRoles={['rep']} />}>
                         <Route path="/rep-dashboard" element={<RepDashboard />} />
+                        <Route path="/notes-monitoring" element={<NotesMonitoring />} />
                     </Route>
 
                     <Route path="/lost-items" element={<LostItems />} />

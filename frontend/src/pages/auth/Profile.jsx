@@ -134,7 +134,12 @@ const Profile = () => {
                                     </div>
                                     <div className="col-md-6">
                                         <label className="form-label text-muted small fw-bold">
-                                            {profile.role === 'admin' ? 'Admin ID' : 'Enrollment No / Staff ID'}
+                                            {
+                                                profile.role === 'admin' ? 'Admin ID' : 
+                                                profile.role === 'staff' ? 'Staff ID' : 
+                                                profile.role === 'rep' ? 'Rep ID' : 
+                                                'Enrollment No'
+                                            }
                                         </label>
                                         <input
                                             type="text"

@@ -69,5 +69,37 @@ class PeerLearning extends BaseModel {
         $stmt->bindParam(':courseUnitID', $courseUnitID);
         return $stmt->execute();
     }
+
+    public function getRepDashboardRequests($courseId, $year) {
+        $query = "
+            SELECT p.*, u.fname, u.lname, u.email, u.phoneNum
+            FROM " . $this->table . " p
+            JOIN Student s ON p.enrollmentNo = s.enrollmentNo
+            JOIN Users u ON s.userID = u.userID
+            WHERE s.courseID = :courseId AND p.std_year = :year
+            ORDER BY p.created_at DESC
+        ";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':courseId', $courseId);
+        $stmt->bindParam(':year', $year);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getRepDashboardUnitCounts($courseId, $year) {
+        $query = "
+            SELECT p.courseUnitName, p.courseUnitID, COUNT(*) as request_count
+            FROM " . $this->table . " p
+            JOIN Student s ON p.enrollmentNo = s.enrollmentNo
+            WHERE s.courseID = :courseId AND p.std_year = :year
+            GROUP BY p.courseUnitName, p.courseUnitID
+            ORDER BY request_count DESC
+        ";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':courseId', $courseId);
+        $stmt->bindParam(':year', $year);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }
 ?>

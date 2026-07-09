@@ -18,10 +18,13 @@ class ProfileController extends BaseController {
             Response::error("User not found", 404);
         }
 
-        // Fetch profile data based on role
         $profile = null;
-        if ($user['role'] === 'student' || $user['role'] === 'rep') {
-            $stmt = $db->prepare("SELECT courseID, std_year as year FROM Student WHERE userID = ?");
+        if ($user['role'] === 'student') {
+            $stmt = $db->prepare("SELECT courseID, std_year as year, enrollmentNo as enrollment_no FROM Student WHERE userID = ?");
+            $stmt->execute([$userId]);
+            $profile = $stmt->fetch(PDO::FETCH_ASSOC);
+        } else if ($user['role'] === 'rep') {
+            $stmt = $db->prepare("SELECT s.courseID, s.std_year as year, c.rep_id_string as enrollment_no FROM Student s JOIN Course_representative c ON s.userID = c.userID WHERE s.userID = ?");
             $stmt->execute([$userId]);
             $profile = $stmt->fetch(PDO::FETCH_ASSOC);
         } else if ($user['role'] === 'staff') {
