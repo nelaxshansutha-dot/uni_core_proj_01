@@ -99,7 +99,16 @@ const Login = () => {
                 setError(response.data.message);
             }
         } catch (err) {
-            setError(err.response?.data?.message || 'Something went wrong. Please try again.');
+            if (err.response?.status === 403 && err.response?.data?.data?.needs_verification) {
+                navigate('/otp', {
+                    state: { 
+                        email: err.response.data.data.email, 
+                        userId: err.response.data.data.user_id 
+                    }
+                });
+            } else {
+                setError(err.response?.data?.message || 'Something went wrong. Please try again.');
+            }
         } finally {
             setLoading(false);
         }

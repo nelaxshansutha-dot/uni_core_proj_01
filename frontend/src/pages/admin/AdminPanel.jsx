@@ -342,22 +342,7 @@ const AdminPanel = () => {
         setDeleteModal({ isOpen: true, type, id, reason: '' });
     };
 
-    const handleContentFlag = async (type, id, flagState) => {
-        try {
-            const res = await api.patch('/admin.php?action=content-status', {
-                content_type: type,
-                content_id: id,
-                status: type === 'lost_item' ? 'lost' : (type === 'marketplace' ? 'available' : 'active'),
-                is_flagged: flagState
-            });
-            if (res.data.status === 'success') {
-                showFeedback('success', flagState ? 'Content flagged.' : 'Flag cleared.');
-                fetchTabData();
-            }
-        } catch (err) {
-            showFeedback('danger', 'Error updating flag status.');
-        }
-    };
+
 
     // Report Operations
     const handleReportAction = async (reportId, reportStatus) => {
@@ -912,7 +897,6 @@ const AdminPanel = () => {
                                             <th>Item / Title</th>
                                             <th>User / Email</th>
                                             <th>Status</th>
-                                            <th>Flagged</th>
                                             <th>Created At</th>
                                             <th className="text-end">Actions</th>
                                         </tr>
@@ -927,15 +911,6 @@ const AdminPanel = () => {
                                                     <span className={`badge ${item.status === 'hidden' ? 'bg-warning text-dark' : (item.status === 'removed' ? 'bg-danger' : 'bg-success')}`}>
                                                         {item.status.toUpperCase()}
                                                     </span>
-                                                </td>
-                                                <td>
-                                                    {item.is_flagged ? (
-                                                        <span className="text-danger d-flex align-items-center gap-1 small fw-bold">
-                                                            <AlertTriangle size={14} /> FLAGGED
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-muted small">No</span>
-                                                    )}
                                                 </td>
                                                 <td>{new Date(item.created_at).toLocaleDateString()}</td>
                                                 <td className="text-end">
@@ -966,15 +941,6 @@ const AdminPanel = () => {
                                                         {item.status.toUpperCase()}
                                                     </span>
                                                 </td>
-                                                <td>
-                                                    {item.is_flagged ? (
-                                                        <span className="text-danger d-flex align-items-center gap-1 small fw-bold">
-                                                            <AlertTriangle size={14} /> FLAGGED
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-muted small">No</span>
-                                                    )}
-                                                </td>
                                                 <td>{new Date(item.created_at).toLocaleDateString()}</td>
                                                 <td className="text-end">
                                                     <div className="d-flex justify-content-end gap-2">
@@ -1003,15 +969,6 @@ const AdminPanel = () => {
                                                     <span className={`badge ${note.status === 'hidden' ? 'bg-warning text-dark' : (note.status === 'removed' ? 'bg-danger' : 'bg-success')}`}>
                                                         {note.status.toUpperCase()}
                                                     </span>
-                                                </td>
-                                                <td>
-                                                    {note.is_flagged ? (
-                                                        <span className="text-danger d-flex align-items-center gap-1 small fw-bold">
-                                                            <AlertTriangle size={14} /> FLAGGED
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-muted small">No</span>
-                                                    )}
                                                 </td>
                                                 <td>{new Date(note.created_at).toLocaleDateString()}</td>
                                                 <td className="text-end">
