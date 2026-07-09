@@ -1,15 +1,14 @@
 <?php
 require_once __DIR__ . '/BaseModel.php';
 
-// Inheritance: Marketplace inherits base database functionality from BaseModel
 class Marketplace extends BaseModel {
 
-    // Encapsulation: Define the table name internally
+    
     protected function getTableName() {
         return "marketplace";
     }
 
-    // Encapsulation: Define the primary key internally
+
     protected function getPrimaryKey() {
         return "productID";
     }
@@ -18,7 +17,7 @@ class Marketplace extends BaseModel {
         parent::__construct();
     }
 
-    // Abstraction: Implement abstract create method from BaseModel
+
     public function create($data) {
         $query = "INSERT INTO " . $this->table . " 
             (userID, productName, description, price, condition_type, location, phone_number, usage_duration, image_url, image_url2, image_url3, image_url4, status) 
@@ -42,7 +41,7 @@ class Marketplace extends BaseModel {
         return $stmt->execute();
     }
 
-    // Polymorphism: Override default findById to retrieve item with seller info
+
     public function findById($productID) {
         $query = "SELECT m.*, CONCAT(u.fname, ' ', u.lname) AS seller_name 
                   FROM " . $this->table . " m 
@@ -60,6 +59,7 @@ class Marketplace extends BaseModel {
                   FROM " . $this->table . " m 
                   JOIN Users u ON m.userID = u.userID
                   LEFT JOIN Student s ON u.userID = s.userID
+                  WHERE m.status NOT IN ('removed', 'hidden')
                   ORDER BY m.created_at DESC";
         $stmt = $this->conn->prepare($query);
         $stmt->execute();
@@ -123,33 +123,30 @@ class Marketplace extends BaseModel {
         return $stmt->execute();
     }
 
-    // --- Admin specific methods below ---
+    
 
     public function countAll() {
         return $this->conn->query("SELECT COUNT(*) FROM " . $this->table)->fetchColumn();
     }
 
     public function getAdminContent() {
-        $query = "SELECT m.productID as id, m.productName as title, m.price, m.location, m.image_url as product_image, m.phone_number as contact_no, m.created_at, m.status, m.is_flagged, u.email, s.enrollmentNo as enrollment_no
+        $query = "SELECT m.productID as id, m.productName as title, m.price, m.location, m.image_url as product_image, m.phone_number as contact_no, m.created_at, m.status, u.email, s.enrollmentNo as enrollment_no
                   FROM " . $this->table . " m 
                   JOIN Users u ON m.userID = u.userID 
                   LEFT JOIN Student s ON u.userID = s.userID
                   ORDER BY m.productID DESC";
         $stmt = $this->conn->query($query);
         $marketplace = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        foreach ($marketplace as &$item) {
-            $item['is_flagged'] = (bool)$item['is_flagged'];
-        }
         return $marketplace;
     }
 
     public function updateAdminStatus($id, $status) {
-        $stmt = $this->conn->prepare("UPDATE " . $this->table . " SET status = ?, is_flagged = 0 WHERE productID = ?");
+        $stmt = $this->conn->prepare("UPDATE " . $this->table . " SET status = ? WHERE productID = ?");
         return $stmt->execute([$status, $id]);
     }
 
     public function getLatestItems($limit = 5) {
-        $query = "SELECT productID as id, productName as title, 'marketplace' as type, created_at FROM " . $this->table . " ORDER BY created_at DESC LIMIT " . intval($limit);
+        $query = "SELECT productID as id, productName as title, 'marketplace' as type, created_at FROM " . $this->table . " WHERE status NOT IN ('removed', 'hidden') ORDER BY created_at DESC LIMIT " . intval($limit);
         $stmt = $this->conn->prepare($query);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);

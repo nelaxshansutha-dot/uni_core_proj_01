@@ -91,8 +91,7 @@ class AdminController extends BaseController {
                 $staffModel = new Staff();
                 $staffModel->create([
                     'userID' => $user_id,
-                    'staffID' => $data['enrollment_no'] ?? null,
-                    'dept' => $data['department'] ?? ''
+                    'staffID' => $data['enrollment_no'] ?? null
                 ]);
             }
             Response::success("User created successfully.");
@@ -127,9 +126,8 @@ class AdminController extends BaseController {
 
             // 2. Update Role-Specific Info
             if ($role === User::ROLE_STAFF) {
-                $dept = isset($data['department']) ? $data['department'] : '';
                 $staffModel = new Staff();
-                $staffModel->updateAdminProfile($realId, $dept);
+                $staffModel->updateAdminProfile($realId);
             } else if ($role === User::ROLE_STUDENT || $role === User::ROLE_REP) {
                 require_once __DIR__ . '/../models/Student.php';
                 $studentModel = new Student();
@@ -234,13 +232,41 @@ class AdminController extends BaseController {
         $status = $data['status'];
         
         try {
+            $db = (new Database())->getConnection();
+            $userEmail = '';
+            $itemTitle = '';
+            
             if ($type === 'lost_item') {
+                $stmt = $db->prepare("SELECT u.email, l.lostItemName as item_name FROM lost_items l JOIN users u ON l.userID = u.userID WHERE l.lostID = ?");
+                $stmt->execute([$id]);
+                $res = $stmt->fetch(PDO::FETCH_ASSOC);
+                if ($res) { $userEmail = $res['email']; $itemTitle = $res['item_name']; }
+                
                 (new LostItem())->updateAdminStatus($id, $status);
             } else if ($type === 'marketplace') {
+                $stmt = $db->prepare("SELECT u.email, m.productName as product_name FROM marketplace m JOIN users u ON m.userID = u.userID WHERE m.productID = ?");
+                $stmt->execute([$id]);
+                $res = $stmt->fetch(PDO::FETCH_ASSOC);
+                if ($res) { $userEmail = $res['email']; $itemTitle = $res['product_name']; }
+                
                 (new Marketplace())->updateAdminStatus($id, $status);
+            } else if ($type === 'notes') {
+                $stmt = $db->prepare("SELECT u.email, n.title FROM notes n JOIN student s ON n.enrollmentNo = s.enrollmentNo JOIN users u ON s.userID = u.userID WHERE n.noteID = ?");
+                $stmt->execute([$id]);
+                $res = $stmt->fetch(PDO::FETCH_ASSOC);
+                if ($res) { $userEmail = $res['email']; $itemTitle = $res['title']; }
+                
+                $updateStmt = $db->prepare("UPDATE notes SET status = ? WHERE noteID = ?");
+                $updateStmt->execute([$status, $id]);
             } else {
                 Response::error("Invalid content type.");
             }
+
+            if ($status === 'removed' && !empty($userEmail) && isset($data['reason'])) {
+                require_once __DIR__ . '/../utils/MailService.php';
+                MailService::sendContentDeletionEmail($userEmail, $type, $itemTitle, $data['reason']);
+            }
+
             Response::success("Content status updated successfully.");
         } catch (Exception $e) {
             Response::error("Failed to update content status: " . $e->getMessage(), 500);

@@ -8,7 +8,7 @@ const api = axios.create({
     }
 });
 
-// Add a response interceptor to handle 401 Unauthorized errors globally
+
 api.interceptors.response.use(
     (response) => {
         return response;

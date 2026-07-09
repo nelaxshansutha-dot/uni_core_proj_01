@@ -34,7 +34,7 @@ const Login = () => {
     const getIdPlaceholder = () => {
         switch (role) {
             case 'admin': return 'e.g. admin123';
-            case 'staff': return 'e.g. staff123';
+            case 'staff': return 'e.g. staff/2021/01';
             case 'rep': return 'e.g. REP_UWU/CST/21/0042';
             case 'student':
             default: return 'e.g. UWU/CST/21/0042';
@@ -46,11 +46,17 @@ const Login = () => {
         setLoading(true);
         setError('');
 
+        if (role === 'admin' && enrollmentNo.includes('/')) {
+            setError('Not valid');
+            setLoading(false);
+            return;
+        }
+
         try {
             const response = await api.post('/auth.php?action=login', {
-                enrollment_no: enrollmentNo, // Backend checks this against all IDs
+                enrollment_no: enrollmentNo,
                 password,
-                role: role // Send the selected role
+                role: role
             });
 
             if (response.data.status === 'success') {
@@ -93,7 +99,16 @@ const Login = () => {
                 setError(response.data.message);
             }
         } catch (err) {
-            setError(err.response?.data?.message || 'Something went wrong. Please try again.');
+            if (err.response?.status === 403 && err.response?.data?.data?.needs_verification) {
+                navigate('/otp', {
+                    state: { 
+                        email: err.response.data.data.email, 
+                        userId: err.response.data.data.user_id 
+                    }
+                });
+            } else {
+                setError(err.response?.data?.message || 'Something went wrong. Please try again.');
+            }
         } finally {
             setLoading(false);
         }

@@ -4,10 +4,33 @@ require_once __DIR__ . '/../config/Database.php';
 require_once __DIR__ . '/BaseModel.php';
 
 class User extends BaseModel {
+    
+    private $userID;
+    private $name;
+    private $email;
+    private $contact_number;
+    private $enrollmentnumber;
+
     public const ROLE_ADMIN = 'admin';
     public const ROLE_STUDENT = 'student';
     public const ROLE_REP = 'rep';
     public const ROLE_STAFF = 'staff';
+
+    // Getters and Setters to maintain encapsulation
+    public function getUserID() { return $this->userID; }
+    public function setUserID($id) { $this->userID = $id; }
+
+    public function getName() { return $this->name; }
+    public function setName($name) { $this->name = $name; }
+
+    public function getEmail() { return $this->email; }
+    public function setEmail($email) { $this->email = $email; }
+
+    public function getContactNumber() { return $this->contact_number; }
+    public function setContactNumber($contact_number) { $this->contact_number = $contact_number; }
+
+    public function getEnrollmentnumber() { return $this->enrollmentnumber; }
+    public function setEnrollmentnumber($enrollmentnumber) { $this->enrollmentnumber = $enrollmentnumber; }
 
     protected function getTableName() {
         return "Users";
@@ -157,8 +180,7 @@ class User extends BaseModel {
                        u.email, u.phoneNum as phone_number, u.role, u.is_verified, 
                        u.is_active, u.created_at, 
                        u.fname as first_name, u.lname as last_name,
-                       s.courseID as course, s.std_year as year,
-                       st.dept as department
+                       s.courseID as course, s.std_year as year
                 FROM Users u
                 LEFT JOIN Student s ON u.userID = s.userID
                 LEFT JOIN Staff st ON u.userID = st.userID
@@ -176,7 +198,16 @@ class User extends BaseModel {
 
         $stmt = $this->conn->prepare($sql);
         $stmt->execute($params);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($results as &$row) {
+            if (isset($row['is_active'])) {
+                $row['is_active'] = (int)$row['is_active'];
+            }
+            if (isset($row['is_verified'])) {
+                $row['is_verified'] = (int)$row['is_verified'];
+            }
+        }
+        return $results;
     }
 
     public function getRole($userId) {
@@ -193,9 +224,7 @@ class User extends BaseModel {
             $stmt->execute([$data['email'], $phone, $data['first_name'], $data['last_name'], $realId]);
 
             if ($role === 'staff') {
-                $dept = isset($data['department']) ? $data['department'] : '';
-                $stmt = $this->conn->prepare("UPDATE Staff SET dept = ? WHERE userID = ?");
-                $stmt->execute([$dept, $realId]);
+                // Department removed
             }
 
             $this->conn->commit();

@@ -14,8 +14,9 @@ class MailService
         $mail->SMTPAuth = true;
         $mail->Username = $_ENV['SMTP_USER'];
         $mail->Password = $_ENV['SMTP_PASS'];
-        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-        $mail->Port = $_ENV['SMTP_PORT'] ?? 587;
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+        $mail->Port = $_ENV['SMTP_PORT'] ?? 465;
+        $mail->Timeout = 5; // Fast timeout to prevent hanging the frontend if SMTP is down
         
         $mail->setFrom($_ENV['SMTP_USER'], 'UniCore');
         return $mail;
@@ -157,6 +158,40 @@ class MailService
             $logPath = __DIR__ . '/../admin_log.txt';
             $logMsg = date('Y-m-d H:i:s') . " | Failed to send email to {$email}: {$mail->ErrorInfo}\n";
             $logMsg .= "Local Dev Credentials - Rep ID: {$rep_id}, Temp Password: {$password}\n";
+            file_put_contents($logPath, $logMsg, FILE_APPEND);
+            return false;
+        }
+    }
+    public static function sendContentDeletionEmail($email, $contentType, $title, $reason) {
+        try {
+            $mail = self::configureMailer();
+            $mail->addAddress($email);
+
+            $typeLabel = ucfirst(str_replace('_', ' ', $contentType));
+
+            $html = "
+                <div style='font-family: Arial, sans-serif; padding: 20px; color: #333;'>
+                    <h2>Content Removed Notification</h2>
+                    <p>Dear User,</p>
+                    <p>We are writing to inform you that your {$typeLabel} listing/post titled <strong>\"{$title}\"</strong> has been removed by a system administrator.</p>
+                    <div style='background: #f8d7da; color: #721c24; padding: 15px; border-radius: 5px; margin: 20px 0;'>
+                        <p style='margin: 0;'><strong>Reason for removal:</strong><br/>{$reason}</p>
+                    </div>
+                    <p>If you believe this was done in error or if you have any questions, please reply to this email or contact the administration team.</p>
+                    <br/>
+                    <p>Best Regards,</p>
+                    <p><strong>The UniCore Admin Team</strong></p>
+                </div>
+            ";
+
+            $mail->isHTML(true);
+            $mail->Subject = "Notice: Your {$typeLabel} has been removed";
+            $mail->Body    = $html;
+            $mail->send();
+            return true;
+        } catch (Exception $e) {
+            $logPath = __DIR__ . '/../admin_log.txt';
+            $logMsg = date('Y-m-d H:i:s') . " | Failed to send deletion email to {$email}: {$mail->ErrorInfo}\n";
             file_put_contents($logPath, $logMsg, FILE_APPEND);
             return false;
         }

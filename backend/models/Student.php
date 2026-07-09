@@ -1,15 +1,14 @@
 <?php
 require_once __DIR__ . '/BaseModel.php';
 
-// Inheritance: Student inherits connection and database features from BaseModel
 class Student extends BaseModel {
 
-    // Encapsulation: Define the table name internally
+    
     protected function getTableName() {
         return "Student";
     }
 
-    // Encapsulation: Define the primary key internally
+    
     protected function getPrimaryKey() {
         return "enrollmentNo";
     }
@@ -18,7 +17,7 @@ class Student extends BaseModel {
         parent::__construct();
     }
 
-    // Abstraction: Implementing the abstract create method from BaseModel
+
     public function create($data) {
         $query = "INSERT INTO " . $this->table . " (enrollmentNo, userID, courseID, std_year) VALUES (:enrollmentNo, :userID, :courseID, :std_year)";
         $stmt = $this->conn->prepare($query);
@@ -43,14 +42,13 @@ class Student extends BaseModel {
     }
 
     public static function extractCourseFromEnrollment($enrollmentNo) {
-        // Parse format like UWU/CST/23/088 — second segment is the course abbreviation
+    
         $parts = explode('/', strtoupper(trim($enrollmentNo)));
         if (count($parts) < 2 || empty($parts[1])) {
             return null;
         }
         $courseCode = $parts[1]; // e.g. "CST"
 
-        // Look up the numeric courseID from the Course table by matching the abbreviation in courseName
         try {
             require_once __DIR__ . '/../config/Database.php';
             $db = (new Database())->getConnection();

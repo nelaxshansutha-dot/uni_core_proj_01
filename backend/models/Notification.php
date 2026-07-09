@@ -1,18 +1,16 @@
 <?php
 require_once __DIR__ . '/BaseModel.php';
 
-// Inheritance: Notification inherits core database configuration from BaseModel
 class Notification extends BaseModel {
-    // Encapsulation: Keep table references encapsulated inside the class
+    
     private $table_notifications = "notifications";
     private $table_recipients = "notification_recipients";
 
-    // Encapsulation: Define primary table name internally
     protected function getTableName() {
         return "notifications";
     }
 
-    // Encapsulation: Define the primary key internally
+
     protected function getPrimaryKey() {
         return "id";
     }
@@ -21,7 +19,7 @@ class Notification extends BaseModel {
         parent::__construct();
     }
 
-    // Abstraction: Implement abstract create method from BaseModel
+    
     public function create($data) {
         if (isset($data['userId'])) {
             return $this->createForUser($data['userId'], $data['title'], $data['message']);
@@ -45,7 +43,7 @@ class Notification extends BaseModel {
             
             $notification_id = $this->conn->lastInsertId();
 
-            // Insert for all users (in a real app, this should be a background job)
+            
             $queryUsers = "SELECT id FROM users";
             $stmtUsers = $this->conn->prepare($queryUsers);
             $stmtUsers->execute();

@@ -4,12 +4,12 @@ require_once __DIR__ . '/BaseModel.php';
 // Inheritance: LostItem inherits core database tools from BaseModel
 class LostItem extends BaseModel {
 
-    // Encapsulation: Define the table name internally
+
     protected function getTableName() {
         return "Lost_items";
     }
 
-    // Encapsulation: Define the primary key internally
+    
     protected function getPrimaryKey() {
         return "lostID";
     }
@@ -18,28 +18,13 @@ class LostItem extends BaseModel {
         parent::__construct();
     }
 
-    // Abstraction: Implement abstract create method from BaseModel
+
     public function create($data) {
         $query = "INSERT INTO Lost_items
-        (
-            userID,
-            lostItemName,
-            description,
-            last_seen_datetime,
-            last_seen_place,
-            contact_number,
-            item_image
+        (userID,lostItemName, description, last_seen_datetime,last_seen_place,contact_number,item_image
         )
         VALUES
-        (
-            :userID,
-            :lostItemName,
-            :description,
-            :last_seen_datetime,
-            :last_seen_place,
-            :contact_number,
-            :item_image
-        )";
+        ( :userID,:lostItemName,:description,:last_seen_datetime,:last_seen_place,:contact_number,:item_image )";
 
         $stmt = $this->conn->prepare($query);
 
@@ -61,6 +46,7 @@ class LostItem extends BaseModel {
                   FROM Lost_items l
                   JOIN Users u ON l.userID = u.userID
                   LEFT JOIN Student s ON u.userID = s.userID
+                  WHERE l.status NOT IN ('removed', 'hidden')
                   ORDER BY l.created_at DESC";
 
         $stmt = $this->conn->prepare($query);
@@ -122,33 +108,28 @@ class LostItem extends BaseModel {
         return $stmt->execute();
     }
 
-    // --- Admin specific methods below ---
-
     public function countAll() {
         return $this->conn->query("SELECT COUNT(*) FROM " . $this->table)->fetchColumn();
     }
 
     public function getAdminContent() {
-        $query = "SELECT l.lostID as lost_id, l.lostItemName, l.last_seen_date, l.last_seen_time, l.item_image, l.contact_number as contact_no, l.created_at, l.status, l.is_flagged, u.email, s.enrollmentNo as enrollment_no
+        $query = "SELECT l.lostID as lost_id, l.lostItemName, l.last_seen_date, l.last_seen_time, l.item_image, l.contact_number as contact_no, l.created_at, l.status, u.email, s.enrollmentNo as enrollment_no
                   FROM " . $this->table . " l 
                   JOIN Users u ON l.userID = u.userID 
                   LEFT JOIN Student s ON u.userID = s.userID
                   ORDER BY l.lostID DESC";
         $stmt = $this->conn->query($query);
         $lostItems = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        foreach ($lostItems as &$item) {
-            $item['is_flagged'] = (bool)$item['is_flagged'];
-        }
         return $lostItems;
     }
 
     public function updateAdminStatus($id, $status) {
-        $stmt = $this->conn->prepare("UPDATE " . $this->table . " SET status = ?, is_flagged = 0 WHERE lostID = ?");
+        $stmt = $this->conn->prepare("UPDATE " . $this->table . " SET status = ? WHERE lostID = ?");
         return $stmt->execute([$status, $id]);
     }
 
     public function getLatestItems($limit = 5) {
-        $query = "SELECT lostID as id, lostItemName as title, 'lost_item' as type, created_at FROM " . $this->table . " ORDER BY created_at DESC LIMIT " . intval($limit);
+        $query = "SELECT lostID as id, lostItemName as title, 'lost_item' as type, created_at FROM " . $this->table . " WHERE status NOT IN ('removed', 'hidden') ORDER BY created_at DESC LIMIT " . intval($limit);
         $stmt = $this->conn->prepare($query);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);

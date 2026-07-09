@@ -12,13 +12,13 @@ abstract class BaseModel {
         $this->table = $this->getTableName();
     }
 
-    // Abstraction: Force child classes to define their table name
+    
     abstract protected function getTableName();
 
-    // Abstraction: Force child classes to define how they are created
+    // 
     abstract public function create($data);
 
-    // Inheritance: Common read method inherited by all models
+    
     public function findByIdBase($id, $idColumn = 'id') {
         $query = "SELECT * FROM " . $this->table . " WHERE " . $idColumn . " = :id LIMIT 1";
         $stmt = $this->conn->prepare($query);
