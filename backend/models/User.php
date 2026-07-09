@@ -165,7 +165,7 @@ class User extends BaseModel {
                 FROM Users u
                 LEFT JOIN Student s ON u.userID = s.userID
                 LEFT JOIN Staff st ON u.userID = st.userID
-                WHERE 1=1";
+                WHERE u.role != 'admin'";
         
         $params = [];
         if (!empty($role)) {

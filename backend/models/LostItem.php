@@ -113,7 +113,7 @@ class LostItem extends BaseModel {
     }
 
     public function getAdminContent() {
-        $query = "SELECT l.lostID as lost_id, l.lostItemName, l.last_seen_date, l.last_seen_time, l.item_image, l.contact_number as contact_no, l.created_at, l.status, u.email, s.enrollmentNo as enrollment_no
+        $query = "SELECT l.lostID as lost_id, l.lostItemName, l.last_seen_datetime, l.item_image, l.contact_number as contact_no, l.created_at, l.status, u.email, s.enrollmentNo as enrollment_no
                   FROM " . $this->table . " l 
                   JOIN Users u ON l.userID = u.userID 
                   LEFT JOIN Student s ON u.userID = s.userID
