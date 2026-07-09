@@ -4,12 +4,12 @@ require_once __DIR__ . '/BaseModel.php';
 // Inheritance: LostItem inherits core database tools from BaseModel
 class LostItem extends BaseModel {
 
-    // Encapsulation: Define the table name internally
+
     protected function getTableName() {
         return "Lost_items";
     }
 
-    // Encapsulation: Define the primary key internally
+    
     protected function getPrimaryKey() {
         return "lostID";
     }
@@ -18,28 +18,13 @@ class LostItem extends BaseModel {
         parent::__construct();
     }
 
-    // Abstraction: Implement abstract create method from BaseModel
+
     public function create($data) {
         $query = "INSERT INTO Lost_items
-        (
-            userID,
-            lostItemName,
-            description,
-            last_seen_datetime,
-            last_seen_place,
-            contact_number,
-            item_image
+        (userID,lostItemName, description, last_seen_datetime,last_seen_place,contact_number,item_image
         )
         VALUES
-        (
-            :userID,
-            :lostItemName,
-            :description,
-            :last_seen_datetime,
-            :last_seen_place,
-            :contact_number,
-            :item_image
-        )";
+        ( :userID,:lostItemName,:description,:last_seen_datetime,:last_seen_place,:contact_number,:item_image )";
 
         $stmt = $this->conn->prepare($query);
 
@@ -121,8 +106,6 @@ class LostItem extends BaseModel {
         }
         return $stmt->execute();
     }
-
-    // --- Admin specific methods below ---
 
     public function countAll() {
         return $this->conn->query("SELECT COUNT(*) FROM " . $this->table)->fetchColumn();

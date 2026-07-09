@@ -12,7 +12,6 @@ const Settings = () => {
         phone_number: '',
         course: '',
         year: '',
-        department: '',
         lost_item_sms_notification: 0,
         peer_learning_app_notification: 1,
         old_password: '',
@@ -33,7 +32,6 @@ const Settings = () => {
                 phone_number: user.phone_number || '',
                 course: user.course || '',
                 year: user.year || '',
-                department: user.department || '',
                 lost_item_sms_notification: user.lost_item_sms_notification !== undefined ? parseInt(user.lost_item_sms_notification) : 0,
                 peer_learning_app_notification: user.peer_learning_app_notification !== undefined ? parseInt(user.peer_learning_app_notification) : 1,
                 old_password: '',
@@ -107,7 +105,6 @@ const Settings = () => {
                 phone_number: user?.role === 'admin' ? '0000000000' : formData.phone_number,
                 course: user?.role === 'admin' ? '' : formData.course,
                 year: user?.role === 'admin' ? '' : formData.year,
-                department: user?.role === 'admin' ? '' : formData.department,
                 lost_item_sms_notification: user?.role === 'admin' ? 0 : formData.lost_item_sms_notification,
                 peer_learning_app_notification: user?.role === 'admin' ? 0 : formData.peer_learning_app_notification,
                 old_password: formData.old_password,
@@ -245,20 +242,7 @@ const Settings = () => {
                                     </div>
 
 
-                                    {/* Staff Fields */}
-                                    {user?.role === 'staff' && (
-                                        <div className="col-12">
-                                            <label className="form-label text-dark fw-semibold">Department</label>
-                                            <input
-                                                type="text"
-                                                className="form-control"
-                                                name="department"
-                                                placeholder="e.g. Department of Computer Science"
-                                                value={formData.department}
-                                                onChange={handleChange}
-                                            />
-                                        </div>
-                                    )}
+                                    {/* Staff Fields Removed */}
 
                                     <hr className="my-4 border-light" />
                                     

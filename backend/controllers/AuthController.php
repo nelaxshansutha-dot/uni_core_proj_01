@@ -35,9 +35,7 @@ class AuthController extends BaseController
         }
 
         $required = ['enrollment_no', 'email', 'password', 'confirm_password', 'role', 'first_name', 'last_name', 'phone_number'];
-        if ($data['role'] === User::ROLE_STAFF) {
-            $required = array_merge($required, ['department']);
-        } else if ($data['role'] !== User::ROLE_STUDENT) {
+        if ($data['role'] !== User::ROLE_STUDENT && $data['role'] !== User::ROLE_STAFF) {
             Response::error("Invalid role. Please select Student or Staff.");
         }
 
@@ -105,8 +103,7 @@ class AuthController extends BaseController
                 $staffModel = new Staff();
                 $staffModel->create([
                     'staffID' => $data['enrollment_no'],
-                    'userID' => $user_id,
-                    'dept' => $data['department']
+                    'userID' => $user_id
                 ]);
             }
 
@@ -189,7 +186,7 @@ class AuthController extends BaseController
                         $stmt->execute([$user['userID']]);
                         $profile = $stmt->fetch(PDO::FETCH_ASSOC);
                     } else if ($user['role'] === User::ROLE_STAFF) {
-                        $stmt = $db->prepare("SELECT staffID as enrollment_no, dept as department FROM Staff WHERE userID = ?");
+                        $stmt = $db->prepare("SELECT staffID as enrollment_no FROM Staff WHERE userID = ?");
                         $stmt->execute([$user['userID']]);
                         $profile = $stmt->fetch(PDO::FETCH_ASSOC);
                     }
@@ -264,7 +261,7 @@ class AuthController extends BaseController
                 $stmt->execute([$data['user_id']]);
                 $profile = $stmt->fetch(PDO::FETCH_ASSOC);
             } else if ($user['role'] === User::ROLE_STAFF) {
-                $stmt = $db->prepare("SELECT staffID as enrollment_no, dept as department FROM Staff WHERE userID = ?");
+                $stmt = $db->prepare("SELECT staffID as enrollment_no FROM Staff WHERE userID = ?");
                 $stmt->execute([$data['user_id']]);
                 $profile = $stmt->fetch(PDO::FETCH_ASSOC);
             }
@@ -490,9 +487,7 @@ class AuthController extends BaseController
                 $stmt = $db->prepare("UPDATE Student SET courseID = ?, std_year = ? WHERE userID = ?");
                 $stmt->execute([$course, $year, $user_id]);
             } else if ($user['role'] === User::ROLE_STAFF) {
-                $department = isset($data['department']) ? $data['department'] : '';
-                $stmt = $db->prepare("UPDATE Staff SET dept = ? WHERE userID = ?");
-                $stmt->execute([$department, $user_id]);
+                // Department logic removed
             }
 
             $db->commit();
@@ -508,7 +503,7 @@ class AuthController extends BaseController
             $stmt->execute([$user_id]);
             $profile = $stmt->fetch(PDO::FETCH_ASSOC);
         } else if ($updatedUser['role'] === User::ROLE_STAFF) {
-            $stmt = $db->prepare("SELECT staffID as enrollment_no, dept as department FROM Staff WHERE userID = ?");
+            $stmt = $db->prepare("SELECT staffID as enrollment_no FROM Staff WHERE userID = ?");
             $stmt->execute([$user_id]);
             $profile = $stmt->fetch(PDO::FETCH_ASSOC);
         }
@@ -639,12 +634,11 @@ class AuthController extends BaseController
                 $userData['std_year'] = $profile['std_year'];
             }
         } elseif ($role === User::ROLE_STAFF) {
-            $stmt = $db->prepare("SELECT staffID as enrollment_no, dept as department FROM Staff WHERE userID = ?");
+            $stmt = $db->prepare("SELECT staffID as enrollment_no FROM Staff WHERE userID = ?");
             $stmt->execute([$userID]);
             $profile = $stmt->fetch(PDO::FETCH_ASSOC);
             if ($profile) {
                 $userData['enrollment_no'] = $profile['enrollment_no'];
-                $userData['department'] = $profile['department'];
             }
         } elseif ($role === User::ROLE_ADMIN) {
             $stmt = $db->prepare("SELECT adminID FROM Admin WHERE userID = ?");

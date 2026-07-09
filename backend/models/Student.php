@@ -1,15 +1,14 @@
 <?php
 require_once __DIR__ . '/BaseModel.php';
 
-// Inheritance: Student inherits connection and database features from BaseModel
 class Student extends BaseModel {
 
-    // Encapsulation: Define the table name internally
+    
     protected function getTableName() {
         return "Student";
     }
 
-    // Encapsulation: Define the primary key internally
+    
     protected function getPrimaryKey() {
         return "enrollmentNo";
     }
@@ -18,7 +17,7 @@ class Student extends BaseModel {
         parent::__construct();
     }
 
-    // Abstraction: Implementing the abstract create method from BaseModel
+
     public function create($data) {
         $query = "INSERT INTO " . $this->table . " (enrollmentNo, userID, courseID, std_year) VALUES (:enrollmentNo, :userID, :courseID, :std_year)";
         $stmt = $this->conn->prepare($query);

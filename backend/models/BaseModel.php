@@ -12,7 +12,7 @@ abstract class BaseModel {
         $this->table = $this->getTableName();
     }
 
-    // Abstraction: Force child classes to define their table name
+    
     abstract protected function getTableName();
 
     // 

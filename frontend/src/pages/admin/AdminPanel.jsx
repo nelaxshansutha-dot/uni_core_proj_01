@@ -48,8 +48,7 @@ const AdminPanel = () => {
         last_name: '',
         phone_number: '',
         course: '',
-        year: '',
-        department: ''
+        year: ''
     });
 
     // Rep Management State
@@ -184,8 +183,7 @@ const AdminPanel = () => {
             last_name: user.last_name || '',
             phone_number: user.phone_number || '',
             course: user.course || '',
-            year: user.year || '',
-            department: user.department || ''
+            year: user.year || ''
         });
         setShowUserModal(true);
     };
@@ -201,8 +199,7 @@ const AdminPanel = () => {
             last_name: '',
             phone_number: '',
             course: '',
-            year: '',
-            department: ''
+            year: ''
         });
         setShowUserModal(true);
     };
@@ -650,19 +647,6 @@ const AdminPanel = () => {
                                                         onChange={(e) => setUserForm({ ...userForm, phone_number: e.target.value })}
                                                     />
                                                 </div>
-
-
-                                                {userForm.role === 'staff' && (
-                                                    <div className="col-12">
-                                                        <label className="form-label">Department</label>
-                                                        <input 
-                                                            type="text" 
-                                                            className="form-control" 
-                                                            value={userForm.department}
-                                                            onChange={(e) => setUserForm({ ...userForm, department: e.target.value })}
-                                                        />
-                                                    </div>
-                                                )}
                                             </div>
                                         </div>
                                         <div className="modal-footer">
