@@ -109,7 +109,7 @@ class AuthController extends BaseController
 
             $otp = rand(100000, 999999);
             $db = (new Database())->getConnection();
-            $stmt = $db->prepare("INSERT INTO OTP_verification (userID, otp_code, expired_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 2 MINUTE))");
+            $stmt = $db->prepare("INSERT INTO OTP_verification (userID, otp_code, expired_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 15 MINUTE))");
             $stmt->execute([$user_id, $otp]);
 
             MailService::sendOTP($data['email'], $otp);
@@ -230,7 +230,7 @@ class AuthController extends BaseController
                     ]);
                 } else {
                     $otp = rand(100000, 999999);
-                    $stmt = $db->prepare("INSERT INTO OTP_verification (userID, otp_code, expired_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 2 MINUTE))");
+                    $stmt = $db->prepare("INSERT INTO OTP_verification (userID, otp_code, expired_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 15 MINUTE))");
                     $stmt->execute([$user['userID'], $otp]);
 
                     MailService::sendOTP($user['email'], $otp);
@@ -327,7 +327,7 @@ class AuthController extends BaseController
 
         $db->prepare("DELETE FROM OTP_verification WHERE userID = ?")->execute([$user['userID']]);
 
-        $stmt = $db->prepare("INSERT INTO OTP_verification (userID, otp_code, expired_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 2 MINUTE))");
+        $stmt = $db->prepare("INSERT INTO OTP_verification (userID, otp_code, expired_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 15 MINUTE))");
         $stmt->execute([$user['userID'], $otp]);
 
         MailService::sendOTP($user['email'], $otp);
@@ -358,7 +358,7 @@ class AuthController extends BaseController
 
         $otp = rand(100000, 999999);
 
-        $stmt = $db->prepare("INSERT INTO OTP_verification (userID, otp_code, expired_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 2 MINUTE))");
+        $stmt = $db->prepare("INSERT INTO OTP_verification (userID, otp_code, expired_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 15 MINUTE))");
         $stmt->execute([$data['user_id'], $otp]);
 
         MailService::sendOTP($user['email'], $otp);

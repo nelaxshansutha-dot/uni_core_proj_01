@@ -130,21 +130,18 @@ class Marketplace extends BaseModel {
     }
 
     public function getAdminContent() {
-        $query = "SELECT m.productID as id, m.productName as title, m.price, m.location, m.image_url as product_image, m.phone_number as contact_no, m.created_at, m.status, m.is_flagged, u.email, s.enrollmentNo as enrollment_no
+        $query = "SELECT m.productID as id, m.productName as title, m.price, m.location, m.image_url as product_image, m.phone_number as contact_no, m.created_at, m.status, u.email, s.enrollmentNo as enrollment_no
                   FROM " . $this->table . " m 
                   JOIN Users u ON m.userID = u.userID 
                   LEFT JOIN Student s ON u.userID = s.userID
                   ORDER BY m.productID DESC";
         $stmt = $this->conn->query($query);
         $marketplace = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        foreach ($marketplace as &$item) {
-            $item['is_flagged'] = (bool)$item['is_flagged'];
-        }
         return $marketplace;
     }
 
     public function updateAdminStatus($id, $status) {
-        $stmt = $this->conn->prepare("UPDATE " . $this->table . " SET status = ?, is_flagged = 0 WHERE productID = ?");
+        $stmt = $this->conn->prepare("UPDATE " . $this->table . " SET status = ? WHERE productID = ?");
         return $stmt->execute([$status, $id]);
     }
 
