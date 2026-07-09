@@ -15,7 +15,7 @@ abstract class BaseModel {
     // Abstraction: Force child classes to define their table name
     abstract protected function getTableName();
 
-    // Abstraction: Force child classes to define how they are created
+    // 
     abstract public function create($data);
 
     // Inheritance: Common read method inherited by all models
