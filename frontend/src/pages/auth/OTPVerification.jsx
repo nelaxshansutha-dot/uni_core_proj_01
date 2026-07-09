@@ -88,7 +88,7 @@ const OTPVerification = () => {
                 setError(response.data.message);
             }
         } catch (err) {
-            setError(err.response?.data?.message || 'Invalid or expired OTP. Please try again.');
+            setError(err.response?.data?.message || 'Invalid OTP, please enter a valid OTP.');
         } finally {
             setLoading(false);
         }

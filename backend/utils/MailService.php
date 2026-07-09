@@ -14,8 +14,8 @@ class MailService
         $mail->SMTPAuth = true;
         $mail->Username = $_ENV['SMTP_USER'];
         $mail->Password = $_ENV['SMTP_PASS'];
-        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-        $mail->Port = $_ENV['SMTP_PORT'] ?? 587;
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+        $mail->Port = $_ENV['SMTP_PORT'] ?? 465;
         
         $mail->setFrom($_ENV['SMTP_USER'], 'UniCore');
         return $mail;

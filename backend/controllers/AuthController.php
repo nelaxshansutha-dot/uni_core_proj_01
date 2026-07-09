@@ -136,14 +136,14 @@ class AuthController extends BaseController
         $requestedRole = isset($data['role']) ? $data['role'] : User::ROLE_STUDENT;
 
         if ($user) {
-            // Check if user is active
+        
             if (isset($user['is_active']) && $user['is_active'] == 0) {
                 Response::error("Your account has been deactivated. Please contact an administrator.");
             }
 
             $isAuthenticated = false;
 
-            // If logging in as a rep, verify against Course_representative password
+        
             if ($requestedRole === User::ROLE_REP) {
                 $db = (new Database())->getConnection();
                 $stmt = $db->prepare("SELECT hash_password, is_first_login, is_active FROM Course_representative WHERE userID = ?");
@@ -165,7 +165,7 @@ class AuthController extends BaseController
                     }
                 }
             } else {
-                // Check the primary Users table password
+            
                 if (password_verify($data['password'], $user['hash_password'])) {
                     // Prevent a staff member from logging in as student etc
                     if ($requestedRole === User::ROLE_STAFF && $user['role'] !== User::ROLE_STAFF) {
@@ -298,7 +298,7 @@ class AuthController extends BaseController
                 'user' => $userData
             ]);
         } else {
-            Response::error("Invalid or expired OTP. Please request a new one.", 401);
+            Response::error("Invalid OTP, please enter a valid OTP.", 401);
         }
     }
 
@@ -381,7 +381,7 @@ class AuthController extends BaseController
                 'user_id' => $data['user_id']
             ]);
         } else {
-            Response::error("Invalid or expired OTP. Please try again.", 401);
+            Response::error("Invalid OTP, please enter a valid OTP.", 401);
         }
     }
 

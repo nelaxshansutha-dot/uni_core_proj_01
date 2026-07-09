@@ -46,11 +46,17 @@ const Login = () => {
         setLoading(true);
         setError('');
 
+        if (role === 'admin' && enrollmentNo.includes('/')) {
+            setError('Not valid');
+            setLoading(false);
+            return;
+        }
+
         try {
             const response = await api.post('/auth.php?action=login', {
-                enrollment_no: enrollmentNo, // Backend checks this against all IDs
+                enrollment_no: enrollmentNo,
                 password,
-                role: role // Send the selected role
+                role: role
             });
 
             if (response.data.status === 'success') {

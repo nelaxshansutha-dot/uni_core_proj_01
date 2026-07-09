@@ -176,7 +176,16 @@ class User extends BaseModel {
 
         $stmt = $this->conn->prepare($sql);
         $stmt->execute($params);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($results as &$row) {
+            if (isset($row['is_active'])) {
+                $row['is_active'] = (int)$row['is_active'];
+            }
+            if (isset($row['is_verified'])) {
+                $row['is_verified'] = (int)$row['is_verified'];
+            }
+        }
+        return $results;
     }
 
     public function getRole($userId) {

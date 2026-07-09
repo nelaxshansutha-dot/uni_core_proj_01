@@ -43,14 +43,13 @@ class Student extends BaseModel {
     }
 
     public static function extractCourseFromEnrollment($enrollmentNo) {
-        // Parse format like UWU/CST/23/088 — second segment is the course abbreviation
+    
         $parts = explode('/', strtoupper(trim($enrollmentNo)));
         if (count($parts) < 2 || empty($parts[1])) {
             return null;
         }
         $courseCode = $parts[1]; // e.g. "CST"
 
-        // Look up the numeric courseID from the Course table by matching the abbreviation in courseName
         try {
             require_once __DIR__ . '/../config/Database.php';
             $db = (new Database())->getConnection();

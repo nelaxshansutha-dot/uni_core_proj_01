@@ -104,7 +104,7 @@ const Settings = () => {
                 first_name: user?.role === 'admin' ? 'Admin' : formData.first_name,
                 last_name: user?.role === 'admin' ? 'Admin' : formData.last_name,
                 email: formData.email,
-                phone_number: user?.role === 'admin' ? '' : formData.phone_number,
+                phone_number: user?.role === 'admin' ? '0000000000' : formData.phone_number,
                 course: user?.role === 'admin' ? '' : formData.course,
                 year: user?.role === 'admin' ? '' : formData.year,
                 department: user?.role === 'admin' ? '' : formData.department,
@@ -191,22 +191,7 @@ const Settings = () => {
                                 />
                             </div>
 
-                            {user?.role === 'admin' ? (
-                                <>
-                                    {/* Email */}
-                                    <div className="col-md-12">
-                                        <label className="form-label text-dark fw-semibold">Email Address</label>
-                                        <input
-                                            type="email"
-                                            className="form-control bg-light text-muted"
-                                            name="email"
-                                            value={formData.email}
-                                            readOnly
-                                            disabled
-                                        />
-                                    </div>
-                                </>
-                            ) : (
+                            {user?.role === 'admin' ? null : (
                                 <>
                                     {/* First Name */}
                                     <div className="col-md-6">
