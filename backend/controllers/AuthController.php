@@ -229,13 +229,7 @@ class AuthController extends BaseController
                         'redirect' => $requestedRole === User::ROLE_REP ? 'rep_dashboard' : 'student_dashboard'
                     ]);
                 } else {
-                    $otp = rand(100000, 999999);
-                    $stmt = $db->prepare("INSERT INTO OTP_verification (userID, otp_code, expired_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 15 MINUTE))");
-                    $stmt->execute([$user['userID'], $otp]);
-
-                    MailService::sendOTP($user['email'], $otp);
-
-                    Response::error("Account not verified. A new OTP has been sent to your email.", 403, ['user_id' => $user['userID'], 'email' => $user['email'], 'needs_verification' => true]);
+                    Response::error("Account not verified. Please verify your email to continue.", 403, ['user_id' => $user['userID'], 'email' => $user['email'], 'needs_verification' => true]);
                 }
             } else {
                 Response::error("Invalid ID or password.", 401);

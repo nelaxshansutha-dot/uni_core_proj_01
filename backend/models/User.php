@@ -4,33 +4,14 @@ require_once __DIR__ . '/../config/Database.php';
 require_once __DIR__ . '/BaseModel.php';
 
 class User extends BaseModel {
-    
-    private $userID;
-    private $name;
-    private $email;
-    private $contact_number;
-    private $enrollmentnumber;
+  
 
     public const ROLE_ADMIN = 'admin';
     public const ROLE_STUDENT = 'student';
     public const ROLE_REP = 'rep';
     public const ROLE_STAFF = 'staff';
 
-    // Getters and Setters to maintain encapsulation
-    public function getUserID() { return $this->userID; }
-    public function setUserID($id) { $this->userID = $id; }
-
-    public function getName() { return $this->name; }
-    public function setName($name) { $this->name = $name; }
-
-    public function getEmail() { return $this->email; }
-    public function setEmail($email) { $this->email = $email; }
-
-    public function getContactNumber() { return $this->contact_number; }
-    public function setContactNumber($contact_number) { $this->contact_number = $contact_number; }
-
-    public function getEnrollmentnumber() { return $this->enrollmentnumber; }
-    public function setEnrollmentnumber($enrollmentnumber) { $this->enrollmentnumber = $enrollmentnumber; }
+  
 
     protected function getTableName() {
         return "Users";

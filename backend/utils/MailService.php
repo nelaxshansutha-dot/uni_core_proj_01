@@ -14,8 +14,16 @@ class MailService
         $mail->SMTPAuth = true;
         $mail->Username = $_ENV['SMTP_USER'];
         $mail->Password = $_ENV['SMTP_PASS'];
-        $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
-        $mail->Port = $_ENV['SMTP_PORT'] ?? 465;
+        
+        $port = $_ENV['SMTP_PORT'] ?? 465;
+        $mail->Port = $port;
+        
+        if ($port == 587) {
+            $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+        } else {
+            $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+        }
+        
         $mail->Timeout = 5; // Fast timeout to prevent hanging the frontend if SMTP is down
         
         $mail->setFrom($_ENV['SMTP_USER'], 'UniCore');
