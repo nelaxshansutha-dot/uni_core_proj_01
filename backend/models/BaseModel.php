@@ -18,7 +18,7 @@ abstract class BaseModel {
     // 
     abstract public function create($data);
 
-    // Inheritance: Common read method inherited by all models
+    
     public function findByIdBase($id, $idColumn = 'id') {
         $query = "SELECT * FROM " . $this->table . " WHERE " . $idColumn . " = :id LIMIT 1";
         $stmt = $this->conn->prepare($query);
