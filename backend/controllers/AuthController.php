@@ -510,15 +510,15 @@ class AuthController extends BaseController
 
         $updatedUser = $userModel->findById($user_id);
         $profile = null;
-        if ($targetRole === User::ROLE_STUDENT) {
+        if ($updatedUser['role'] === User::ROLE_STUDENT) {
             $stmt = $db->prepare("SELECT enrollmentNo as enrollment_no, courseID, std_year as year FROM Student WHERE userID = ?");
             $stmt->execute([$user_id]);
             $profile = $stmt->fetch(PDO::FETCH_ASSOC);
-        } else if ($targetRole === User::ROLE_REP) {
+        } else if ($updatedUser['role'] === User::ROLE_REP) {
             $stmt = $db->prepare("SELECT s.courseID, s.std_year as year, c.rep_id_string as enrollment_no FROM Student s JOIN Course_representative c ON s.userID = c.userID WHERE s.userID = ?");
             $stmt->execute([$user_id]);
             $profile = $stmt->fetch(PDO::FETCH_ASSOC);
-        } else if ($targetRole === User::ROLE_STAFF) {
+        } else if ($updatedUser['role'] === User::ROLE_STAFF) {
             $stmt = $db->prepare("SELECT staffID as enrollment_no FROM Staff WHERE userID = ?");
             $stmt->execute([$user_id]);
             $profile = $stmt->fetch(PDO::FETCH_ASSOC);

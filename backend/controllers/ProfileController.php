@@ -7,7 +7,7 @@ require_once __DIR__ . '/../config/Database.php';
 require_once __DIR__ . '/BaseController.php';
 
 class ProfileController extends BaseController {
-    public function getProfile($userId) {
+    public function getProfile($userId, $activeRole = null) {
         $db = (new Database())->getConnection();
         
         $stmt = $db->prepare("SELECT u.userID as id, s.enrollmentNo as enrollment_no, u.fname as first_name, u.lname as last_name, u.email, u.phoneNum as phone_number, u.lost_item_sms_notification, u.peer_learning_app_notification, u.has_seen_lost_item_popup, u.role FROM Users u LEFT JOIN Student s ON u.userID = s.userID WHERE u.userID = ?");
@@ -16,6 +16,11 @@ class ProfileController extends BaseController {
 
         if (!$user) {
             Response::error("User not found", 404);
+        }
+
+        // Override role from DB with active role if provided
+        if ($activeRole) {
+            $user['role'] = $activeRole;
         }
 
         $profile = null;
