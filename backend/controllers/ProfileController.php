@@ -25,7 +25,7 @@ class ProfileController extends BaseController {
             $stmt->execute([$userId]);
             $profile = $stmt->fetch(PDO::FETCH_ASSOC);
         } else if ($user['role'] === 'staff') {
-            $stmt = $db->prepare("SELECT dept as department FROM Staff WHERE userID = ?");
+            $stmt = $db->prepare("SELECT staffID as enrollment_no FROM Staff WHERE userID = ?");
             $stmt->execute([$userId]);
             $profile = $stmt->fetch(PDO::FETCH_ASSOC);
         }
@@ -67,9 +67,7 @@ class ProfileController extends BaseController {
                 $stmt = $db->prepare("UPDATE Student SET courseID = ?, std_year = ? WHERE userID = ?");
                 $stmt->execute([$course, $year, $userId]);
             } else if ($user['role'] === 'staff') {
-                $dept = isset($data['department']) ? $data['department'] : '';
-                $stmt = $db->prepare("UPDATE Staff SET dept = ? WHERE userID = ?");
-                $stmt->execute([$dept, $userId]);
+                // No specific details to update for staff
             }
         }
 

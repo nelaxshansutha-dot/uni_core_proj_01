@@ -6,7 +6,7 @@ class Database {
     private $db_name;
     private $username;
     private $password;
-    public $conn;   //connection object 
+    public $conn;  
 
     public function getConnection() {
         $this->conn = null;
@@ -17,11 +17,11 @@ class Database {
 
         try {
             $this->conn = new PDO("mysql:host=" . $this->host . ";dbname=" . $this->db_name, $this->username, $this->password);
-            $this->conn->exec("set names utf8");// 
-            // Set PDO error mode to exception
+            $this->conn->exec("set names utf8");
+
             $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION); // exception throw
         } catch(PDOException $exception) {
-            // Handle error, optionally log it
+            
             echo "Connection error: " . $exception->getMessage();
         }
 

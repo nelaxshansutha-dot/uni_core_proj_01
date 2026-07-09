@@ -14,8 +14,7 @@ const Register = () => {
         confirm_password: '',
         role: 'student',
         first_name: '',
-        last_name: '',
-        department: ''
+        last_name: ''
     });
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
@@ -295,14 +294,6 @@ const Register = () => {
                                     </div>
                                 )}
                             </div>
-
-                            {/* Department (Staff only) */}
-                            {formData.role === 'staff' && (
-                                <div className="col-12">
-                                    <label className="form-label">Department</label>
-                                    <input type="text" className="form-control" name="department" placeholder="e.g. Computer Science & Technology" value={formData.department} onChange={handleChange} required />
-                                </div>
-                            )}
 
                             {/* Submit */}
                             <div className="col-12 mt-3">

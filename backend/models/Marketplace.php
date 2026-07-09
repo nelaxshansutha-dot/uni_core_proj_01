@@ -1,15 +1,14 @@
 <?php
 require_once __DIR__ . '/BaseModel.php';
 
-// Inheritance: Marketplace inherits base database functionality from BaseModel
 class Marketplace extends BaseModel {
 
-    // Encapsulation: Define the table name internally
+    
     protected function getTableName() {
         return "marketplace";
     }
 
-    // Encapsulation: Define the primary key internally
+
     protected function getPrimaryKey() {
         return "productID";
     }
@@ -18,7 +17,7 @@ class Marketplace extends BaseModel {
         parent::__construct();
     }
 
-    // Abstraction: Implement abstract create method from BaseModel
+
     public function create($data) {
         $query = "INSERT INTO " . $this->table . " 
             (userID, productName, description, price, condition_type, location, phone_number, usage_duration, image_url, image_url2, image_url3, image_url4, status) 
@@ -42,7 +41,7 @@ class Marketplace extends BaseModel {
         return $stmt->execute();
     }
 
-    // Polymorphism: Override default findById to retrieve item with seller info
+
     public function findById($productID) {
         $query = "SELECT m.*, CONCAT(u.fname, ' ', u.lname) AS seller_name 
                   FROM " . $this->table . " m 
@@ -123,7 +122,7 @@ class Marketplace extends BaseModel {
         return $stmt->execute();
     }
 
-    // --- Admin specific methods below ---
+    
 
     public function countAll() {
         return $this->conn->query("SELECT COUNT(*) FROM " . $this->table)->fetchColumn();

@@ -157,8 +157,7 @@ class User extends BaseModel {
                        u.email, u.phoneNum as phone_number, u.role, u.is_verified, 
                        u.is_active, u.created_at, 
                        u.fname as first_name, u.lname as last_name,
-                       s.courseID as course, s.std_year as year,
-                       st.dept as department
+                       s.courseID as course, s.std_year as year
                 FROM Users u
                 LEFT JOIN Student s ON u.userID = s.userID
                 LEFT JOIN Staff st ON u.userID = st.userID
@@ -202,9 +201,7 @@ class User extends BaseModel {
             $stmt->execute([$data['email'], $phone, $data['first_name'], $data['last_name'], $realId]);
 
             if ($role === 'staff') {
-                $dept = isset($data['department']) ? $data['department'] : '';
-                $stmt = $this->conn->prepare("UPDATE Staff SET dept = ? WHERE userID = ?");
-                $stmt->execute([$dept, $realId]);
+                // Department removed
             }
 
             $this->conn->commit();

@@ -91,8 +91,7 @@ class AdminController extends BaseController {
                 $staffModel = new Staff();
                 $staffModel->create([
                     'userID' => $user_id,
-                    'staffID' => $data['enrollment_no'] ?? null,
-                    'dept' => $data['department'] ?? ''
+                    'staffID' => $data['enrollment_no'] ?? null
                 ]);
             }
             Response::success("User created successfully.");
@@ -127,9 +126,8 @@ class AdminController extends BaseController {
 
             // 2. Update Role-Specific Info
             if ($role === User::ROLE_STAFF) {
-                $dept = isset($data['department']) ? $data['department'] : '';
                 $staffModel = new Staff();
-                $staffModel->updateAdminProfile($realId, $dept);
+                $staffModel->updateAdminProfile($realId);
             } else if ($role === User::ROLE_STUDENT || $role === User::ROLE_REP) {
                 require_once __DIR__ . '/../models/Student.php';
                 $studentModel = new Student();
