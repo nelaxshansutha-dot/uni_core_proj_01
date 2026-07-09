@@ -11,7 +11,7 @@ $user = AuthMiddleware::authenticate();
 $controller = new ProfileController();
 
 if ($method === 'GET') {
-    $controller->getProfile($user['id']);
+    $controller->getProfile($user['id'], $user['role']);
 } elseif ($method === 'PUT') {
     $data = json_decode(file_get_contents("php://input"), true);
     $controller->updateProfile($data, $user['id']);

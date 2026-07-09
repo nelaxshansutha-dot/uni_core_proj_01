@@ -133,14 +133,14 @@ class AuthController extends BaseController
         $requestedRole = isset($data['role']) ? $data['role'] : User::ROLE_STUDENT;
 
         if ($user) {
-        
+
             if (isset($user['is_active']) && $user['is_active'] == 0) {
                 Response::error("Your account has been deactivated. Please contact an administrator.");
             }
 
             $isAuthenticated = false;
 
-        
+
             if ($requestedRole === User::ROLE_REP) {
                 $db = (new Database())->getConnection();
                 $stmt = $db->prepare("SELECT hash_password, is_first_login, is_active FROM Course_representative WHERE userID = ?");
@@ -162,7 +162,7 @@ class AuthController extends BaseController
                     }
                 }
             } else {
-            
+
                 if (password_verify($data['password'], $user['hash_password'])) {
                     // Prevent a staff member from logging in as student etc
                     if ($requestedRole === User::ROLE_STAFF && $user['role'] !== User::ROLE_STAFF) {
@@ -181,8 +181,12 @@ class AuthController extends BaseController
 
                 if ($user['is_verified']) {
                     $profile = null;
-                    if ($user['role'] === User::ROLE_STUDENT || $user['role'] === User::ROLE_REP) {
+                    if ($user['role'] === User::ROLE_STUDENT) {
                         $stmt = $db->prepare("SELECT enrollmentNo as enrollment_no, courseID, std_year as year FROM Student WHERE userID = ?");
+                        $stmt->execute([$user['userID']]);
+                        $profile = $stmt->fetch(PDO::FETCH_ASSOC);
+                    } else if ($user['role'] === User::ROLE_REP) {
+                        $stmt = $db->prepare("SELECT s.courseID, s.std_year as year, c.rep_id_string as enrollment_no FROM Student s JOIN Course_representative c ON s.userID = c.userID WHERE s.userID = ?");
                         $stmt->execute([$user['userID']]);
                         $profile = $stmt->fetch(PDO::FETCH_ASSOC);
                     } else if ($user['role'] === User::ROLE_STAFF) {
@@ -191,9 +195,11 @@ class AuthController extends BaseController
                         $profile = $stmt->fetch(PDO::FETCH_ASSOC);
                     }
 
+                    $finalEnrollment = $profile && !empty($profile['enrollment_no']) ? $profile['enrollment_no'] : ($user['enrollment_no'] ?? null);
+
                     $userData = [
                         'id' => $user['userID'],
-                        'enrollment_no' => $user['enrollment_no'] ?? null,
+                        'enrollment_no' => $finalEnrollment,
                         'email' => $user['email'],
                         'first_name' => $user['fname'],
                         'last_name' => $user['lname'],
@@ -256,8 +262,12 @@ class AuthController extends BaseController
 
             $user = $userModel->findById($data['user_id']);
             $profile = null;
-            if ($user['role'] === User::ROLE_STUDENT || $user['role'] === User::ROLE_REP) {
+            if ($user['role'] === User::ROLE_STUDENT) {
                 $stmt = $db->prepare("SELECT enrollmentNo as enrollment_no, courseID, std_year as year FROM Student WHERE userID = ?");
+                $stmt->execute([$data['user_id']]);
+                $profile = $stmt->fetch(PDO::FETCH_ASSOC);
+            } else if ($user['role'] === User::ROLE_REP) {
+                $stmt = $db->prepare("SELECT s.courseID, s.std_year as year, c.rep_id_string as enrollment_no FROM Student s JOIN Course_representative c ON s.userID = c.userID WHERE s.userID = ?");
                 $stmt->execute([$data['user_id']]);
                 $profile = $stmt->fetch(PDO::FETCH_ASSOC);
             } else if ($user['role'] === User::ROLE_STAFF) {
@@ -266,9 +276,11 @@ class AuthController extends BaseController
                 $profile = $stmt->fetch(PDO::FETCH_ASSOC);
             }
 
+            $finalEnrollment = $profile && !empty($profile['enrollment_no']) ? $profile['enrollment_no'] : ($user['enrollment_no'] ?? null);
+
             $userData = [
                 'id' => $user['userID'],
-                'enrollment_no' => $user['enrollment_no'] ?? null,
+                'enrollment_no' => $finalEnrollment,
                 'email' => $user['email'],
                 'first_name' => $user['fname'],
                 'last_name' => $user['lname'],
@@ -498,8 +510,12 @@ class AuthController extends BaseController
 
         $updatedUser = $userModel->findById($user_id);
         $profile = null;
-        if ($updatedUser['role'] === User::ROLE_STUDENT || $updatedUser['role'] === User::ROLE_REP) {
+        if ($updatedUser['role'] === User::ROLE_STUDENT) {
             $stmt = $db->prepare("SELECT enrollmentNo as enrollment_no, courseID, std_year as year FROM Student WHERE userID = ?");
+            $stmt->execute([$user_id]);
+            $profile = $stmt->fetch(PDO::FETCH_ASSOC);
+        } else if ($updatedUser['role'] === User::ROLE_REP) {
+            $stmt = $db->prepare("SELECT s.courseID, s.std_year as year, c.rep_id_string as enrollment_no FROM Student s JOIN Course_representative c ON s.userID = c.userID WHERE s.userID = ?");
             $stmt->execute([$user_id]);
             $profile = $stmt->fetch(PDO::FETCH_ASSOC);
         } else if ($updatedUser['role'] === User::ROLE_STAFF) {
@@ -509,10 +525,11 @@ class AuthController extends BaseController
         }
 
         $finalRole = $logged_in_role ? $logged_in_role : $updatedUser['role'];
+        $finalEnrollment = $profile && !empty($profile['enrollment_no']) ? $profile['enrollment_no'] : ($updatedUser['enrollment_no'] ?? null);
 
         $userData = [
             'id' => $updatedUser['userID'],
-            'enrollment_no' => $updatedUser['enrollment_no'] ?? null,
+            'enrollment_no' => $finalEnrollment,
             'email' => $updatedUser['email'],
             'first_name' => $updatedUser['fname'],
             'last_name' => $updatedUser['lname'],
@@ -632,6 +649,14 @@ class AuthController extends BaseController
                 $userData['enrollment_no'] = $profile['enrollmentNo'];
                 $userData['course_id'] = $profile['courseID'];
                 $userData['std_year'] = $profile['std_year'];
+            }
+            if ($role === User::ROLE_REP) {
+                $stmt = $db->prepare("SELECT rep_id_string FROM Course_representative WHERE userID = ?");
+                $stmt->execute([$userID]);
+                $repProfile = $stmt->fetch(PDO::FETCH_ASSOC);
+                if ($repProfile && !empty($repProfile['rep_id_string'])) {
+                    $userData['enrollment_no'] = $repProfile['rep_id_string'];
+                }
             }
         } elseif ($role === User::ROLE_STAFF) {
             $stmt = $db->prepare("SELECT staffID as enrollment_no FROM Staff WHERE userID = ?");

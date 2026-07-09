@@ -173,11 +173,23 @@ const Register = () => {
                                 <input type="text" className="form-control" name="last_name" placeholder="e.g. Perera" value={formData.last_name} onChange={handleChange} required />
                             </div>
 
-                            {/* Enrollment Number */}
+                            {/* Enrollment Number / Staff ID */}
                             <div className="col-12">
-                                <label className="form-label">Enrollment Number / Staff ID</label>
-                                <input type="text" className="form-control" name="enrollment_no" placeholder="e.g. UWU/CST/21/0042" value={formData.enrollment_no} onChange={handleChange} required />
-                                <div className="form-hint">Your unique university enrollment or staff identification number</div>
+                                <label className="form-label">
+                                    {formData.role === 'staff' ? 'Staff ID' : 'Enrollment Number'}
+                                </label>
+                                <input 
+                                    type="text" 
+                                    className="form-control" 
+                                    name="enrollment_no" 
+                                    placeholder={formData.role === 'staff' ? 'e.g. STAFF/2021/001' : 'e.g. UWU/CST/21/0042'} 
+                                    value={formData.enrollment_no} 
+                                    onChange={handleChange} 
+                                    required 
+                                />
+                                <div className="form-hint">
+                                    {formData.role === 'staff' ? 'Your unique staff identification number' : 'Your unique university enrollment number'}
+                                </div>
                             </div>
 
                             {/* Email */}

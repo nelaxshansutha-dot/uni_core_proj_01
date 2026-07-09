@@ -59,6 +59,7 @@ class Marketplace extends BaseModel {
                   FROM " . $this->table . " m 
                   JOIN Users u ON m.userID = u.userID
                   LEFT JOIN Student s ON u.userID = s.userID
+                  WHERE m.status NOT IN ('removed', 'hidden')
                   ORDER BY m.created_at DESC";
         $stmt = $this->conn->prepare($query);
         $stmt->execute();
@@ -148,7 +149,7 @@ class Marketplace extends BaseModel {
     }
 
     public function getLatestItems($limit = 5) {
-        $query = "SELECT productID as id, productName as title, 'marketplace' as type, created_at FROM " . $this->table . " ORDER BY created_at DESC LIMIT " . intval($limit);
+        $query = "SELECT productID as id, productName as title, 'marketplace' as type, created_at FROM " . $this->table . " WHERE status NOT IN ('removed', 'hidden') ORDER BY created_at DESC LIMIT " . intval($limit);
         $stmt = $this->conn->prepare($query);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);

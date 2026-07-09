@@ -34,7 +34,7 @@ const Login = () => {
     const getIdPlaceholder = () => {
         switch (role) {
             case 'admin': return 'e.g. admin123';
-            case 'staff': return 'e.g. staff123';
+            case 'staff': return 'e.g. staff/2021/01';
             case 'rep': return 'e.g. REP_UWU/CST/21/0042';
             case 'student':
             default: return 'e.g. UWU/CST/21/0042';

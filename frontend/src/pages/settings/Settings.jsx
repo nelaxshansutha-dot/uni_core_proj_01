@@ -165,7 +165,12 @@ const Settings = () => {
                             {/* Enrollment / ID (ReadOnly) */}
                             <div className="col-md-6">
                                 <label className="form-label text-muted text-uppercase fw-bold" style={{ fontSize: '0.75rem' }}>
-                                    {user?.role === 'admin' ? 'Admin ID' : 'Enrollment No / Staff ID'}
+                                    {
+                                        user?.role === 'admin' ? 'Admin ID' : 
+                                        user?.role === 'staff' ? 'Staff ID' : 
+                                        user?.role === 'rep' ? 'Rep ID' : 
+                                        'Enrollment No'
+                                    }
                                 </label>
                                 <input
                                     type="text"
