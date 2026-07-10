@@ -14,8 +14,7 @@ const Register = () => {
         confirm_password: '',
         role: 'student',
         first_name: '',
-        last_name: '',
-        department: ''
+        last_name: ''
     });
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
@@ -68,6 +67,12 @@ const Register = () => {
         if (!formData.phone_number) return null;
         return /^0[0-9]{9}$/.test(formData.phone_number.trim());
     }, [formData.phone_number]);
+
+    // Password validation - Minimum 6 characters
+    const passwordValid = useMemo(() => {
+        if (!formData.password) return null;
+        return formData.password.length >= 6;
+    }, [formData.password]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -174,11 +179,23 @@ const Register = () => {
                                 <input type="text" className="form-control" name="last_name" placeholder="e.g. Perera" value={formData.last_name} onChange={handleChange} required />
                             </div>
 
-                            {/* Enrollment Number */}
+                            {/* Enrollment Number / Staff ID */}
                             <div className="col-12">
-                                <label className="form-label">Enrollment Number / Staff ID</label>
-                                <input type="text" className="form-control" name="enrollment_no" placeholder="e.g. UWU/CST/21/0042" value={formData.enrollment_no} onChange={handleChange} required />
-                                <div className="form-hint">Your unique university enrollment or staff identification number</div>
+                                <label className="form-label">
+                                    {formData.role === 'staff' ? 'Staff ID' : 'Enrollment Number'}
+                                </label>
+                                <input 
+                                    type="text" 
+                                    className="form-control" 
+                                    name="enrollment_no" 
+                                    placeholder={formData.role === 'staff' ? 'e.g. STAFF/2021/001' : 'e.g. UWU/CST/21/0042'} 
+                                    value={formData.enrollment_no} 
+                                    onChange={handleChange} 
+                                    required 
+                                />
+                                <div className="form-hint">
+                                    {formData.role === 'staff' ? 'Your unique staff identification number' : 'Your unique university enrollment number'}
+                                </div>
                             </div>
 
                             {/* Email */}
@@ -243,7 +260,7 @@ const Register = () => {
                                 <div className="position-relative">
                                     <input
                                         type={showPassword ? 'text' : 'password'}
-                                        className="form-control"
+                                        className={`form-control${passwordValid === false ? ' is-invalid' : passwordValid === true ? ' is-valid' : ''}`}
                                         name="password"
                                         placeholder="Minimum 6 characters"
                                         value={formData.password}
@@ -260,6 +277,15 @@ const Register = () => {
                                         {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                     </button>
                                 </div>
+                                {passwordValid === false ? (
+                                    <div className="text-danger small mt-1 d-flex align-items-center gap-1">
+                                        <XCircle size={13} /> Password must be at least 6 characters.
+                                    </div>
+                                ) : passwordValid === true ? (
+                                    <div className="text-success small mt-1 d-flex align-items-center gap-1">
+                                        <CheckCircle size={13} /> Valid password length
+                                    </div>
+                                ) : null}
                             </div>
 
                             {/* Confirm Password */}
@@ -296,20 +322,12 @@ const Register = () => {
                                 )}
                             </div>
 
-                            {/* Department (Staff only) */}
-                            {formData.role === 'staff' && (
-                                <div className="col-12">
-                                    <label className="form-label">Department</label>
-                                    <input type="text" className="form-control" name="department" placeholder="e.g. Computer Science & Technology" value={formData.department} onChange={handleChange} required />
-                                </div>
-                            )}
-
                             {/* Submit */}
                             <div className="col-12 mt-3">
                                 <button
                                     type="submit"
                                     className="btn btn-primary btn-lg w-100"
-                                    disabled={loading || passwordMatch === false || emailDomainValid === false || phoneValid === false}
+                                    disabled={loading || passwordMatch === false || emailDomainValid === false || phoneValid === false || passwordValid === false}
                                 >
                                     {loading ? <span className="spinner-border spinner-border-sm me-2"></span> : null}
                                     Create Account

@@ -50,7 +50,7 @@ const ResetPassword = () => {
                 setError(response.data.message);
             }
         } catch (err) {
-            setError(err.response?.data?.message || 'Invalid or expired OTP.');
+            setError(err.response?.data?.message || 'Invalid OTP, please enter a valid OTP.');
         } finally {
             setLoading(false);
         }

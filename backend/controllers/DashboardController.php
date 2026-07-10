@@ -9,7 +9,7 @@ class DashboardController extends BaseController {
     public function getRecentActivity($user) {
         $activities = [];
 
-        // 1. Fetch latest Lost Items (max 5)
+ 
         require_once __DIR__ . '/../models/LostItem.php';
         $lostItemModel = new LostItem();
         $lostItems = $lostItemModel->getLatestItems(5);
@@ -19,7 +19,6 @@ class DashboardController extends BaseController {
             $activities[] = $row;
         }
 
-        // 2. Fetch latest Marketplace products (max 5)
         require_once __DIR__ . '/../models/Marketplace.php';
         $marketplaceModel = new Marketplace();
         $marketplaceItems = $marketplaceModel->getLatestItems(5);
@@ -30,6 +29,8 @@ class DashboardController extends BaseController {
         }
 
         // 3. Fetch latest Notes (if user is student/rep)
+        // Note feature not fully implemented in backend yet
+        /*
         if ($user['role'] === 'student' || $user['role'] === 'rep') {
             require_once __DIR__ . '/../models/Note.php';
             $noteModel = new Note();
@@ -40,6 +41,7 @@ class DashboardController extends BaseController {
                 $activities[] = $row;
             }
         }
+        */
 
         // Sort combined activities by created_at descending
         usort($activities, function($a, $b) {

@@ -39,6 +39,14 @@ const AdminPanel = () => {
     const [deactivateUserTarget, setDeactivateUserTarget] = useState(null);
     const [deactivateReason, setDeactivateReason] = useState('');
     
+    // Delete Content Modal State
+    const [deleteModal, setDeleteModal] = useState({
+        isOpen: false,
+        type: '',
+        id: null,
+        reason: ''
+    });
+    
     const [userForm, setUserForm] = useState({
         enrollment_no: '',
         email: '',
@@ -48,8 +56,7 @@ const AdminPanel = () => {
         last_name: '',
         phone_number: '',
         course: '',
-        year: '',
-        department: ''
+        year: ''
     });
 
     // Rep Management State
@@ -184,8 +191,7 @@ const AdminPanel = () => {
             last_name: user.last_name || '',
             phone_number: user.phone_number || '',
             course: user.course || '',
-            year: user.year || '',
-            department: user.department || ''
+            year: user.year || ''
         });
         setShowUserModal(true);
     };
@@ -201,8 +207,7 @@ const AdminPanel = () => {
             last_name: '',
             phone_number: '',
             course: '',
-            year: '',
-            department: ''
+            year: ''
         });
         setShowUserModal(true);
     };
@@ -313,38 +318,31 @@ const AdminPanel = () => {
     };
 
     // Content Moderation
-    const handleContentModeration = async (type, id, newStatus) => {
+    const handleContentModeration = async (type, id, newStatus, reason = '') => {
         try {
             const res = await api.patch('/admin.php?action=content-status', {
                 content_type: type,
                 content_id: id,
-                status: newStatus
+                status: newStatus,
+                reason: reason
             });
             if (res.data.status === 'success') {
                 showFeedback('success', `Content marked as ${newStatus}.`);
                 fetchTabData();
+                if (newStatus === 'removed') {
+                    setDeleteModal({ isOpen: false, type: '', id: null, reason: '' });
+                }
             }
         } catch (err) {
             showFeedback('danger', 'Error updating content status.');
         }
     };
 
-    const handleContentFlag = async (type, id, flagState) => {
-        try {
-            const res = await api.patch('/admin.php?action=content-status', {
-                content_type: type,
-                content_id: id,
-                status: type === 'lost_item' ? 'lost' : (type === 'marketplace' ? 'available' : 'active'),
-                is_flagged: flagState
-            });
-            if (res.data.status === 'success') {
-                showFeedback('success', flagState ? 'Content flagged.' : 'Flag cleared.');
-                fetchTabData();
-            }
-        } catch (err) {
-            showFeedback('danger', 'Error updating flag status.');
-        }
+    const openDeleteModal = (type, id) => {
+        setDeleteModal({ isOpen: true, type, id, reason: '' });
     };
+
+
 
     // Report Operations
     const handleReportAction = async (reportId, reportStatus) => {
@@ -650,19 +648,6 @@ const AdminPanel = () => {
                                                         onChange={(e) => setUserForm({ ...userForm, phone_number: e.target.value })}
                                                     />
                                                 </div>
-
-
-                                                {userForm.role === 'staff' && (
-                                                    <div className="col-12">
-                                                        <label className="form-label">Department</label>
-                                                        <input 
-                                                            type="text" 
-                                                            className="form-control" 
-                                                            value={userForm.department}
-                                                            onChange={(e) => setUserForm({ ...userForm, department: e.target.value })}
-                                                        />
-                                                    </div>
-                                                )}
                                             </div>
                                         </div>
                                         <div className="modal-footer">
@@ -912,7 +897,6 @@ const AdminPanel = () => {
                                             <th>Item / Title</th>
                                             <th>User / Email</th>
                                             <th>Status</th>
-                                            <th>Flagged</th>
                                             <th>Created At</th>
                                             <th className="text-end">Actions</th>
                                         </tr>
@@ -928,39 +912,14 @@ const AdminPanel = () => {
                                                         {item.status.toUpperCase()}
                                                     </span>
                                                 </td>
-                                                <td>
-                                                    {item.is_flagged ? (
-                                                        <span className="text-danger d-flex align-items-center gap-1 small fw-bold">
-                                                            <AlertTriangle size={14} /> FLAGGED
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-muted small">No</span>
-                                                    )}
-                                                </td>
                                                 <td>{new Date(item.created_at).toLocaleDateString()}</td>
                                                 <td className="text-end">
                                                     <div className="d-flex justify-content-end gap-2">
                                                         <button className="btn btn-sm btn-outline-info" onClick={() => handleViewItem(item, 'lost_item')} title="View Details">
                                                             <Eye size={14} />
                                                         </button>
-                                                        <button 
-                                                            className={`btn btn-sm ${item.is_flagged ? 'btn-outline-success' : 'btn-outline-warning'}`}
-                                                            onClick={() => handleContentFlag('lost_item', item.lost_id, !item.is_flagged)}
-                                                            title={item.is_flagged ? 'Clear Flag' : 'Flag Content'}
-                                                        >
-                                                            <AlertTriangle size={14} />
-                                                        </button>
-                                                        {item.status !== 'hidden' ? (
-                                                            <button className="btn btn-sm btn-outline-warning" onClick={() => handleContentModeration('lost_item', item.lost_id, 'hidden')} title="Hide Content">
-                                                                <EyeOff size={14} />
-                                                            </button>
-                                                        ) : (
-                                                            <button className="btn btn-sm btn-outline-success" onClick={() => handleContentModeration('lost_item', item.lost_id, 'lost')} title="Restore Content">
-                                                                <CheckCircle size={14} />
-                                                            </button>
-                                                        )}
                                                         {item.status !== 'removed' && (
-                                                            <button className="btn btn-sm btn-outline-danger" onClick={() => handleContentModeration('lost_item', item.lost_id, 'removed')} title="Soft Delete">
+                                                            <button className="btn btn-sm btn-outline-danger" onClick={() => openDeleteModal('lost_item', item.lost_id)} title="Soft Delete">
                                                                 <Trash2 size={14} />
                                                             </button>
                                                         )}
@@ -982,39 +941,14 @@ const AdminPanel = () => {
                                                         {item.status.toUpperCase()}
                                                     </span>
                                                 </td>
-                                                <td>
-                                                    {item.is_flagged ? (
-                                                        <span className="text-danger d-flex align-items-center gap-1 small fw-bold">
-                                                            <AlertTriangle size={14} /> FLAGGED
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-muted small">No</span>
-                                                    )}
-                                                </td>
                                                 <td>{new Date(item.created_at).toLocaleDateString()}</td>
                                                 <td className="text-end">
                                                     <div className="d-flex justify-content-end gap-2">
                                                         <button className="btn btn-sm btn-outline-info" onClick={() => handleViewItem(item, 'marketplace')} title="View Details">
                                                             <Eye size={14} />
                                                         </button>
-                                                        <button 
-                                                            className={`btn btn-sm ${item.is_flagged ? 'btn-outline-success' : 'btn-outline-warning'}`}
-                                                            onClick={() => handleContentFlag('marketplace', item.id, !item.is_flagged)}
-                                                            title={item.is_flagged ? 'Clear Flag' : 'Flag Content'}
-                                                        >
-                                                            <AlertTriangle size={14} />
-                                                        </button>
-                                                        {item.status !== 'hidden' ? (
-                                                            <button className="btn btn-sm btn-outline-warning" onClick={() => handleContentModeration('marketplace', item.id, 'hidden')} title="Hide Content">
-                                                                <EyeOff size={14} />
-                                                            </button>
-                                                        ) : (
-                                                            <button className="btn btn-sm btn-outline-success" onClick={() => handleContentModeration('marketplace', item.id, 'available')} title="Restore Content">
-                                                                <CheckCircle size={14} />
-                                                            </button>
-                                                        )}
                                                         {item.status !== 'removed' && (
-                                                            <button className="btn btn-sm btn-outline-danger" onClick={() => handleContentModeration('marketplace', item.id, 'removed')} title="Soft Delete">
+                                                            <button className="btn btn-sm btn-outline-danger" onClick={() => openDeleteModal('marketplace', item.id)} title="Soft Delete">
                                                                 <Trash2 size={14} />
                                                             </button>
                                                         )}
@@ -1036,39 +970,14 @@ const AdminPanel = () => {
                                                         {note.status.toUpperCase()}
                                                     </span>
                                                 </td>
-                                                <td>
-                                                    {note.is_flagged ? (
-                                                        <span className="text-danger d-flex align-items-center gap-1 small fw-bold">
-                                                            <AlertTriangle size={14} /> FLAGGED
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-muted small">No</span>
-                                                    )}
-                                                </td>
                                                 <td>{new Date(note.created_at).toLocaleDateString()}</td>
                                                 <td className="text-end">
                                                     <div className="d-flex justify-content-end gap-2">
                                                         <button className="btn btn-sm btn-outline-info" onClick={() => handleViewItem(note, 'notes')} title="View Details">
                                                             <Eye size={14} />
                                                         </button>
-                                                        <button 
-                                                            className={`btn btn-sm ${note.is_flagged ? 'btn-outline-success' : 'btn-outline-warning'}`}
-                                                            onClick={() => handleContentFlag('notes', note.id, !note.is_flagged)}
-                                                            title={note.is_flagged ? 'Clear Flag' : 'Flag Content'}
-                                                        >
-                                                            <AlertTriangle size={14} />
-                                                        </button>
-                                                        {note.status !== 'hidden' ? (
-                                                            <button className="btn btn-sm btn-outline-warning" onClick={() => handleContentModeration('notes', note.id, 'hidden')} title="Hide Content">
-                                                                <EyeOff size={14} />
-                                                            </button>
-                                                        ) : (
-                                                            <button className="btn btn-sm btn-outline-success" onClick={() => handleContentModeration('notes', note.id, 'active')} title="Restore Content">
-                                                                <CheckCircle size={14} />
-                                                            </button>
-                                                        )}
                                                         {note.status !== 'removed' && (
-                                                            <button className="btn btn-sm btn-outline-danger" onClick={() => handleContentModeration('notes', note.id, 'removed')} title="Soft Delete">
+                                                            <button className="btn btn-sm btn-outline-danger" onClick={() => openDeleteModal('notes', note.id)} title="Soft Delete">
                                                                 <Trash2 size={14} />
                                                             </button>
                                                         )}
@@ -1105,7 +1014,7 @@ const AdminPanel = () => {
                                             <img src={selectedViewItem.item_image.startsWith('http') ? selectedViewItem.item_image : `http://localhost/uni_core_proj_01/${selectedViewItem.item_image}`} alt={selectedViewItem.lostItemName} className="img-fluid rounded mb-3 w-100 object-fit-cover" style={{maxHeight: '250px'}} />
                                         )}
                                         <p><strong>Contact:</strong> {selectedViewItem.contact_no}</p>
-                                        <p><strong>Last Seen:</strong> {selectedViewItem.last_seen_date} {selectedViewItem.last_seen_time}</p>
+                                        <p><strong>Last Seen:</strong> {selectedViewItem.last_seen_datetime}</p>
                                         <p><strong>Reported By:</strong> {selectedViewItem.email}</p>
                                         <p><strong>Status:</strong> <span className="badge bg-secondary">{selectedViewItem.status}</span></p>
                                     </>
@@ -1135,6 +1044,45 @@ const AdminPanel = () => {
                             </div>
                             <div className="modal-footer">
                                 <button type="button" className="btn btn-secondary" onClick={() => setShowItemModal(false)}>Close</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* DELETE CONTENT MODAL */}
+            {deleteModal.isOpen && (
+                <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                    <div className="modal-dialog modal-dialog-centered">
+                        <div className="modal-content">
+                            <div className="modal-header">
+                                <h5 className="modal-title fw-bold text-danger">Delete Content</h5>
+                                <button type="button" className="btn-close" onClick={() => setDeleteModal({ ...deleteModal, isOpen: false })}></button>
+                            </div>
+                            <div className="modal-body">
+                                <div className="mb-3">
+                                    <label className="form-label">Reason for Deletion</label>
+                                    <textarea 
+                                        className="form-control" 
+                                        rows="3" 
+                                        placeholder="Please provide a reason to delete this content..."
+                                        value={deleteModal.reason}
+                                        onChange={(e) => setDeleteModal({ ...deleteModal, reason: e.target.value })}
+                                        required
+                                    ></textarea>
+                                    <div className="form-text">This reason will be sent to the content owner via email.</div>
+                                </div>
+                            </div>
+                            <div className="modal-footer">
+                                <button type="button" className="btn btn-light" onClick={() => setDeleteModal({ ...deleteModal, isOpen: false })}>Cancel</button>
+                                <button 
+                                    type="button" 
+                                    className="btn btn-danger"
+                                    disabled={!deleteModal.reason.trim()}
+                                    onClick={() => handleContentModeration(deleteModal.type, deleteModal.id, 'removed', deleteModal.reason)}
+                                >
+                                    Delete & Send Email
+                                </button>
                             </div>
                         </div>
                     </div>

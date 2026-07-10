@@ -62,7 +62,7 @@ class PeerLearningController extends BaseController {
 
             $repID = $repInfo['repID'];
 
-            // 3. Create the request
+            
             $model = new PeerLearning();
             $requestData = [
                 'repID' => $repID,

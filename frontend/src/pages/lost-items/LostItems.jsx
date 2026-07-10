@@ -7,7 +7,7 @@ import { Plus, Search, MapPin, Trash2, BellRing } from 'lucide-react';
 console.log("LostItems loaded"); 
 
 const LostItems = () => {
-    const { user } = useContext(AuthContext);
+    const { user, login } = useContext(AuthContext);
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
@@ -55,6 +55,13 @@ const LostItems = () => {
             });
             if (res.data.status === 'success') {
                 setShowPrefModal(false);
+                if (user) {
+                    login(null, { 
+                        ...user, 
+                        lost_item_sms_notification: val, 
+                        has_seen_lost_item_popup: 1 
+                    });
+                }
             }
         } catch (err) {
             console.error(err);

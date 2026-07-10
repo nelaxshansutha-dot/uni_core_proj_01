@@ -35,7 +35,7 @@ class LostItemController extends BaseController {
             return;
         }
 
-        // ---------------- IMAGE UPLOAD ----------------
+        
         $imagePath = null;
 
         if ($file && isset($file['error']) && $file['error'] === 0) {
@@ -54,7 +54,7 @@ class LostItemController extends BaseController {
             $imagePath = "uploads/lost_items/" . $fileName;
         }
 
-        // ---------------- DATA ----------------
+        
         $itemData = [
             'user_id' => $user_id,
             'lostItemName' => $data['lostItemName'],
@@ -67,7 +67,7 @@ class LostItemController extends BaseController {
 
         $model = new LostItem();
 
-        // ---------------- INSERT ----------------
+    
         if ($model->create($itemData)) {
             // Trigger SMS notifications to ALL registered users who have a phone number
             try {
@@ -113,7 +113,7 @@ class LostItemController extends BaseController {
             return;
         }
 
-        // ---------------- IMAGE UPLOAD ----------------
+        
         $imagePath = null;
 
         if ($file && isset($file['error']) && $file['error'] === 0) {
@@ -131,7 +131,7 @@ class LostItemController extends BaseController {
             $imagePath = "uploads/lost_items/" . $fileName;
         }
 
-        // ---------------- DATA ----------------
+
         $itemData = [
             'lost_id' => $data['update_id'],
             'user_id' => $user_id,
@@ -145,7 +145,7 @@ class LostItemController extends BaseController {
 
         $model = new LostItem();
 
-        // ---------------- UPDATE ----------------
+        
         if ($model->update($itemData)) {
             Response::success("Item updated successfully.");
         } else {

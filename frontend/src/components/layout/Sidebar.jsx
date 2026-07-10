@@ -98,6 +98,12 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                             </NavLink>
                         </li>
                         <li>
+                            <NavLink to="/notes-monitoring" className="nav-link d-flex align-items-center gap-3">
+                                <BookOpen size={20} />
+                                Notes Monitoring
+                            </NavLink>
+                        </li>
+                        <li>
                             <NavLink to="/peer-learning" className="nav-link d-flex align-items-center gap-3">
                                 <Users size={20} />
                                 Peer Learning

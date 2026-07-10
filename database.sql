@@ -30,7 +30,6 @@ CREATE TABLE Admin (
 CREATE TABLE Staff (
     staffID VARCHAR(50) PRIMARY KEY,
     userID INT NOT NULL,
-    dept VARCHAR(100) NOT NULL,
     FOREIGN KEY (userID) REFERENCES Users(userID) ON DELETE CASCADE
 );
 
@@ -123,6 +122,14 @@ CREATE TABLE SMS_notification (
     FOREIGN KEY (userID) REFERENCES Users(userID) ON DELETE CASCADE
 );
 
+CREATE TABLE sms_settings (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    api_token VARCHAR(255) NOT NULL,
+    api_url VARCHAR(255) NOT NULL,
+    sender_id VARCHAR(50) NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
 CREATE TABLE marketplace (
     productID INT AUTO_INCREMENT PRIMARY KEY,
     userID INT NOT NULL,
@@ -178,3 +185,6 @@ VALUES ('Super', 'Admin', 'admin@unicore.com', '$2y$10$ANYPk2UCXkPfgEhdWDlHceI2h
 
 -- Link default admin to Admin table
 INSERT INTO Admin (userID) VALUES (LAST_INSERT_ID());
+
+-- Insert default SMS settings
+INSERT INTO sms_settings (api_token, api_url, sender_id) VALUES ('4810|NgGYVtUHjSS98YTck7nLSlYG9NgjUiv5agw5Enje1071d5c9', 'https://app.text.lk/api/v3/sms/send', 'TextLKDemo');

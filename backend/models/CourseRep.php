@@ -35,8 +35,6 @@ class CourseRep extends BaseModel {
         return false;
     }
 
-    
-
     public function deleteByUserId($userID) {
         $query = "DELETE FROM " . $this->table . " WHERE userID = :userID";
         $stmt = $this->conn->prepare($query);
@@ -48,6 +46,19 @@ class CourseRep extends BaseModel {
         $query = "SELECT * FROM " . $this->table . " WHERE userID = :userID";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':userID', $userID);
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function getRepCourseAndYear($userId) {
+        $query = "
+            SELECT cr.courseID, s.std_year 
+            FROM " . $this->table . " cr
+            JOIN Student s ON cr.enrollmentNo = s.enrollmentNo
+            WHERE cr.userID = :userId
+        ";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':userId', $userId);
         $stmt->execute();
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }

@@ -13,8 +13,7 @@ const Profile = () => {
         lost_item_sms_notification: 0,
         peer_learning_app_notification: 1,
         course: '',
-        year: '',
-        department: ''
+        year: ''
     });
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -135,7 +134,12 @@ const Profile = () => {
                                     </div>
                                     <div className="col-md-6">
                                         <label className="form-label text-muted small fw-bold">
-                                            {profile.role === 'admin' ? 'Admin ID' : 'Enrollment No / Staff ID'}
+                                            {
+                                                profile.role === 'admin' ? 'Admin ID' : 
+                                                profile.role === 'staff' ? 'Staff ID' : 
+                                                profile.role === 'rep' ? 'Rep ID' : 
+                                                'Enrollment No'
+                                            }
                                         </label>
                                         <input
                                             type="text"
@@ -156,20 +160,6 @@ const Profile = () => {
                                         />
                                     </div>
 
-
-
-                                    {profile.role === 'staff' && (
-                                        <div className="col-md-12">
-                                            <label className="form-label text-muted small fw-bold">Department</label>
-                                            <input
-                                                type="text"
-                                                className="form-control"
-                                                name="department"
-                                                value={profile.department || ''}
-                                                onChange={handleChange}
-                                            />
-                                        </div>
-                                    )}
                                 </div>
 
                                 <hr className="my-4 text-secondary" />
