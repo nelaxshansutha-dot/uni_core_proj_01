@@ -1014,7 +1014,7 @@ const AdminPanel = () => {
                                             <img src={selectedViewItem.item_image.startsWith('http') ? selectedViewItem.item_image : `http://localhost/uni_core_proj_01/${selectedViewItem.item_image}`} alt={selectedViewItem.lostItemName} className="img-fluid rounded mb-3 w-100 object-fit-cover" style={{maxHeight: '250px'}} />
                                         )}
                                         <p><strong>Contact:</strong> {selectedViewItem.contact_no}</p>
-                                        <p><strong>Last Seen:</strong> {selectedViewItem.last_seen_date} {selectedViewItem.last_seen_time}</p>
+                                        <p><strong>Last Seen:</strong> {selectedViewItem.last_seen_datetime}</p>
                                         <p><strong>Reported By:</strong> {selectedViewItem.email}</p>
                                         <p><strong>Status:</strong> <span className="badge bg-secondary">{selectedViewItem.status}</span></p>
                                     </>
