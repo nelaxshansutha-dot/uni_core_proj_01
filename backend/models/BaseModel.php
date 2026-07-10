@@ -15,7 +15,7 @@ abstract class BaseModel {
     
     abstract protected function getTableName();
 
-    // 
+    
     abstract public function create($data);
 
     
