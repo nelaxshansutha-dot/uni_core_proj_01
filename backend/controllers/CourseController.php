@@ -11,8 +11,7 @@ class CourseController extends BaseController {
             Response::error("Missing year or semester.");
         }
         
-        // Always read courseID and std_year directly from the Student table
-        // The enrollment number segment (e.g. "CST") is NOT the courseID — the DB stores an integer FK
+       
         if ($userID) {
             $db = (new Database())->getConnection();
             $stmt = $db->prepare("SELECT courseID, std_year, enrollmentNo FROM Student WHERE userID = ?");
@@ -22,7 +21,7 @@ class CourseController extends BaseController {
             if ($studentRow) {
                 $courseID = $studentRow['courseID'];
 
-                // Fallback: if courseID is NULL, extract course code from enrollment number and look up Course table
+              
                 if (empty($courseID) && !empty($studentRow['enrollmentNo'])) {
                     $parts = explode('/', strtoupper(trim($studentRow['enrollmentNo'])));
                     if (count($parts) >= 2 && !empty($parts[1])) {
@@ -38,7 +37,7 @@ class CourseController extends BaseController {
                     }
                 }
 
-                // If year not provided by client, fall back to student's registered year
+          
                 if (empty($year) && !empty($studentRow['std_year'])) {
                     $year = $studentRow['std_year'];
                 }
