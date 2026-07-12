@@ -1,155 +1,139 @@
 <?php
-require_once __DIR__ . '/BaseModel.php';
+namespace Models;
+use Config\Database;
+use PDO;
 
-class Marketplace extends BaseModel {
-
-    
-    protected function getTableName() {
-        return "marketplace";
-    }
+class Marketplace {
+    private $conn;
 
 
-    protected function getPrimaryKey() {
-        return "productID";
-    }
+    private $sellerID;
+    private $userID;
+    private $itemName;
+    private $location;
+    private $phoneNumber;
+    private $description;
+    private $conditionType;
+    private $itemImage;
 
     public function __construct() {
-        parent::__construct();
+        $this->conn = Database::getInstance()->getConnection();
     }
 
+
+    public function getSellerID() { return $this->sellerID; }
+    public function setSellerID($val) { $this->sellerID = $val; }
+
+    public function getUserID() { return $this->userID; }
+    public function setUserID($val) { $this->userID = $val; }
+
+    public function getItemName() { return $this->itemName; }
+    public function setItemName($val) { $this->itemName = $val; }
+
+    public function getLocation() { return $this->location; }
+    public function setLocation($val) { $this->location = $val; }
+
+    public function getPhoneNumber() { return $this->phoneNumber; }
+    public function setPhoneNumber($val) { $this->phoneNumber = $val; }
+
+    public function getDescription() { return $this->description; }
+    public function setDescription($val) { $this->description = $val; }
+
+    public function getConditionType() { return $this->conditionType; }
+    public function setConditionType($val) { $this->conditionType = $val; }
+
+    public function getItemImage() { return $this->itemImage; }
+    public function setItemImage($val) { $this->itemImage = $val; }
+
+    public function hydrate($data) {
+        $this->sellerID = $data['sellerID'] ?? $this->sellerID;
+        $this->userID = $data['userID'] ?? $this->userID;
+        
+        $this->itemName = $data['productName'] ?? $data['itemName'] ?? $this->itemName;
+        $this->location = $data['location'] ?? $this->location;
+        $this->phoneNumber = $data['phone_number'] ?? $data['phoneNumber'] ?? $this->phoneNumber;
+        $this->description = $data['description'] ?? $this->description;
+        
+        // Handle boolean condition type mapping
+        if (isset($data['condition_type'])) {
+            $this->conditionType = (bool)$data['condition_type'];
+        } elseif (isset($data['conditionType'])) {
+            $this->conditionType = (bool)$data['conditionType'];
+        }
+        
+      
+        $this->itemImage = $data['image_url'] ?? $data['itemImage'] ?? $this->itemImage;
+
+        return $this;
+    }
 
     public function create($data) {
-        $query = "INSERT INTO " . $this->table . " 
-            (userID, productName, description, price, condition_type, location, phone_number, usage_duration, image_url, image_url2, image_url3, image_url4, status) 
-            VALUES (:userID, :productName, :description, :price, :condition_type, :location, :phone_number, :usage_duration, :image_url, :image_url2, :image_url3, :image_url4, :status)";
-        $stmt = $this->conn->prepare($query);
-
-        $stmt->bindParam(':userID',         $data['userID']);
-        $stmt->bindParam(':productName',      $data['productName']);
-        $stmt->bindParam(':description',    $data['description']);
-        $stmt->bindParam(':price',          $data['price']);
-        $stmt->bindParam(':condition_type', $data['condition_type']);
-        $stmt->bindParam(':location',       $data['location']);
-        $stmt->bindParam(':phone_number',   $data['phone_number']);
-        $stmt->bindParam(':usage_duration', $data['usage_duration']);
-        $stmt->bindParam(':image_url',      $data['image_url']);
-        $stmt->bindParam(':image_url2',     $data['image_url2']);
-        $stmt->bindParam(':image_url3',     $data['image_url3']);
-        $stmt->bindParam(':image_url4',     $data['image_url4']);
-        $stmt->bindParam(':status',         $data['status']);
-
-        return $stmt->execute();
-    }
-
-
-    public function findById($productID) {
-        $query = "SELECT m.*, CONCAT(u.fname, ' ', u.lname) AS seller_name 
-                  FROM " . $this->table . " m 
-                  JOIN Users u ON m.userID = u.userID 
-                  WHERE m.productID = :productID LIMIT 1";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':productID', $productID);
-        $stmt->execute();
-        return $stmt->fetch(PDO::FETCH_ASSOC);
-    }
-
-    public function getAll() {
-        $query = "SELECT m.*, s.enrollmentNo as enrollment_no, 
-                          CONCAT(u.fname, ' ', u.lname) AS seller_name
-                  FROM " . $this->table . " m 
-                  JOIN Users u ON m.userID = u.userID
-                  LEFT JOIN Student s ON u.userID = s.userID
-                  WHERE m.status NOT IN ('removed', 'hidden')
-                  ORDER BY m.created_at DESC";
-        $stmt = $this->conn->prepare($query);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    public function updateStatus($productID, $userID, $status) {
-        $query = "UPDATE " . $this->table . " SET status = :status WHERE productID = :productID AND userID = :userID";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':status',    $status);
-        $stmt->bindParam(':productID', $productID);
-        $stmt->bindParam(':userID',    $userID);
-        return $stmt->execute();
-    }
-
-    public function update($data, $userID) {
-        $query = "UPDATE " . $this->table . " 
-            SET productName = :productName, 
-                description = :description, 
-                price = :price, 
-                condition_type = :condition_type, 
-                location = :location, 
-                phone_number = :phone_number, 
-                usage_duration = :usage_duration, 
-                image_url = :image_url, 
-                image_url2 = :image_url2, 
-                image_url3 = :image_url3, 
-                image_url4 = :image_url4
-            WHERE productID = :productID AND userID = :userID";
+        $this->hydrate($data);
         
+        // Extract required database fields that are NOT part of the strict class properties
+        $price = $data['price'] ?? 0.00;
+        $img2 = $data['image_url2'] ?? null;
+        $img3 = $data['image_url3'] ?? null;
+        $img4 = $data['image_url4'] ?? null;
+        $usage = $data['usage_duration'] ?? null;
+
+        $query = "INSERT INTO marketplace (userID, productName, price, condition_type, location, image_url, image_url2, image_url3, image_url4, usage_duration, description, phone_number) 
+                  VALUES (:uid, :pname, :price, :cond, :loc, :img1, :img2, :img3, :img4, :usage, :desc, :phone)";
         $stmt = $this->conn->prepare($query);
-
-        $stmt->bindParam(':productName',      $data['productName']);
-        $stmt->bindParam(':description',    $data['description']);
-        $stmt->bindParam(':price',          $data['price']);
-        $stmt->bindParam(':condition_type', $data['condition_type']);
-        $stmt->bindParam(':location',       $data['location']);
-        $stmt->bindParam(':phone_number',   $data['phone_number']);
-        $stmt->bindParam(':usage_duration', $data['usage_duration']);
-        $stmt->bindParam(':image_url',      $data['image_url']);
-        $stmt->bindParam(':image_url2',     $data['image_url2']);
-        $stmt->bindParam(':image_url3',     $data['image_url3']);
-        $stmt->bindParam(':image_url4',     $data['image_url4']);
-        $stmt->bindParam(':productID',      $data['productID']);
-        $stmt->bindParam(':userID',         $userID);
-
-        return $stmt->execute();
+        $stmt->execute([
+            ':uid' => $this->userID,
+            ':pname' => $this->itemName,
+            ':price' => $price,
+            ':cond' => $this->conditionType ? 1 : 0,
+            ':loc' => $this->location,
+            ':img1' => $this->itemImage,
+            ':img2' => $img2,
+            ':img3' => $img3,
+            ':img4' => $img4,
+            ':usage' => $usage,
+            ':desc' => $this->description,
+            ':phone' => $this->phoneNumber
+        ]);
+        return $this->conn->lastInsertId();
     }
 
-    public function delete($productID, $userID = null) {
-        if ($userID !== null) {
-            $query = "DELETE FROM " . $this->table . " WHERE productID = :productID AND userID = :userID";
-            $stmt = $this->conn->prepare($query);
-            $stmt->bindParam(':productID', $productID);
-            $stmt->bindParam(':userID',    $userID);
+    public function update($productID, $userID, $data) {
+        $this->hydrate($data);
+        if ($userID) $this->userID = $userID;
+        
+        // Extract required database fields that are NOT part of the strict class properties
+        $price = $data['price'] ?? 0.00;
+        $status = $data['status'] ?? 'available';
+
+        $query = "UPDATE marketplace SET productName = :pname, price = :price, status = :status WHERE productID = :pid AND userID = :uid";
+        $stmt = $this->conn->prepare($query);
+        return $stmt->execute([
+            ':pname' => $this->itemName,
+            ':price' => $price,
+            ':status' => $status,
+            ':pid' => $productID,
+            ':uid' => $this->userID
+        ]);
+    }
+
+    public function delete($productID, $userID) {
+        $stmt = $this->conn->prepare("DELETE FROM marketplace WHERE productID = :pid AND userID = :uid");
+        return $stmt->execute([':pid' => $productID, ':uid' => $userID]);
+    }
+
+    public function view($productID = null) {
+        if ($productID) {
+            $stmt = $this->conn->prepare("SELECT * FROM marketplace WHERE productID = :pid");
+            $stmt->execute([':pid' => $productID]);
+            return $stmt->fetch();
         } else {
-            $query = "DELETE FROM " . $this->table . " WHERE productID = :productID";
-            $stmt = $this->conn->prepare($query);
-            $stmt->bindParam(':productID', $productID);
+            $stmt = $this->conn->query("SELECT * FROM marketplace ORDER BY created_at DESC");
+            return $stmt->fetchAll();
         }
-        return $stmt->execute();
     }
 
-    
-
-    public function countAll() {
-        return $this->conn->query("SELECT COUNT(*) FROM " . $this->table)->fetchColumn();
-    }
-
-    public function getAdminContent() {
-        $query = "SELECT m.productID as id, m.productName as title, m.price, m.location, m.image_url as product_image, m.phone_number as contact_no, m.created_at, m.status, u.email, s.enrollmentNo as enrollment_no
-                  FROM " . $this->table . " m 
-                  JOIN Users u ON m.userID = u.userID 
-                  LEFT JOIN Student s ON u.userID = s.userID
-                  ORDER BY m.productID DESC";
-        $stmt = $this->conn->query($query);
-        $marketplace = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        return $marketplace;
-    }
-
-    public function updateAdminStatus($id, $status) {
-        $stmt = $this->conn->prepare("UPDATE " . $this->table . " SET status = ? WHERE productID = ?");
-        return $stmt->execute([$status, $id]);
-    }
-
-    public function getLatestItems($limit = 5) {
-        $query = "SELECT productID as id, productName as title, 'marketplace' as type, created_at FROM " . $this->table . " WHERE status NOT IN ('removed', 'hidden') ORDER BY created_at DESC LIMIT " . intval($limit);
-        $stmt = $this->conn->prepare($query);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    public function flag($productID) {
+        $stmt = $this->conn->prepare("UPDATE marketplace SET is_flagged = 1 WHERE productID = :pid");
+        return $stmt->execute([':pid' => $productID]);
     }
 }
-?>

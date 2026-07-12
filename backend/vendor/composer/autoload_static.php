@@ -4,7 +4,7 @@
 
 namespace Composer\Autoload;
 
-class ComposerStaticInit2185d2f99bcd56787481d9357a5972d3
+class ComposerStaticInit5d0e1d76c8194e3979dcc201c14897ef
 {
     public static $files = array (
         '320cde22f66dd4f5d3fd621d3e88b98f' => __DIR__ . '/..' . '/symfony/polyfill-ctype/bootstrap.php',
@@ -13,6 +13,10 @@ class ComposerStaticInit2185d2f99bcd56787481d9357a5972d3
     );
 
     public static $prefixLengthsPsr4 = array (
+        'U' =>
+        array (
+            'Utils\\' => 6,
+        ),
         'S' =>
         array (
             'Symfony\\Polyfill\\Php80\\' => 23,
@@ -24,17 +28,35 @@ class ComposerStaticInit2185d2f99bcd56787481d9357a5972d3
             'PhpOption\\' => 10,
             'PHPMailer\\PHPMailer\\' => 20,
         ),
+        'M' =>
+        array (
+            'Models\\' => 7,
+            'Middleware\\' => 11,
+        ),
         'G' =>
         array (
             'GrahamCampbell\\ResultType\\' => 26,
+        ),
+        'F' =>
+        array (
+            'Firebase\\JWT\\' => 13,
         ),
         'D' =>
         array (
             'Dotenv\\' => 7,
         ),
+        'C' =>
+        array (
+            'Controllers\\' => 12,
+            'Config\\' => 7,
+        ),
     );
 
     public static $prefixDirsPsr4 = array (
+        'Utils\\' =>
+        array (
+            0 => __DIR__ . '/../..' . '/utils',
+        ),
         'Symfony\\Polyfill\\Php80\\' =>
         array (
             0 => __DIR__ . '/..' . '/symfony/polyfill-php80',
@@ -55,13 +77,33 @@ class ComposerStaticInit2185d2f99bcd56787481d9357a5972d3
         array (
             0 => __DIR__ . '/..' . '/phpmailer/phpmailer/src',
         ),
+        'Models\\' =>
+        array (
+            0 => __DIR__ . '/../..' . '/models',
+        ),
+        'Middleware\\' =>
+        array (
+            0 => __DIR__ . '/../..' . '/middleware',
+        ),
         'GrahamCampbell\\ResultType\\' =>
         array (
             0 => __DIR__ . '/..' . '/graham-campbell/result-type/src',
         ),
+        'Firebase\\JWT\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/firebase/php-jwt/src',
+        ),
         'Dotenv\\' =>
         array (
             0 => __DIR__ . '/..' . '/vlucas/phpdotenv/src',
+        ),
+        'Controllers\\' =>
+        array (
+            0 => __DIR__ . '/../..' . '/controllers',
+        ),
+        'Config\\' =>
+        array (
+            0 => __DIR__ . '/../..' . '/config',
         ),
     );
 
@@ -77,9 +119,9 @@ class ComposerStaticInit2185d2f99bcd56787481d9357a5972d3
     public static function getInitializer(ClassLoader $loader)
     {
         return \Closure::bind(function () use ($loader) {
-            $loader->prefixLengthsPsr4 = ComposerStaticInit2185d2f99bcd56787481d9357a5972d3::$prefixLengthsPsr4;
-            $loader->prefixDirsPsr4 = ComposerStaticInit2185d2f99bcd56787481d9357a5972d3::$prefixDirsPsr4;
-            $loader->classMap = ComposerStaticInit2185d2f99bcd56787481d9357a5972d3::$classMap;
+            $loader->prefixLengthsPsr4 = ComposerStaticInit5d0e1d76c8194e3979dcc201c14897ef::$prefixLengthsPsr4;
+            $loader->prefixDirsPsr4 = ComposerStaticInit5d0e1d76c8194e3979dcc201c14897ef::$prefixDirsPsr4;
+            $loader->classMap = ComposerStaticInit5d0e1d76c8194e3979dcc201c14897ef::$classMap;
 
         }, null, ClassLoader::class);
     }

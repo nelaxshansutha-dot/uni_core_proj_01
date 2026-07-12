@@ -37,7 +37,7 @@ const Dashboard = () => {
     useEffect(() => {
         const fetchActivities = async () => {
             try {
-                const response = await api.get('/dashboard.php?action=recent-activity');
+                const response = await api.get('/dashboard/recent-activity');
                 if (response.data.status === 'success') {
                     setRecentActivities(response.data.data.activities);
                 }
@@ -55,6 +55,10 @@ const Dashboard = () => {
 
     if (user?.role === 'admin') {
         return <Navigate to="/admin" replace />;
+    }
+
+    if (user?.role === 'course_representative' || user?.role === 'rep') {
+        return <Navigate to="/rep-dashboard" replace />;
     }
 
     const getActivityIcon = (type) => {

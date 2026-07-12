@@ -1,243 +1,167 @@
 <?php
-require_once __DIR__ . '/../config/Database.php';
 
-require_once __DIR__ . '/BaseModel.php';
+namespace Models;
 
-class User extends BaseModel {
-  
+use Config\Database;
+use PDO;
+use Firebase\JWT\JWT;
 
-    public const ROLE_ADMIN = 'admin';
-    public const ROLE_STUDENT = 'student';
-    public const ROLE_REP = 'rep';
-    public const ROLE_STAFF = 'staff';
+abstract class User {
+    protected $conn;
 
-  
-
-    protected function getTableName() {
-        return "Users";
-    }
-
-    // Encapsulation: Define the primary key internally
-    protected function getPrimaryKey() {
-        return "userID";
-    }
+   
+    protected $userID;
+    protected $fname;
+    protected $lname;
+    protected $phoneNum;
+    protected $email;
+    protected $hash_password;
+    protected $role;
+    protected $is_active;
+    protected $is_verified;
+    protected $last_login;
+    protected $created_at;
+    protected $peer_learning_app_notification;
+    protected $lost_item_sms_notification;
+    protected $has_seen_lost_item_popup;
 
     public function __construct() {
-        parent::__construct();
+        $this->conn = Database::getInstance()->getConnection();
     }
 
-    public function findByEnrollment($enrollment_no)
-    {
-        $query = "SELECT u.*, s.enrollmentNo as std_enrollment, cr.enrollmentNo as rep_enrollment, st.staffID as staff_enrollment
-                  FROM " . $this->table . " u
-                  LEFT JOIN Student s ON u.userID = s.userID
-                  LEFT JOIN Course_representative cr ON u.userID = cr.userID
-                  LEFT JOIN Staff st ON u.userID = st.userID
-                  WHERE s.enrollmentNo = :id 
-                     OR cr.enrollmentNo = :id 
-                     OR cr.rep_id_string = :id
-                     OR st.staffID = :id
-                     OR u.email = :id LIMIT 1";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':id', $enrollment_no);
-        $stmt->execute();
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        if ($result) {
-            $result['enrollment_no'] = $result['std_enrollment'] ?? $result['rep_enrollment'] ?? $result['staff_enrollment'] ?? null;
-            return $result;
-        }
-        return false;
-    }
-
-    public function findByEmail($email)// forgot password
-     {
-        $query = "SELECT * FROM " . $this->table . " WHERE email = :email LIMIT 1";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':email', $email);
-        $stmt->execute();
-        return $stmt->fetch(PDO::FETCH_ASSOC);
-    }
-
-    // Polymorphism: Overriding the parent's findById method to use userID column instead of id
-    public function findById($id)//profile page
-     {
-        return parent::findByIdBase($id, 'userID');
-    }
-
-    public function create($data) //new user insert
     
-    {
-        $query = "INSERT INTO " . $this->table . " (fname, lname, email, phoneNum, hash_password, role, is_verified) 
-                  VALUES (:fname, :lname, :email, :phoneNum, :hash_password, :role, FALSE)";
-        $stmt = $this->conn->prepare($query);
+    public function getUserID() { return $this->userID; }
+    public function setUserID($val) { $this->userID = $val; return $this; }
+    
+    public function getFname() { return $this->fname; }
+    public function setFname($val) { $this->fname = $val; return $this; }
 
-        $stmt->bindParam(':fname', $data['fname']);
-        $stmt->bindParam(':lname', $data['lname']);
-        $stmt->bindParam(':email', $data['email']);
-        $phone = isset($data['phoneNum']) ? $data['phoneNum'] : null;
-        $stmt->bindParam(':phoneNum', $phone);
-        $stmt->bindParam(':hash_password', $data['hash_password']);
-        $stmt->bindParam(':role', $data['role']);
+    public function getLname() { return $this->lname; }
+    public function setLname($val) { $this->lname = $val; return $this; }
+
+    public function getPhoneNum() { return $this->phoneNum; }
+    public function setPhoneNum($val) { $this->phoneNum = $val; return $this; }
+
+    public function getEmail() { return $this->email; }
+    public function setEmail($val) { $this->email = $val; return $this; }
+
+    public function getHashPassword() { return $this->hash_password; }
+    public function setHashPassword($val) { $this->hash_password = $val; return $this; }
+
+    public function getRole() { return $this->role; }
+    public function setRole($val) { $this->role = $val; return $this; }
+
+    public function getIsActive() { return $this->is_active; }
+    public function setIsActive($val) { $this->is_active = $val; return $this; }
+
+    public function getIsVerified() { return $this->is_verified; }
+    public function setIsVerified($val) { $this->is_verified = $val; return $this; }
+
+    
+    public function hydrate(array $data) {
+        $this->userID = $data['userID'] ?? $this->userID;
+        $this->fname = $data['fname'] ?? $this->fname;
+        $this->lname = $data['lname'] ?? $this->lname;
+        $this->phoneNum = $data['phoneNum'] ?? $this->phoneNum;
+        $this->email = $data['email'] ?? $this->email;
+        $this->hash_password = $data['hash_password'] ?? $this->hash_password;
+        $this->role = $data['role'] ?? $this->role;
+        $this->is_active = $data['is_active'] ?? $this->is_active;
+        $this->is_verified = $data['is_verified'] ?? $this->is_verified;
+        $this->last_login = $data['last_login'] ?? $this->last_login;
+        $this->created_at = $data['created_at'] ?? $this->created_at;
+        $this->peer_learning_app_notification = $data['peer_learning_app_notification'] ?? $this->peer_learning_app_notification;
+        $this->lost_item_sms_notification = $data['lost_item_sms_notification'] ?? $this->lost_item_sms_notification;
+        $this->has_seen_lost_item_popup = $data['has_seen_lost_item_popup'] ?? $this->has_seen_lost_item_popup;
+        return $this;
+    }
+
+    public function register() {
+        $query = "INSERT INTO users (fname, lname, email, phoneNum, hash_password, role) 
+                  VALUES (:fname, :lname, :email, :phoneNum, :hash, :role)";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':fname', $this->fname);
+        $stmt->bindParam(':lname', $this->lname);
+        $stmt->bindParam(':email', $this->email);
+        $stmt->bindParam(':phoneNum', $this->phoneNum);
+        $stmt->bindParam(':hash', $this->hash_password);
+        $stmt->bindParam(':role', $this->role);
 
         if ($stmt->execute()) {
-            return $this->conn->lastInsertId();
+            $this->userID = $this->conn->lastInsertId();
+            return $this->userID;
+        }
+        
+        throw new \Exception("Database insert into users failed: " . implode(" ", $stmt->errorInfo()));
+    }
+
+    public function login($password) {
+        if ($this->hash_password && password_verify($password, $this->hash_password)) {
+            if (!$this->is_active) {
+                throw new \Exception("Account is deactivated.");
+            }
+            if (!$this->is_verified) {
+                throw new \Exception("Account is not verified.");
+            }
+            
+            // update last login
+            $upd = $this->conn->prepare("UPDATE users SET last_login = NOW() WHERE userID = :uid");
+            $upd->bindParam(':uid', $this->userID);
+            $upd->execute();
+            return true;
         }
         return false;
     }
 
-    public function markAsVerified($id) // login
-    
-    {
-        $query = "UPDATE " . $this->table . " SET is_verified = TRUE WHERE userID = :id";
+    public function logout($jti, $expires_at) {
+        $query = "INSERT INTO revoked_tokens (jti, expires_at) VALUES (:jti, :exp)";
         $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':id', $id);
-        return $stmt->execute();
-    }
-    
-    public function updatePassword($id, $new_hash) //forgot password/changepassword onnly hashpassword
-    
-    {
-        $query = "UPDATE " . $this->table . " SET hash_password = :hash WHERE userID = :id";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':hash', $new_hash);
-        $stmt->bindParam(':id', $id);
+        $stmt->bindParam(':jti', $jti);
+        $stmt->bindParam(':exp', $expires_at);
         return $stmt->execute();
     }
 
-    public function updateLoginTime($id) //Admin dashboard- last active time
-    {
-        $query = "UPDATE " . $this->table . " SET last_login = CURRENT_TIMESTAMP WHERE userID = :id";
+    public function updateProfile() {
+        $query = "UPDATE users SET fname = :fname, lname = :lname, phoneNum = :phoneNum WHERE userID = :uid";
         $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':id', $id);
+        $stmt->bindParam(':fname', $this->fname);
+        $stmt->bindParam(':lname', $this->lname);
+        $stmt->bindParam(':phoneNum', $this->phoneNum);
+        $stmt->bindParam(':uid', $this->userID);
         return $stmt->execute();
     }
 
-    public function updateProfileFields($id, $phoneNum) //upadte phone number in profile
-    {
-        $query = "UPDATE " . $this->table . " SET phoneNum = :phone WHERE userID = :id";
+    public function changePassword($newHash) {
+        $query = "UPDATE users SET hash_password = :hash WHERE userID = :uid";
         $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':phone', $phoneNum);
-        $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+        $stmt->bindParam(':hash', $newHash);
+        $stmt->bindParam(':uid', $this->userID);
         return $stmt->execute();
     }
 
-    public function updateNotificationSettings($id, $smsPref, $popupSeen) {
-        $query = "UPDATE " . $this->table . " SET lost_item_sms_notification = :smsPref, has_seen_lost_item_popup = :popupSeen WHERE userID = :id";
+    public function forgotPassword() {
+        // Issue token / email logic
+    }
+
+    public function verifyOTP($otpCode) {
+        $query = "SELECT * FROM otp_verification WHERE userID = :uid AND otp_code = :otp AND expired_at > NOW() AND verified_at IS NULL LIMIT 1";
         $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':smsPref', $smsPref, PDO::PARAM_INT);
-        $stmt->bindParam(':popupSeen', $popupSeen, PDO::PARAM_INT);
-        $stmt->bindParam(':id', $id, PDO::PARAM_INT);
-        return $stmt->execute();
-    }
-
-    public function updateProfile($id, $data) {
-        $query = "UPDATE " . $this->table . " SET fname = :fname, lname = :lname, email = :email WHERE userID = :id";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':fname', $data['first_name']);
-        $stmt->bindParam(':lname', $data['last_name']);
-        $stmt->bindParam(':email', $data['email']);
-        $stmt->bindParam(':id', $id, PDO::PARAM_INT);
-        return $stmt->execute();
-    }
-
-    // --- Admin specific methods below ---
-
-    public function countAll() {
-        return $this->conn->query("SELECT COUNT(*) FROM " . $this->table)->fetchColumn();
-    }
-
-    public function countVerified() {
-        return $this->conn->query("SELECT COUNT(*) FROM " . $this->table . " WHERE is_verified = 1")->fetchColumn();
-    }
-
-    public function countReps() {
-        return $this->conn->query("SELECT COUNT(*) FROM " . $this->table . " WHERE role = 'rep'")->fetchColumn();
-    }
-
-    public function getAllWithDetails($query, $role) {
-        $sql = "SELECT u.userID as id, 
-                       s.enrollmentNo as enrollment_no, 
-                       st.staffID as staff_id,
-                       u.email, u.phoneNum as phone_number, u.role, u.is_verified, 
-                       u.is_active, u.created_at, 
-                       u.fname as first_name, u.lname as last_name,
-                       s.courseID as course, s.std_year as year
-                FROM Users u
-                LEFT JOIN Student s ON u.userID = s.userID
-                LEFT JOIN Staff st ON u.userID = st.userID
-                WHERE u.role != 'admin'";
-        
-        $params = [];
-        if (!empty($role)) {
-            $sql .= " AND u.role = :role";
-            $params[':role'] = $role;
-        }
-        if (!empty($query)) {
-            $sql .= " AND (s.enrollmentNo LIKE :q OR u.email LIKE :q OR u.fname LIKE :q OR u.lname LIKE :q)";
-            $params[':q'] = "%" . $query . "%";
-        }
-
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute($params);
-        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        foreach ($results as &$row) {
-            if (isset($row['is_active'])) {
-                $row['is_active'] = (int)$row['is_active'];
-            }
-            if (isset($row['is_verified'])) {
-                $row['is_verified'] = (int)$row['is_verified'];
-            }
-        }
-        return $results;
-    }
-
-    public function getRole($userId) {
-        $stmt = $this->conn->prepare("SELECT role FROM Users WHERE userID = ?");
-        $stmt->execute([$userId]);
-        return $stmt->fetchColumn();
-    }
-
-    public function updateAdminProfile($realId, $role, $data) {
-        $this->conn->beginTransaction();
-        try {
-            $phone = isset($data['phone_number']) ? $data['phone_number'] : null;
-            $stmt = $this->conn->prepare("UPDATE Users SET email = ?, phoneNum = ?, fname = ?, lname = ? WHERE userID = ?");
-            $stmt->execute([$data['email'], $phone, $data['first_name'], $data['last_name'], $realId]);
-
-            if ($role === 'staff') {
-                // Department removed
-            }
-
-            $this->conn->commit();
-            return true;
-        } catch (Exception $e) {
-            $this->conn->rollBack();
-            throw $e;
-        }
-    }
-
-    public function toggleStatus($realId, $isActive) {
-        $stmt = $this->conn->prepare("UPDATE Users SET is_active = ? WHERE userID = ?");
-        return $stmt->execute([$isActive, $realId]);
-    }
-
-    public function searchStudents($query) {
-        $q = "%" . $query . "%";
-        $sql = "SELECT u.userID as id, s.enrollmentNo as enrollment_no, u.email, u.phoneNum as phone_number, u.role, u.fname as first_name, u.lname as last_name, s.courseID as course, s.std_year as year 
-                FROM Users u 
-                JOIN Student s ON u.userID = s.userID 
-                WHERE (s.enrollmentNo LIKE :q OR u.fname LIKE :q OR u.lname LIKE :q) 
-                AND u.role IN ('student', 'rep')";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bindParam(':q', $q);
+        $stmt->bindParam(':uid', $this->userID);
+        $stmt->bindParam(':otp', $otpCode);
         $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
+        $row = $stmt->fetch();
 
-    public function getStudentDetails($userId) {
-        $stmt = $this->conn->prepare("SELECT u.*, s.enrollmentNo, s.courseID FROM Users u JOIN Student s ON u.userID = s.userID WHERE u.userID = ?");
-        $stmt->execute([$userId]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row) {
+            $upd = $this->conn->prepare("UPDATE otp_verification SET verified_at = NOW() WHERE otpID = :id");
+            $upd->bindParam(':id', $row['otpID']);
+            $upd->execute();
+
+            $updUser = $this->conn->prepare("UPDATE users SET is_verified = 1 WHERE userID = :uid");
+            $updUser->bindParam(':uid', $this->userID);
+            $updUser->execute();
+
+            return true;
+        }
+        return false;
     }
 }
-?>

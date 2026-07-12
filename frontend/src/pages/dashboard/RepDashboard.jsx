@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Share2, Send, Clock, BookOpen, User, CheckCircle, XCircle } from 'lucide-react';
+import { Share2, Send, Clock, BookOpen, User, CheckCircle, XCircle, TrendingUp, Users } from 'lucide-react';
 import api from '../../services/api';
 
 const RepDashboard = () => {

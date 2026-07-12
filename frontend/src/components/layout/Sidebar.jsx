@@ -89,7 +89,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                             </NavLink>
                         </li>
                     </>
-                ) : user?.role === 'rep' ? (
+                ) : (user?.role === 'course_representative' || user?.role === 'rep') ? (
                     <>
                         <li className="nav-item">
                             <NavLink to="/rep-dashboard" className="nav-link d-flex align-items-center gap-3">

@@ -1,138 +1,128 @@
 <?php
-require_once __DIR__ . '/BaseModel.php';
+namespace Models;
+use Config\Database;
+use PDO;
 
-// Inheritance: LostItem inherits core database tools from BaseModel
-class LostItem extends BaseModel {
-
-
-    protected function getTableName() {
-        return "Lost_items";
-    }
-
+class LostItem {
+    private $conn;
     
-    protected function getPrimaryKey() {
-        return "lostID";
-    }
+    private $lostID;
+    private $userID;
+    private $itemName;
+    private $LastSeenDate;
+    private $lastSeenTime;
+    private $itemLmage;
+    private $contactNumber;
+    private $description;
+    private $lastSeenPlace;
+    private $status;
 
     public function __construct() {
-        parent::__construct();
+        $this->conn = Database::getInstance()->getConnection();
     }
 
+    // Getters and Setters
+    public function getLostID() { return $this->lostID; }
+    public function setLostID($val) { $this->lostID = $val; }
 
-    public function create($data) {
-        $query = "INSERT INTO Lost_items
-        (userID,lostItemName, description, last_seen_datetime,last_seen_place,contact_number,item_image
-        )
-        VALUES
-        ( :userID,:lostItemName,:description,:last_seen_datetime,:last_seen_place,:contact_number,:item_image )";
+    public function getUserID() { return $this->userID; }
+    public function setUserID($val) { $this->userID = $val; }
 
-        $stmt = $this->conn->prepare($query);
+    public function getItemName() { return $this->itemName; }
+    public function setItemName($val) { $this->itemName = $val; }
 
-        $stmt->bindParam(':userID', $data['user_id']);
-        $stmt->bindParam(':lostItemName', $data['lostItemName']);
-        $stmt->bindParam(':description', $data['description']);
-        $stmt->bindParam(':last_seen_datetime', $data['last_seen_datetime']);
-        $stmt->bindParam(':last_seen_place', $data['last_seen_place']);
-        $stmt->bindParam(':contact_number', $data['contact_number']);
-        $stmt->bindParam(':item_image', $data['item_image']);
+    public function getLastSeenDate() { return $this->LastSeenDate; }
+    public function setLastSeenDate($val) { $this->LastSeenDate = $val; }
 
-        return $stmt->execute();
-    }
+    public function getLastSeenTime() { return $this->lastSeenTime; }
+    public function setLastSeenTime($val) { $this->lastSeenTime = $val; }
 
-    
+    public function getItemLmage() { return $this->itemLmage; }
+    public function setItemLmage($val) { $this->itemLmage = $val; }
 
-    public function getAll() {
-        $query = "SELECT l.*, l.lostID as lost_id, l.userID as user_id, s.enrollmentNo as enrollment_no
-                  FROM Lost_items l
-                  JOIN Users u ON l.userID = u.userID
-                  LEFT JOIN Student s ON u.userID = s.userID
-                  WHERE l.status NOT IN ('removed', 'hidden')
-                  ORDER BY l.created_at DESC";
+    public function getContactNumber() { return $this->contactNumber; }
+    public function setContactNumber($val) { $this->contactNumber = $val; }
 
-        $stmt = $this->conn->prepare($query);
-        $stmt->execute();
-
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
+    public function hydrate($data) {
+        $this->lostID = $data['lostID'] ?? $this->lostID;
+        $this->userID = $data['userID'] ?? $this->userID;
+        $this->itemName = $data['lostItemName'] ?? $data['itemName'] ?? $this->itemName;
         
-    public function getByUser($user_id) {
-        $query = "SELECT *, lostID as lost_id, userID as user_id FROM " . $this->table . " WHERE userID = :userID ORDER BY created_at DESC";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':userID', $user_id);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    public function update($data) {
-        $query = "UPDATE " . $this->table . " SET 
-                  lostItemName = :lostItemName, 
-                  description = :description, 
-                  last_seen_datetime = :last_seen_datetime, 
-                  last_seen_place = :last_seen_place, 
-                  contact_number = :contact_number";
-                  
-        if ($data['item_image'] !== null) {
-            $query .= ", item_image = :item_image";
-        }
-        
-        $query .= " WHERE lostID = :lost_id AND userID = :user_id";
-
-        $stmt = $this->conn->prepare($query);
-
-        $stmt->bindParam(':lostItemName', $data['lostItemName']);
-        $stmt->bindParam(':description', $data['description']);
-        $stmt->bindParam(':last_seen_datetime', $data['last_seen_datetime']);
-        $stmt->bindParam(':last_seen_place', $data['last_seen_place']);
-        $stmt->bindParam(':contact_number', $data['contact_number']);
-        $stmt->bindParam(':lost_id', $data['lost_id']);
-        $stmt->bindParam(':user_id', $data['user_id']);
-
-        if ($data['item_image'] !== null) {
-            $stmt->bindParam(':item_image', $data['item_image']);
+        // Handle datetime splitting if provided as a single string from frontend
+        if (!empty($data['last_seen_datetime'])) {
+            $parts = explode('T', $data['last_seen_datetime']);
+            if (count($parts) == 2) {
+                $this->LastSeenDate = $parts[0];
+                $this->lastSeenTime = $parts[1];
+            } else {
+                $parts = explode(' ', $data['last_seen_datetime']);
+                $this->LastSeenDate = $parts[0] ?? null;
+                $this->lastSeenTime = $parts[1] ?? null;
+            }
         }
 
-        return $stmt->execute();
+        $this->itemLmage = $data['item_image'] ?? $data['itemLmage'] ?? $this->itemLmage;
+        $this->contactNumber = $data['contact_number'] ?? $data['contactNumber'] ?? $this->contactNumber;
+        
+        $this->description = $data['description'] ?? $this->description;
+        $this->lastSeenPlace = $data['last_seen_place'] ?? $this->lastSeenPlace;
+        $this->status = $data['status'] ?? $this->status ?? 'lost';
+        
+        return $this;
     }
 
-    public function delete($lost_id, $user_id = null) {
-        if ($user_id !== null) {
-            $query = "DELETE FROM " . $this->table . " WHERE lostID = :lost_id AND userID = :user_id";
-            $stmt = $this->conn->prepare($query);
-            $stmt->bindParam(':lost_id', $lost_id);
-            $stmt->bindParam(':user_id', $user_id);
+    public function create($data = null) {
+        if ($data) $this->hydrate($data);
+        
+        $query = "INSERT INTO lost_items (userID, lostItemName, last_seen_datetime, last_seen_place, description, item_image, contact_number) 
+                  VALUES (:uid, :name, :lsdt, :lsp, :desc, :img, :phone)";
+        $stmt = $this->conn->prepare($query);
+        
+        // Combine date and time for DB
+        $lsdt = null;
+        if ($this->LastSeenDate && $this->lastSeenTime) {
+            $lsdt = $this->LastSeenDate . ' ' . $this->lastSeenTime;
+        }
+
+        $stmt->execute([
+            ':uid' => $this->userID,
+            ':name' => $this->itemName,
+            ':lsdt' => $lsdt,
+            ':lsp' => $this->lastSeenPlace,
+            ':desc' => $this->description,
+            ':img' => $this->itemLmage,
+            ':phone' => $this->contactNumber
+        ]);
+        $this->lostID = $this->conn->lastInsertId();
+        return $this->lostID;
+    }
+
+    public function update($lostID, $data = null) {
+        if ($data) $this->hydrate($data);
+        
+        $query = "UPDATE lost_items SET lostItemName = :name, status = :status WHERE lostID = :id AND userID = :uid";
+        $stmt = $this->conn->prepare($query);
+        return $stmt->execute([
+            ':name' => $this->itemName,
+            ':status' => $this->status,
+            ':id' => $lostID,
+            ':uid' => $this->userID
+        ]);
+    }
+
+    public function delete($lostID, $userID) {
+        $stmt = $this->conn->prepare("DELETE FROM lost_items WHERE lostID = :id AND userID = :uid");
+        return $stmt->execute([':id' => $lostID, ':uid' => $userID]);
+    }
+
+    public function view($lostID = null) {
+        if ($lostID) {
+            $stmt = $this->conn->prepare("SELECT * FROM lost_items WHERE lostID = :id");
+            $stmt->execute([':id' => $lostID]);
+            return $stmt->fetch();
         } else {
-            $query = "DELETE FROM " . $this->table . " WHERE lostID = :lost_id";
-            $stmt = $this->conn->prepare($query);
-            $stmt->bindParam(':lost_id', $lost_id);
+            $stmt = $this->conn->query("SELECT * FROM lost_items ORDER BY created_at DESC");
+            return $stmt->fetchAll();
         }
-        return $stmt->execute();
-    }
-
-    public function countAll() {
-        return $this->conn->query("SELECT COUNT(*) FROM " . $this->table)->fetchColumn();
-    }
-
-    public function getAdminContent() {
-        $query = "SELECT l.lostID as lost_id, l.lostItemName, l.last_seen_datetime, l.item_image, l.contact_number as contact_no, l.created_at, l.status, u.email, s.enrollmentNo as enrollment_no
-                  FROM " . $this->table . " l 
-                  JOIN Users u ON l.userID = u.userID 
-                  LEFT JOIN Student s ON u.userID = s.userID
-                  ORDER BY l.lostID DESC";
-        $stmt = $this->conn->query($query);
-        $lostItems = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        return $lostItems;
-    }
-
-    public function updateAdminStatus($id, $status) {
-        $stmt = $this->conn->prepare("UPDATE " . $this->table . " SET status = ? WHERE lostID = ?");
-        return $stmt->execute([$status, $id]);
-    }
-
-    public function getLatestItems($limit = 5) {
-        $query = "SELECT lostID as id, lostItemName as title, 'lost_item' as type, created_at FROM " . $this->table . " WHERE status NOT IN ('removed', 'hidden') ORDER BY created_at DESC LIMIT " . intval($limit);
-        $stmt = $this->conn->prepare($query);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }
-?>

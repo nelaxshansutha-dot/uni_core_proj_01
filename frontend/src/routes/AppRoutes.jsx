@@ -42,7 +42,7 @@ const AppRoutes = () => {
                     <Route path="/dashboard" element={<Dashboard />} />
                     
                     {/* Course Rep Only Route */}
-                    <Route element={<RoleBasedRoute allowedRoles={['rep']} />}>
+                    <Route element={<RoleBasedRoute allowedRoles={['course_representative', 'rep']} />}>
                         <Route path="/rep-dashboard" element={<RepDashboard />} />
                         <Route path="/notes-monitoring" element={<NotesMonitoring />} />
                     </Route>
@@ -54,6 +54,8 @@ const AppRoutes = () => {
                     <Route path="/notifications" element={<Notifications />} />
                     <Route path="/settings" element={<Settings />} />
                     
+                    <Route path="/profile" element={<Profile />} />
+
                     {/* Admin Only Route */}
                     <Route element={<RoleBasedRoute allowedRoles={['admin']} />}>
                         <Route path="/admin" element={<AdminPanel />} />

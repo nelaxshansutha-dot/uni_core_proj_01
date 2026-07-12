@@ -53,62 +53,38 @@ const Login = () => {
         }
 
         try {
-            const response = await api.post('/auth.php?action=login', {
-                enrollment_no: enrollmentNo,
-                password,
-                role: role
+            // Map frontend role value to backend role value
+            const backendRole = role === 'rep' ? 'course_representative' : role;
+
+            const response = await api.post('/auth/login', {
+                identifier: enrollmentNo,
+                password: password,
+                role: backendRole
             });
 
-            if (response.data.status === 'success') {
-                if (response.data.data.action === 'force_reset') {
-                    navigate('/change-rep-password', {
-                        state: { userId: response.data.data.user_id }
-                    });
-                    return;
-                }
+            if (response.data.success) {
+                // Merge JWT payload fields (userID, enrollmentNo etc.) into user object
+                const userData = {
+                    ...response.data.user,
+                    userID: response.data.user.userID ?? response.data.userID,
+                    enrollmentNo: response.data.user.enrollmentNo,
+                    role: response.data.user.role,
+                };
+                login(response.data.token, userData);
 
-                const { verified, user } = response.data.data;
-
-                // Optional: Validate that the logged-in user role matches the selected role
-                if (user.role !== role && user.role !== 'admin') {
-                   // Some apps allow admin to login anywhere, but let's be strict if they selected a specific role
-                   // Actually, it's better to just trust the backend role, but we can alert them if it mismatches.
-                   // Or we just proceed with whatever role the DB says they have.
-                }
-
-                if (verified) {
-                    // User is already verified — login directly, no OTP needed
-                    login(response.data.data.token, response.data.data.user);
-                    if (response.data.data.user.role === 'admin') {
-                        navigate('/admin');
-                    } else if (response.data.data.user.role === 'rep') {
-                        navigate('/rep-dashboard');
-                    } else {
-                        navigate('/dashboard');
-                    }
+                const userRole = response.data.user.role;
+                if (userRole === 'admin') {
+                    navigate('/admin');
+                } else if (userRole === 'course_representative') {
+                    navigate('/rep-dashboard');
                 } else {
-                    // First-time login — redirect to OTP verification
-                    navigate('/otp', {
-                        state: {
-                            userId: response.data.data.user_id,
-                            email: response.data.data.email
-                        }
-                    });
+                    navigate('/dashboard');
                 }
             } else {
-                setError(response.data.message);
+                setError(response.data.message || 'Invalid credentials');
             }
         } catch (err) {
-            if (err.response?.status === 403 && err.response?.data?.data?.needs_verification) {
-                navigate('/otp', {
-                    state: { 
-                        email: err.response.data.data.email, 
-                        userId: err.response.data.data.user_id 
-                    }
-                });
-            } else {
-                setError(err.response?.data?.message || 'Something went wrong. Please try again.');
-            }
+            setError(err.response?.data?.message || 'Something went wrong. Please try again.');
         } finally {
             setLoading(false);
         }

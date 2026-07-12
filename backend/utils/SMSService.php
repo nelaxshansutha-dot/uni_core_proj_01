@@ -1,6 +1,5 @@
 <?php
-require_once __DIR__ . '/../utils/Response.php';
-require_once __DIR__ . '/../config/Database.php';
+namespace Utils;
 
 class SMSService {
     public static function sendSMS($phoneNumber, $message) {
@@ -15,22 +14,14 @@ class SMSService {
             $phoneNumber = '94' . substr($phoneNumber, 1);
         }
 
-        $db = new Database();
-        $conn = $db->getConnection();
-        $stmt = $conn->prepare("SELECT api_token, api_url, sender_id FROM sms_settings LIMIT 1");
-        $stmt->execute();
-        $settings = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if (!$settings) {
-            return false;
-        }
-
-        $apiToken = $settings['api_token'];
-        $url = $settings['api_url'];
+        $apiToken = "4810|NgGYVtUHjSS98YTck7nLSlYG9NgjUiv5agw5Enje1071d5c9";
+        
+        
+        $url = "https://app.text.lk/api/v3/sms/send";
 
         $payload = [
             'recipient' => $phoneNumber,
-            'sender_id' => $settings['sender_id'], 
+            'sender_id' => 'TextLKDemo', 
             'message' => $message
         ];
 
@@ -54,4 +45,3 @@ class SMSService {
         return ($httpCode === 200 || $httpCode === 201);
     }
 }
-?>

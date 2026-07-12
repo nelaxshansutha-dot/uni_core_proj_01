@@ -15,7 +15,7 @@ const ForgotPassword = () => {
         setError('');
 
         try {
-            const response = await api.post('/auth.php?action=forgot-password', { email });
+            const response = await api.post('/auth/forgot-password', { email });
 
             if (response.data.status === 'success') {
                 navigate('/reset-password', {

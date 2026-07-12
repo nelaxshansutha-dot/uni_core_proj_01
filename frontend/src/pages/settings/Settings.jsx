@@ -98,7 +98,7 @@ const Settings = () => {
         }
 
         try {
-            const response = await api.post('/auth.php?action=update-profile', {
+            const response = await api.post('/auth/update-profile', {
                 first_name: user?.role === 'admin' ? 'Admin' : formData.first_name,
                 last_name: user?.role === 'admin' ? 'Admin' : formData.last_name,
                 email: formData.email,

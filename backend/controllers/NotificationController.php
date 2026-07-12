@@ -1,28 +1,30 @@
 <?php
-require_once __DIR__ . '/../models/Notification.php';
-require_once __DIR__ . '/../utils/Response.php';
+namespace Controllers;
+use Middleware\AuthMiddleware;
+use Config\Database;
 
-require_once __DIR__ . '/BaseController.php';
-
-class NotificationController extends BaseController {
-    
-    public function getUserNotifications($user_id) {
-        $model = new Notification();
-        $notifications = $model->getUserNotifications($user_id);
-        Response::success("Notifications retrieved", $notifications);
-    }
-
-    public function markAsRead($data, $user_id) {
-        if (!isset($data['recipient_id'])) {
-            Response::error("Missing recipient_id.");
-        }
-
-        $model = new Notification();
-        if ($model->markAsRead($data['recipient_id'], $user_id)) {
-            Response::success("Marked as read.");
-        } else {
-            Response::error("Failed to mark as read.", 500);
+class NotificationController {
+    public function getNotifications() {
+        $decoded = AuthMiddleware::authenticate(['student', 'course_representative']);
+        $enrollmentNo = $decoded->enrollmentNo;
+        
+        $db = Database::getInstance()->getConnection();
+        
+        try {
+            // Fetch notifications for this student
+            $stmt = $db->prepare("SELECT message, created_at FROM app_notification WHERE enrollmentNo = :enr ORDER BY created_at DESC LIMIT 20");
+            $stmt->execute([':enr' => $enrollmentNo]);
+            $notifications = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            
+            echo json_encode([
+                'status' => 'success',
+                'data' => $notifications
+            ]);
+        } catch (\Exception $e) {
+            echo json_encode([
+                'status' => 'error',
+                'message' => 'Failed to fetch notifications'
+            ]);
         }
     }
 }
-?>

@@ -43,8 +43,8 @@ const PeerLearning = () => {
         try {
             setLoading(true);
             const endpoint = user?.role === 'rep' 
-                ? '/peer-learning.php?action=course-requests&courseUnitID=CS101' 
-                : '/peer-learning.php?action=my-requests';
+                ? '/peer-learning-requests/course-requests?courseUnitID=CS101' 
+                : '/peer-learning-requests/my-requests';
             // Note: hardcoded CS101 for rep to simplify, ideally should fetch rep's course
             const res = await api.get(endpoint);
             if (res.data.status === 'success') {
@@ -62,7 +62,7 @@ const PeerLearning = () => {
         try {
             setLoading(true);
             // courseID is intentionally omitted — backend auto-extracts it from the user's enrollment number
-            const res = await api.get(`/courses.php?action=modules&year=${courseFilters.year}&semester=${courseFilters.semester}`);
+            const res = await api.get(`/course-units/my-modules?year=${courseFilters.year}&semester=${courseFilters.semester}`);
             if (res.data.status === 'success') {
                 setModules(res.data.data);
                 setShowSemPopup(false);
@@ -86,7 +86,7 @@ const PeerLearning = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const res = await api.post('/peer-learning.php', formData);
+            const res = await api.post('/peer-learning-requests', formData);
             if (res.data.status === 'success') {
                 setShowModal(false);
                 setFormData({ courseUnitName: '', courseUnitID: '', description: '' });
@@ -103,7 +103,7 @@ const PeerLearning = () => {
 
     const handleStatusUpdate = async (courseUnitName, courseUnitID, status) => {
         try {
-            const res = await api.put('/peer-learning.php', { courseUnitName, courseUnitID, status });
+            const res = await api.put('/peer-learning-requests', { courseUnitName, courseUnitID, status });
             if (res.data.status === 'success') {
                 fetchRequests();
             }
@@ -206,7 +206,7 @@ const PeerLearning = () => {
                                                 e.stopPropagation();
                                                 const autoSubmit = async () => {
                                                     try {
-                                                        const res = await api.post('/peer-learning.php', {
+                                                        const res = await api.post('/peer-learning-requests', {
                                                             courseUnitID: mod.courseUnitID,
                                                             courseUnitName: mod.courseUnitName,
                                                             description: 'General unit request'

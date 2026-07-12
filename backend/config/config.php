@@ -1,10 +1,16 @@
 <?php
-require_once __DIR__ . '/../vendor/autoload.php';
+namespace Config;
 
-use Dotenv\Dotenv;
+class Config {
+    public static function get($key, $default = null) {
+        $configs = [
+            'app_name' => 'UniCore App',
+            'app_env' => 'development',
+            'api_base_url' => 'http://localhost/uni_core_proj_01/backend/api',
+            'frontend_url' => 'http://localhost:5173',
+            'upload_dir' => __DIR__ . '/../../uploads/',
+        ];
 
-$dotenv = Dotenv::createImmutable(__DIR__ . '/../');
-$dotenv->load();
-
-$dotenv->required(['DB_HOST', 'DB_NAME', 'DB_USER', 'JWT_SECRET', 'SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASS']);
-?>
+        return $configs[$key] ?? $default;
+    }
+}
