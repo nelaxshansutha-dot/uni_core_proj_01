@@ -8,8 +8,8 @@ const Notifications = () => {
 
     const fetchNotifications = async () => {
         try {
-            const res = await api.get('/notifications.php');
-            if (res.data.status === 'success') {
+            const res = await api.get('/notifications/app');
+            if (res.data.success) {
                 setNotifications(res.data.data);
             }
         } catch (err) {
@@ -23,17 +23,10 @@ const Notifications = () => {
         fetchNotifications();
     }, []);
 
-    const markAsRead = async (recipient_id) => {
-        try {
-            const res = await api.put('/notifications.php', { recipient_id });
-            if (res.data.status === 'success') {
-                setNotifications(notifications.map(n => 
-                    n.recipient_id === recipient_id ? { ...n, is_read: 1 } : n
-                ));
-            }
-        } catch (err) {
-            console.error(err);
-        }
+    const markAsRead = async (appID) => {
+        // Since schema doesn't have is_read, this is a placeholder or can delete the notification
+        // For now, we will just remove it from local state to dismiss it visually.
+        setNotifications(notifications.filter(n => n.appID !== appID));
     };
 
     return (
@@ -55,26 +48,24 @@ const Notifications = () => {
                             </div>
                         ) : (
                             notifications.map(notif => (
-                                <div key={notif.recipient_id} className={`list-group-item list-group-item-action p-4 border-0 border-bottom ${notif.is_read ? 'bg-white' : 'bg-light'}`}>
+                                <div key={notif.appID} className="list-group-item list-group-item-action p-4 border-0 border-bottom bg-light">
                                     <div className="d-flex w-100 justify-content-between align-items-start">
                                         <div className="d-flex gap-3 align-items-start">
-                                            <div className={`p-2 rounded-circle ${notif.is_read ? 'bg-secondary bg-opacity-10 text-secondary' : 'bg-primary bg-opacity-10 text-primary'}`}>
+                                            <div className="p-2 rounded-circle bg-primary bg-opacity-10 text-primary">
                                                 <Bell size={20} />
                                             </div>
                                             <div>
-                                                <h6 className={`mb-1 ${notif.is_read ? 'text-muted' : 'fw-bold'}`}>{notif.title}</h6>
+                                                <h6 className="mb-1 fw-bold">Message from Rep (ID: {notif.repID})</h6>
                                                 <p className="mb-1 small text-secondary">{notif.message}</p>
                                                 <small className="text-muted">{new Date(notif.created_at).toLocaleString()}</small>
                                             </div>
                                         </div>
-                                        {!notif.is_read && (
-                                            <button 
-                                                className="btn btn-sm btn-outline-primary rounded-pill d-flex align-items-center gap-1"
-                                                onClick={() => markAsRead(notif.recipient_id)}
-                                            >
-                                                <Check size={14} /> Mark Read
-                                            </button>
-                                        )}
+                                        <button 
+                                            className="btn btn-sm btn-outline-primary rounded-pill d-flex align-items-center gap-1"
+                                            onClick={() => markAsRead(notif.appID)}
+                                        >
+                                            <Check size={14} /> Dismiss
+                                        </button>
                                     </div>
                                 </div>
                             ))

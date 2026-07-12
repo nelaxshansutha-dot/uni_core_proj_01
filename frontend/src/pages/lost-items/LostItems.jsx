@@ -32,10 +32,9 @@ const LostItems = () => {
 
     const checkPreferencePopup = async () => {
         try {
-            const res = await api.get('/profile.php');
-            if (res.data.status === 'success') {
+            const res = await api.get('/profile');
+            if (res.data.success) {
                 const profile = res.data.data;
-                // If user is registered/logged in and has_seen_lost_item_popup is 0 (false)
                 if (parseInt(profile.has_seen_lost_item_popup) === 0) {
                     setShowPrefModal(true);
                 }
@@ -48,12 +47,12 @@ const LostItems = () => {
     const handlePreferenceSelection = async (accept) => {
         try {
             const val = accept ? 1 : 0;
-            const res = await api.put('/lost-items.php', {
+            const res = await api.put('/lost-items', {
                 update_preference: true,
                 lost_item_sms_notification: val,
                 has_seen_lost_item_popup: 1
             });
-            if (res.data.status === 'success') {
+            if (res.data.success) {
                 setShowPrefModal(false);
                 if (user) {
                     login(null, { 
@@ -70,9 +69,8 @@ const LostItems = () => {
 
     const fetchItems = async () => {
         try {
-            const res = await api.get('/lost-items.php');
-
-            if (res.data.status === 'success') {
+            const res = await api.get('/lost-items');
+            if (res.data.success) {
                 setItems(res.data.data);
             }
         } catch (err) {
@@ -87,11 +85,9 @@ const [selectedItemId, setSelectedItemId] = useState(null);
 
 const handleDelete = async () => {
     try {
-        const res = await api.delete(
-            `/lost-items.php?id=${selectedItemId}`
-        );
+        const res = await api.delete(`/lost-items/${selectedItemId}`);
 
-        if (res.data.status === 'success') {
+        if (res.data.success) {
             fetchItems();
         }
 
@@ -105,7 +101,7 @@ const handleDelete = async () => {
 
     const handleEditClick = (item) => {
         setIsUpdating(true);
-        setUpdateItemId(item.lost_id);
+        setUpdateItemId(item.lostID);
         
         // Format datetime correctly if needed
         const formattedDate = item.last_seen_datetime 
@@ -150,13 +146,17 @@ const handleDelete = async () => {
         }
 
         try {
-            const res = await api.post('/lost-items.php', data, {
+            const endpoint = '/lost-items'; // always send to /lost-items for POST
+            
+            // PHP does not support parsing multipart/form-data via PUT natively. 
+            // We use POST and let the backend look for 'update_id'.
+            const res = await api.post(endpoint, data, {
                 headers: {
                     'Content-Type': 'multipart/form-data'
                 }
             });
 
-            if (res.data.status === 'success') {
+            if (res.data.success) {
                 setShowModal(false);
                 setIsUpdating(false);
                 setUpdateItemId(null);
@@ -225,7 +225,7 @@ const handleDelete = async () => {
                         </div>
                     ) : (
                         items.map((item) => (
-                            <div className="col-md-3" key={item.lost_id}>
+                            <div className="col-md-3" key={item.lostID}>
                                 <div className="card shadow-sm h-100 d-flex flex-column justify-content-between">
                                     <div>
                                         {item.item_image ? (
@@ -269,7 +269,7 @@ const handleDelete = async () => {
                                             </div>
                                         </div>
                                     </div>
-                                    {item.user_id === user?.id && (
+                                    {item.userID === user?.userID && (
                                         <div className="card-footer bg-white border-0 pt-0 pb-3 px-3 d-flex gap-2">
                                             <button
                                                 className="btn btn-primary flex-grow-1"
@@ -280,7 +280,7 @@ const handleDelete = async () => {
                                             <button
                                                 className="btn btn-danger flex-grow-1"
                                                 onClick={() => {
-                                                    setSelectedItemId(item.lost_id);
+                                                    setSelectedItemId(item.lostID);
                                                     setShowDeleteModal(true);
                                                 }}
                                             >

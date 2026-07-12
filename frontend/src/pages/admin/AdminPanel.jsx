@@ -107,23 +107,23 @@ const AdminPanel = () => {
         setLoading(true);
         try {
             if (activeTab === 'overview') {
-                const res = await api.get('/admin.php?action=dashboard');
-                if (res.data.status === 'success') {
+                const res = await api.get('/admin/dashboard');
+                if (res.data.status === 'success' || res.data.success) {
                     setStats(res.data.data);
                 }
             } else if (activeTab === 'users') {
-                const res = await api.get(`/admin.php?action=users&q=${userSearch}&role=${roleFilter}`);
-                if (res.data.status === 'success') {
+                const res = await api.get(`/admin/users?q=${userSearch}&role=${roleFilter}`);
+                if (res.data.status === 'success' || res.data.success) {
                     setUsers(res.data.data);
                 }
             } else if (activeTab === 'content') {
-                const res = await api.get('/admin.php?action=content');
-                if (res.data.status === 'success') {
+                const res = await api.get('/admin/content');
+                if (res.data.status === 'success' || res.data.success) {
                     setContent(res.data.data);
                 }
             } else if (activeTab === 'reports') {
-                const res = await api.get('/admin.php?action=reports');
-                if (res.data.status === 'success') {
+                const res = await api.get('/admin/reports');
+                if (res.data.status === 'success' || res.data.success) {
                     setReports(res.data.data);
                 }
             }
@@ -156,8 +156,8 @@ const AdminPanel = () => {
         try {
             if (editingUser) {
                 // Update User
-                const res = await api.put(`/admin.php?action=users&id=${editingUser.id}`, userForm);
-                if (res.data.status === 'success') {
+                const res = await api.put(`/admin/users?id=${editingUser.id}`, userForm);
+                if (res.data.status === 'success' || res.data.success) {
                     showFeedback('success', 'User updated successfully.');
                     setShowUserModal(false);
                     fetchTabData();
@@ -166,8 +166,8 @@ const AdminPanel = () => {
                 }
             } else {
                 // Create User
-                const res = await api.post('/admin.php?action=users', userForm);
-                if (res.data.status === 'success') {
+                const res = await api.post('/admin/users', userForm);
+                if (res.data.status === 'success' || res.data.success) {
                     showFeedback('success', 'User created successfully.');
                     setShowUserModal(false);
                     fetchTabData();
@@ -217,8 +217,8 @@ const AdminPanel = () => {
             const payload = { is_active: !currentStatus };
             if (reason) payload.reason = reason;
             
-            const res = await api.patch(`/admin.php?action=users-status&id=${userId}`, payload);
-            if (res.data.status === 'success') {
+            const res = await api.patch(`/admin/users-status?id=${userId}`, payload);
+            if (res.data.status === 'success' || res.data.success) {
                 showFeedback('success', `User successfully ${!currentStatus ? 'activated' : 'deactivated'}.`);
                 fetchTabData();
             }
@@ -256,8 +256,8 @@ const AdminPanel = () => {
         if (!repSearch) return;
         setLoading(true);
         try {
-            const res = await api.get(`/admin.php?action=search-students&q=${repSearch}`);
-            if (res.data.status === 'success') {
+            const res = await api.get(`/admin/search-students?q=${repSearch}`);
+            if (res.data.status === 'success' || res.data.success) {
                 setRepStudents(res.data.data);
             }
         } catch (err) {
@@ -276,7 +276,7 @@ const AdminPanel = () => {
             return;
         }
         try {
-            const res = await api.post('/admin.php?action=assign-rep', {
+            const res = await api.post('/admin/assign-rep', {
                 user_id: selectedStudent.id,
                 fname: repForm.fname,
                 lname: repForm.lname,
@@ -287,7 +287,7 @@ const AdminPanel = () => {
                 course: repForm.course,
                 year: repForm.year
             });
-            if (res.data.status === 'success') {
+            if (res.data.status === 'success' || res.data.success) {
                 showFeedback('success', `Successfully assigned! Credentials have been emailed to ${selectedStudent.enrollment_no}.`);
                 setSelectedStudent(null);
                 setRepStudents([]);
@@ -304,8 +304,8 @@ const AdminPanel = () => {
     const handleDemoteRep = async (student) => {
         if (!window.confirm(`Are you sure you want to demote ${student.first_name} back to a regular student?`)) return;
         try {
-            const res = await api.patch(`/admin.php?action=users-status&id=rep_${student.id}`, { is_active: false });
-            if (res.data.status === 'success') {
+            const res = await api.patch(`/admin/users-status?id=rep_${student.id}`, { is_active: false });
+            if (res.data.status === 'success' || res.data.success) {
                 showFeedback('success', `Successfully demoted ${student.first_name} to student.`);
                 setSelectedStudent(null);
                 setRepStudents([]);
@@ -320,13 +320,13 @@ const AdminPanel = () => {
     // Content Moderation
     const handleContentModeration = async (type, id, newStatus, reason = '') => {
         try {
-            const res = await api.patch('/admin.php?action=content-status', {
+            const res = await api.patch('/admin/content-status', {
                 content_type: type,
                 content_id: id,
                 status: newStatus,
                 reason: reason
             });
-            if (res.data.status === 'success') {
+            if (res.data.status === 'success' || res.data.success) {
                 showFeedback('success', `Content marked as ${newStatus}.`);
                 fetchTabData();
                 if (newStatus === 'removed') {
@@ -347,11 +347,11 @@ const AdminPanel = () => {
     // Report Operations
     const handleReportAction = async (reportId, reportStatus) => {
         try {
-            const res = await api.patch('/admin.php?action=reports-status', {
+            const res = await api.patch('/admin/reports-status', {
                 report_id: reportId,
                 status: reportStatus
             });
-            if (res.data.status === 'success') {
+            if (res.data.status === 'success' || res.data.success) {
                 showFeedback('success', `Report marked as ${reportStatus}.`);
                 fetchTabData();
             }

@@ -37,7 +37,7 @@ const ResetPassword = () => {
         setError('');
 
         try {
-            const response = await api.post('/auth.php?action=verify-reset-otp', {
+            const response = await api.post('/auth/verify-reset-otp', {
                 user_id: userId,
                 otp
             });
@@ -76,7 +76,7 @@ const ResetPassword = () => {
         }
 
         try {
-            const response = await api.post('/auth.php?action=reset-password', {
+            const response = await api.post('/auth/reset-password', {
                 user_id: userId,
                 reset_token: resetToken,
                 new_password: newPassword,

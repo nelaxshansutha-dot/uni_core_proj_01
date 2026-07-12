@@ -1,31 +1,46 @@
 <?php
-require_once __DIR__ . '/config.php';
+
+namespace Config;
+
+use PDO;
+use PDOException;
 
 class Database {
-    private $host;
-    private $db_name;
-    private $username;
-    private $password;
-    public $conn;  
+    private static $instance = null;
+    private $conn;
 
-    public function getConnection() {
-        $this->conn = null;
-        $this->host = $_ENV['DB_HOST'];
-        $this->db_name = $_ENV['DB_NAME'];
-        $this->username = $_ENV['DB_USER'];
-        $this->password = $_ENV['DB_PASS'] ?? "";
+    private $host = '127.0.0.1';
+    private $db_name = 'uni_core_proj_01'; 
+    private $username = 'root';
+    private $password = '';
+
+    private function __construct() {
+       
+        if (isset($_ENV['DB_HOST'])) $this->host = $_ENV['DB_HOST'];
+        if (isset($_ENV['DB_NAME'])) $this->db_name = $_ENV['DB_NAME'];
+        if (isset($_ENV['DB_USER'])) $this->username = $_ENV['DB_USER'];
+        if (isset($_ENV['DB_PASS'])) $this->password = $_ENV['DB_PASS'];
 
         try {
-            $this->conn = new PDO("mysql:host=" . $this->host . ";dbname=" . $this->db_name, $this->username, $this->password);
-            $this->conn->exec("set names utf8");
-
-            $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION); // exception throw
-        } catch(PDOException $exception) {
-            
-            echo "Connection error: " . $exception->getMessage();
+            $dsn = "mysql:host=" . $this->host . ";dbname=" . $this->db_name . ";charset=utf8mb4";
+            $this->conn = new PDO($dsn, $this->username, $this->password);
+            $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            $this->conn->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+        } catch(PDOException $e) {
+         
+            error_log("Connection Error: " . $e->getMessage());
+            die(json_encode(["success" => false, "message" => "Database connection failed."]));
         }
+    }
 
+    public static function getInstance() {
+        if (!self::$instance) {
+            self::$instance = new Database();
+        }
+        return self::$instance;
+    }
+
+    public function getConnection() {
         return $this->conn;
     }
 }
-?>

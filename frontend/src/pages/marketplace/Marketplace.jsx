@@ -23,12 +23,12 @@ const ImageUploader = ({ label, value, onChange }) => {
         try {
             const form = new FormData();
             form.append('image', file);
-            const res = await fetch(`${BASE_URL}/upload.php`, {
-                method: 'POST',
-                credentials: 'include',
-                body: form
+            const res = await api.post('/upload', form, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
             });
-            const json = await res.json();
+            const json = res.data;
             if (json.status === 'success') {
                 onChange(json.data.url);
             } else {
@@ -103,8 +103,8 @@ const Marketplace = () => {
     const fetchItems = async () => {
         setLoading(true);
         try {
-            const res = await api.get('/marketplace.php');
-            if (res.data.status === 'success') {
+            const res = await api.get('/marketplace');
+            if (res.data.success) {
                 setItems(res.data.data);
                 if (selectedItem) {
                     const updated = res.data.data.find(i => i.productID === selectedItem.productID);
@@ -164,17 +164,17 @@ const Marketplace = () => {
         try {
             let res;
             if (editingItem) {
-                res = await api.put('/marketplace.php', formData);
+                res = await api.put(`/marketplace/${editingItem.productID}`, formData);
             } else {
-                res = await api.post('/marketplace.php', formData);
+                res = await api.post('/marketplace', formData);
             }
-            if (res.data.status === 'success') {
+            if (res.data.success) {
                 setShowModal(false);
                 setFormData(emptyForm);
                 setEditingItem(null);
                 fetchItems();
             } else {
-                setSubmitError(res.data.message);
+                setSubmitError(res.data.message || 'Error occurred');
             }
         } catch (err) {
             setSubmitError(err.response?.data?.message || 'Failed to list item.');
@@ -186,7 +186,7 @@ const Marketplace = () => {
     const handleMarkSold = async (productID, e) => {
         if (e) e.stopPropagation();
         try {
-            await api.put('/marketplace.php', { productID, status: 'sold' });
+            await api.put(`/marketplace/${productID}`, { status: 'sold' });
             fetchItems();
         } catch (err) { console.error(err); }
     };
@@ -194,7 +194,7 @@ const Marketplace = () => {
     const handleDelete = async (productID) => {
         setDeletingId(productID);
         try {
-            await api.delete('/marketplace.php', { data: { productID } });
+            await api.delete(`/marketplace/${productID}`);
             if (selectedItem && selectedItem.productID === productID) {
                 setSelectedItem(null);
             }
@@ -236,7 +236,7 @@ const Marketplace = () => {
                     ) : (
                         items.map(item => {
                             const images = [item.image_url, item.image_url2, item.image_url3, item.image_url4].filter(Boolean);
-                            const isMine = item.userID === user?.id;
+                            const isMine = item.userID === user?.userID;
                             return (
                                 <div className="col-sm-6 col-lg-4 col-xl-3" key={item.productID} onClick={() => { setSelectedItem(item); setActiveImageIndex(0); }}>
                                     <div className="card h-100 border-0 shadow-sm overflow-hidden market-card" style={{ cursor: 'pointer' }}>
@@ -557,7 +557,7 @@ const Marketplace = () => {
                     selectedItem.image_url3,
                     selectedItem.image_url4
                 ].filter(Boolean);
-                const isMine = selectedItem.userID === user?.id;
+                const isMine = selectedItem.userID === user?.userID;
 
                 return (
                     <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.65)' }} onClick={() => setSelectedItem(null)}>

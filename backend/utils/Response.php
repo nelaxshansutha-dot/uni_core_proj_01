@@ -1,25 +1,39 @@
 <?php
+namespace Utils;
+
 class Response {
-    public static function json($status, $message, $data = null, $httpCode = 200) {
-        http_response_code($httpCode);
-        header('Content-Type: application/json; charset=utf-8');
-        
+    
+    
+    public static function success($data = null, $message = "Request successful", $statusCode = 200) {
+        http_response_code($statusCode);
         $response = [
-            'status' => $status,
-            'message' => $message,
-            'data' => $data
+            'success' => true,
+            'message' => $message
         ];
-        
+
+        if ($data !== null) {
+            $response['data'] = $data;
+        }
+
+        header('Content-Type: application/json');
         echo json_encode($response);
-        exit();
+        exit; 
     }
 
-    public static function success($message, $data = null) {
-        self::json('success', $message, $data, 200);
-    }
+ 
+    public static function error($message = "An error occurred", $statusCode = 400, $errors = null) {
+        http_response_code($statusCode);
+        $response = [
+            'success' => false,
+            'message' => $message
+        ];
 
-    public static function error($message, $httpCode = 400, $data = null) {
-        self::json('error', $message, $data, $httpCode);
+        if ($errors !== null) {
+            $response['errors'] = $errors;
+        }
+
+        header('Content-Type: application/json');
+        echo json_encode($response);
+        exit; 
     }
 }
-?>

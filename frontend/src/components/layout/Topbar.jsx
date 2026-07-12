@@ -1,12 +1,33 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
-import { LogOut, User, Menu } from 'lucide-react';
+import { LogOut, User, Menu, Bell } from 'lucide-react';
+import api from '../../services/api';
 
 const Topbar = ({ toggleSidebar }) => {
     const { user, logout } = useContext(AuthContext);
     const navigate = useNavigate();
     const [dropdownOpen, setDropdownOpen] = useState(false);
+    
+    // Notifications State
+    const [notificationsOpen, setNotificationsOpen] = useState(false);
+    const [notifications, setNotifications] = useState([]);
+
+    useEffect(() => {
+        if (user && (user.role === 'student' || user.role === 'course_representative' || user.role === 'rep')) {
+            const fetchNotifications = async () => {
+                try {
+                    const res = await api.get('/notifications');
+                    if (res.data.status === 'success') {
+                        setNotifications(res.data.data);
+                    }
+                } catch (e) {
+                    console.error("Failed to fetch notifications");
+                }
+            };
+            fetchNotifications();
+        }
+    }, [user]);
 
     const handleLogout = () => {
         logout();
@@ -15,9 +36,14 @@ const Topbar = ({ toggleSidebar }) => {
 
     const getInitials = () => {
         if (!user) return '?';
-        const first = user.first_name ? user.first_name.charAt(0) : '';
-        const last = user.last_name ? user.last_name.charAt(0) : '';
-        return (first + last).toUpperCase() || user.enrollment_no.substring(0, 2);
+        const first = (user.fname || user.first_name || '').charAt(0);
+        const last = (user.lname || user.last_name || '').charAt(0);
+        const initials = (first + last).toUpperCase();
+        
+        if (initials) return initials;
+        
+        const id = user.enrollmentNo || user.enrollment_no || user.staffID || 'U';
+        return id.substring(0, 2).toUpperCase();
     };
 
     return (
@@ -30,12 +56,64 @@ const Topbar = ({ toggleSidebar }) => {
                 >
                     <Menu size={20} />
                 </button>
-                <h5 className="m-0 text-dark fw-semibold d-none d-sm-block">Welcome back, {user?.first_name || 'User'}!</h5>
-                <h5 className="m-0 text-dark fw-semibold d-block d-sm-none">Hi, {user?.first_name || 'User'}!</h5>
+                <h5 className="m-0 text-dark fw-semibold d-none d-sm-block">Welcome back, {user?.fname || user?.first_name || 'User'}!</h5>
+                <h5 className="m-0 text-dark fw-semibold d-block d-sm-none">Hi, {user?.fname || user?.first_name || 'User'}!</h5>
             </div>
             
             <div className="d-flex align-items-center gap-3">
 
+                {/* Notifications Bell */}
+                {(user?.role === 'student' || user?.role === 'course_representative' || user?.role === 'rep') && (
+                    <div className="dropdown position-relative">
+                        <button 
+                            className="btn btn-light d-flex align-items-center justify-content-center rounded-circle border shadow-sm position-relative"
+                            type="button"
+                            onClick={() => setNotificationsOpen(!notificationsOpen)}
+                            style={{ width: '40px', height: '40px' }}
+                        >
+                            <Bell size={18} className="text-secondary" />
+                            {notifications.length > 0 && (
+                                <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style={{ fontSize: '0.65rem' }}>
+                                    {notifications.length > 9 ? '9+' : notifications.length}
+                                </span>
+                            )}
+                        </button>
+                        
+                        {notificationsOpen && (
+                            <>
+                                <div 
+                                    className="dropdown-backdrop position-fixed top-0 bottom-0 start-0 end-0 z-1" 
+                                    style={{ background: 'transparent' }}
+                                    onClick={() => setNotificationsOpen(false)}
+                                ></div>
+                                <div 
+                                    className="dropdown-menu show dropdown-menu-end shadow-lg border-0 mt-2 p-0 rounded-3 z-2 position-absolute" 
+                                    style={{ right: 0, width: '300px', overflow: 'hidden' }}
+                                >
+                                    <div className="p-3 border-bottom bg-light d-flex justify-content-between align-items-center">
+                                        <h6 className="m-0 fw-bold">Notifications</h6>
+                                        <span className="badge bg-primary rounded-pill">{notifications.length} New</span>
+                                    </div>
+                                    <div style={{ maxHeight: '350px', overflowY: 'auto' }}>
+                                        {notifications.length > 0 ? (
+                                            notifications.map((notif, index) => (
+                                                <div key={index} className="p-3 border-bottom text-wrap" style={{ fontSize: '0.85rem' }}>
+                                                    <div className="text-dark fw-medium mb-1">{notif.message}</div>
+                                                    <div className="text-muted small">{new Date(notif.created_at).toLocaleString()}</div>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="p-4 text-center text-muted">
+                                                <Bell size={30} className="mb-2 text-light" />
+                                                <p className="m-0 small">You have no new notifications.</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                )}
 
                 {/* Round Profile Icon with Dropdown */}
                 <div className="dropdown position-relative">
@@ -52,7 +130,7 @@ const Topbar = ({ toggleSidebar }) => {
                             {getInitials()}
                         </div>
                         <span className="fw-medium text-dark d-none d-md-inline" style={{ fontSize: '0.85rem' }}>
-                            {user?.first_name || 'Profile'}
+                            {user?.fname || user?.first_name || 'Profile'}
                         </span>
                     </button>
                     

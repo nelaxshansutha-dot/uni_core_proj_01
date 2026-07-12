@@ -1,74 +1,86 @@
 <?php
-require_once __DIR__ . '/BaseModel.php';
 
-class Student extends BaseModel {
+namespace Models;
 
+use PDO;
+
+class Student extends User {
     
-    protected function getTableName() {
-        return "Student";
+    protected $enrollmentNo;
+    protected $courseID;
+    protected $std_year;
+
+    public function getEnrollmentNo() { return $this->enrollmentNo; }
+    public function setEnrollmentNo($val) { $this->enrollmentNo = $val; return $this; }
+
+    public function getCourseID() { return $this->courseID; }
+    public function setCourseID($val) { $this->courseID = $val; return $this; }
+
+    public function getStdYear() { return $this->std_year; }
+    public function setStdYear($val) { $this->std_year = $val; return $this; }
+
+    public function hydrate(array $data) {
+        parent::hydrate($data);
+        $this->enrollmentNo = $data['enrollmentNo'] ?? $this->enrollmentNo;
+        $this->courseID = $data['courseID'] ?? $this->courseID;
+        $this->std_year = $data['std_year'] ?? $this->std_year;
+        return $this;
     }
 
-    
-    protected function getPrimaryKey() {
-        return "enrollmentNo";
-    }
-
-    public function __construct() {
-        parent::__construct();
-    }
-
-
-    public function create($data) {
-        $query = "INSERT INTO " . $this->table . " (enrollmentNo, userID, courseID, std_year) VALUES (:enrollmentNo, :userID, :courseID, :std_year)";
-        $stmt = $this->conn->prepare($query);
-
-        $stmt->bindParam(':enrollmentNo', $data['enrollmentNo']);
-        $stmt->bindParam(':userID', $data['userID']);
-        $course = isset($data['courseID']) ? $data['courseID'] : null;
-        $year = isset($data['std_year']) ? $data['std_year'] : null;
-        $stmt->bindParam(':courseID', $course);
-        $stmt->bindParam(':std_year', $year);
-
-        return $stmt->execute();
-    }
-    
-    public function getProfile($user_id) {
-        $query = "SELECT s.*, u.email, u.role, u.fname, u.lname, u.phoneNum FROM " . $this->table . " s JOIN Users u ON s.userID = u.userID WHERE s.userID = :userID LIMIT 1";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':userID', $user_id);
-        $stmt->execute();
-        
-        return $stmt->fetch(PDO::FETCH_ASSOC);
-    }
-
-    public static function extractCourseFromEnrollment($enrollmentNo) {
-    
-        $parts = explode('/', strtoupper(trim($enrollmentNo)));
-        if (count($parts) < 2 || empty($parts[1])) {
-            return null;
+    public function register() {
+        $ownsTransaction = false;
+        if (!$this->conn->inTransaction()) {
+            $this->conn->beginTransaction();
+            $ownsTransaction = true;
         }
-        $courseCode = $parts[1]; // e.g. "CST"
-
         try {
-            require_once __DIR__ . '/../config/Database.php';
-            $db = (new Database())->getConnection();
-            $stmt = $db->prepare("SELECT courseID FROM Course WHERE courseName LIKE ? LIMIT 1");
-            $stmt->execute(['%' . $courseCode . '%']);
-            $row = $stmt->fetch(PDO::FETCH_ASSOC);
-            return $row ? (int)$row['courseID'] : null;
-        } catch (Exception $e) {
-            return null;
+            if (!parent::register()) {
+                throw new \Exception("Failed to register user");
+            }
+            $query = "INSERT INTO student (enrollmentNo, userID, courseID, std_year) VALUES (:enr, :uid, :cid, :year)";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(':enr', $this->enrollmentNo);
+            $stmt->bindParam(':uid', $this->userID, PDO::PARAM_INT);
+            
+            if (empty($this->courseID)) {
+                $stmt->bindValue(':cid', null, PDO::PARAM_NULL);
+            } else {
+                $stmt->bindParam(':cid', $this->courseID, PDO::PARAM_INT);
+            }
+            
+            if (empty($this->std_year)) {
+                $stmt->bindValue(':year', null, PDO::PARAM_NULL);
+            } else {
+                $stmt->bindParam(':year', $this->std_year, PDO::PARAM_INT);
+            }
+            
+            $stmt->execute();
+            if ($ownsTransaction) {
+                $this->conn->commit();
+            }
+            return $this->userID;
+        } catch (\Exception $e) {
+            if ($ownsTransaction) {
+                $this->conn->rollBack();
+            }
+            throw $e;
         }
     }
 
-    public function updateAdminProfile($user_id, $enrollmentNo, $courseID, $std_year) {
-        $query = "UPDATE " . $this->table . " SET enrollmentNo = :enrollmentNo, courseID = :courseID, std_year = :std_year WHERE userID = :userID";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':enrollmentNo', $enrollmentNo);
-        $stmt->bindParam(':courseID', $courseID);
-        $stmt->bindParam(':std_year', $std_year);
-        $stmt->bindParam(':userID', $user_id);
-        return $stmt->execute();
-    }
+    // Standard Student Methods
+    public function postLostItem() {}
+    public function updateLostItem() {}
+    public function deleteLostItem() {}
+    public function viewLostItem() {}
+    
+    public function postMarketItem() {}
+    public function updateMarketItem() {}
+    public function deleteMarketItem() {}
+    public function viewMarketItem() {}
+    
+    public function uploadNotes() {}
+    public function viewNotes() {}
+    public function downloadNotes() {}
+    
+    public function requestPeerLearningSession() {}
 }
-?>

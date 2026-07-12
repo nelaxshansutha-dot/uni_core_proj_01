@@ -113,16 +113,27 @@ const Register = () => {
         }
 
         try {
-            const response = await api.post('/auth.php?action=register', formData);
-            if (response.data.status === 'success') {
+            const payload = {
+                enrollmentNo: formData.enrollment_no,
+                email: formData.email,
+                phoneNum: formData.phone_number,
+                password: formData.password,
+                role: formData.role,
+                fname: formData.first_name,
+                lname: formData.last_name
+            };
+
+            const response = await api.post('/auth/register', payload);
+            if (response.data.success) {
                 navigate('/otp', {
                     state: {
-                        userId: response.data.data.user_id,
-                        email: response.data.data.email
+                        email: formData.email,
+                        userId: response.data.userID,
+                        otpDebug: response.data.otp_debug ?? null  // shown on screen if email fails
                     }
                 });
             } else {
-                setError(response.data.message);
+                setError(response.data.message || 'Registration failed.');
             }
         } catch (err) {
             setError(err.response?.data?.message || 'Registration failed. Please try again.');

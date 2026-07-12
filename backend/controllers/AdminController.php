@@ -1,284 +1,245 @@
 <?php
-require_once __DIR__ . '/../models/User.php';
-require_once __DIR__ . '/../models/Student.php';
-require_once __DIR__ . '/../models/Staff.php';
-require_once __DIR__ . '/../models/CourseRep.php';
-require_once __DIR__ . '/../models/LostItem.php';
-require_once __DIR__ . '/../models/Marketplace.php';
-require_once __DIR__ . '/../utils/Response.php';
-require_once __DIR__ . '/../utils/Validator.php';
-require_once __DIR__ . '/../utils/MailService.php';
+namespace Controllers;
+use Models\UserFactory;
+use Middleware\AuthMiddleware;
 
-require_once __DIR__ . '/BaseController.php';
-
-class AdminController extends BaseController {
-
-    public function getDashboardStats() {
-        $userModel = new User();
-        $lostItemModel = new LostItem();
-        $marketplaceModel = new Marketplace();
-
-        $stats = [
-            'totalUsers' => (int)$userModel->countAll(),
-            'activeUsers' => (int)$userModel->countVerified(),
-            'totalReps' => (int)$userModel->countReps(),
-            'lostCount' => (int)$lostItemModel->countAll(),
-            'marketCount' => (int)$marketplaceModel->countAll(),
-            'notesCount' => 0
-        ];
+class AdminController {
+    public function handleUsers($method, $id = null) {
+        $decoded = AuthMiddleware::authenticate(['admin']);
+        $admin = UserFactory::create('admin');
+        $db = \Config\Database::getInstance()->getConnection();
         
-        $stats['hidden_posts'] = 0;
-        $stats['recent_logs'] = [];
-        $stats['active_posts'] = $stats['lostCount'] + $stats['marketCount'] + $stats['notesCount'];
-        $stats['total_posts'] = $stats['active_posts'];
-        $stats['deactivated_users'] = $stats['totalUsers'] - $stats['activeUsers'];
+        if ($method === 'GET') {
+            $q = $_GET['q'] ?? '';
+            $role = $_GET['role'] ?? 'all';
+            if ($role === '') $role = 'all'; // Fix empty string from frontend filter
+            
+            // Map frontend role 'rep' to backend 'course_representative'
+            if ($role === 'rep') $role = 'course_representative';
+            
+            $sql = "SELECT 
+                        u.userID as id, 
+                        u.fname as first_name, 
+                        u.lname as last_name, 
+                        u.email, 
+                        u.role, 
+                        u.is_active,
+                        s.enrollmentNo as enrollment_no,
+                        st.staffID as staff_id
+                    FROM users u
+                    LEFT JOIN student s ON u.userID = s.userID
+                    LEFT JOIN staff st ON u.userID = st.userID
+                    WHERE 1=1";
+            $params = [];
+            
+            if ($role !== 'all') {
+                $sql .= " AND u.role = :role";
+                $params[':role'] = $role;
+            }
+            if (!empty($q)) {
+                $sql .= " AND (u.fname LIKE :q OR u.lname LIKE :q OR u.email LIKE :q)";
+                $params[':q'] = "%$q%";
+            }
+            
+            $stmt = $db->prepare($sql);
+            $stmt->execute($params);
+            $users = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            
+            // Map course_representative back to rep for frontend
+            foreach ($users as &$u) {
+                if ($u['role'] === 'course_representative') {
+                    $u['role'] = 'rep';
+                }
+            }
+            
+            file_put_contents('admin_users_debug.txt', json_encode(['role' => $role, 'q' => $q, 'users' => $users]));
+            
+            echo json_encode(['success' => true, 'data' => $users]);
+            return;
+        }
+    }
+        
+    public function createUser() {
+        AuthMiddleware::authenticate(['admin']);
+        $data = json_decode(file_get_contents("php://input"), true);
+        if (!$data || !isset($data['email'])) {
+            echo json_encode(['success' => false, 'message' => 'Invalid payload']);
+            return;
+        }
 
-        Response::success("Stats retrieved", [
-            'total_users' => $stats['totalUsers'],
-            'active_users' => $stats['activeUsers'],
-            'deactivated_users' => $stats['deactivated_users'],
-            'total_reps' => $stats['totalReps'],
-            'total_posts' => $stats['total_posts'],
-            'active_posts' => $stats['active_posts'],
-            'hidden_posts' => $stats['hidden_posts'],
-            'recent_logs' => $stats['recent_logs']
+        $role = $data['role'] ?? 'student';
+        $data['hash_password'] = password_hash($data['password'], PASSWORD_BCRYPT);
+        
+        // Map frontend fields to backend model fields
+        $data['fname'] = $data['first_name'];
+        $data['lname'] = $data['last_name'];
+        $data['phoneNum'] = $data['phone_number'];
+        $data['enrollmentNo'] = $data['enrollment_no']; // Student specific
+        $data['courseID'] = isset($data['course']) && !empty($data['course']) ? $data['course'] : 1; // Default to 1 if empty
+        $data['std_year'] = isset($data['year']) && !empty($data['year']) ? $data['year'] : 1;
+        
+        try {
+            $user = UserFactory::create($role, $data);
+            $userID = $user->register();
+            
+            // Auto verify admin created users
+            $db = \Config\Database::getInstance()->getConnection();
+            $db->prepare("UPDATE users SET is_verified = 1 WHERE userID = ?")->execute([$userID]);
+            
+            echo json_encode(['success' => true, 'message' => 'User created successfully']);
+        } catch (\Exception $e) {
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        }
+    }
+
+    public function updateUser($id) {
+        AuthMiddleware::authenticate(['admin']);
+        $data = json_decode(file_get_contents("php://input"), true);
+        $db = \Config\Database::getInstance()->getConnection();
+        
+        $sql = "UPDATE users SET fname = :fname, lname = :lname, phoneNum = :phone, email = :email WHERE userID = :uid";
+        $stmt = $db->prepare($sql);
+        $success = $stmt->execute([
+            ':fname' => $data['first_name'],
+            ':lname' => $data['last_name'],
+            ':phone' => $data['phone_number'],
+            ':email' => $data['email'],
+            ':uid' => $id
         ]);
-    }
-
-    public function getUsers($query = '', $role = '') {
-        $userModel = new User();
-        $allUsers = $userModel->getAllWithDetails($query, $role);
-        Response::success("Users retrieved", $allUsers);
-    }
-
-    public function createUser($data, $adminId) {
-        Validator::validateRequired(['enrollment_no', 'email', 'password', 'role', 'first_name', 'last_name'], $data);
-
-        if (!Validator::validateName($data['first_name']) || !Validator::validateName($data['last_name'])) {
-            Response::error("First name and last name must contain only letters and spaces.");
-        }
-
-        $userModel = new User();
-        if ($userModel->findByEnrollment($data['enrollment_no']) || $userModel->findByEmail($data['email'])) {
-            Response::error("Enrollment number or email is already registered.");
-        }
-
-        $userData = [
-            'fname' => $data['first_name'],
-            'lname' => $data['last_name'],
-            'email' => $data['email'],
-            'phoneNum' => null,
-            'hash_password' => password_hash($data['password'], PASSWORD_BCRYPT),
-            'role' => $data['role']
-        ];
-
-        $user_id = $userModel->create($userData);
-
-        if ($user_id) {
-            $userModel->markAsVerified($user_id);
-
-            if ($data['role'] === 'student' || $data['role'] === 'rep') {
-                $studentModel = new Student();
-                $courseID = !empty($data['course']) ? $data['course'] : Student::extractCourseFromEnrollment($data['enrollment_no']);
-                
-                $studentModel->create([
-                    'userID' => $user_id,
-                    'enrollmentNo' => $data['enrollment_no'],
-                    'courseID' => $courseID,
-                    'std_year' => !empty($data['year']) ? $data['year'] : null
-                ]);
-            } else if ($data['role'] === 'staff') {
-                $staffModel = new Staff();
-                $staffModel->create([
-                    'userID' => $user_id,
-                    'staffID' => $data['enrollment_no'] ?? null
-                ]);
-            }
-            Response::success("User created successfully.");
-        } else {
-            Response::error("Failed to create user.", 500);
-        }
-    }
-
-    public function updateUser($id, $data, $adminId) {
-        Validator::validateRequired(['email', 'first_name', 'last_name'], $data);
-
-        if (!Validator::validateName($data['first_name']) || !Validator::validateName($data['last_name'])) {
-            Response::error("First name and last name must contain only letters and spaces.");
-        }
-
-        // Handle rep_ prefix if they edit the rep row
-        $isRepRow = strpos((string)$id, 'rep_') === 0;
-        $realId = $isRepRow ? (int)str_replace('rep_', '', $id) : (int)$id;
-
-        $userModel = new User();
-        $role = $userModel->getRole($realId);
-        if (!$role) {
-            Response::error("User not found", 404);
-        }
-
-        $db = (new Database())->getConnection();
-        $db->beginTransaction();
-
-        try {
-            // 1. Update Core User Info
-            $userModel->updateProfile($realId, $data);
-
-            // 2. Update Role-Specific Info
-            if ($role === User::ROLE_STAFF) {
-                $staffModel = new Staff();
-                $staffModel->updateAdminProfile($realId);
-            } else if ($role === User::ROLE_STUDENT || $role === User::ROLE_REP) {
-                require_once __DIR__ . '/../models/Student.php';
-                $studentModel = new Student();
-                
-                $enrollmentNo = isset($data['enrollment_no']) ? $data['enrollment_no'] : null;
-                $courseID = isset($data['course']) ? $data['course'] : null;
-                $std_year = isset($data['year']) ? $data['year'] : null;
-                
-                $studentModel->updateAdminProfile($realId, $enrollmentNo, $courseID, $std_year);
-            }
-
-            $db->commit();
-            Response::success("User updated successfully.");
-        } catch (Exception $e) {
-            $db->rollBack();
-            Response::error("Failed to update user: " . $e->getMessage(), 500);
-        }
-    }
-
-    public function toggleUserStatus($id, $data, $adminId) {
-        if (!isset($data['is_active'])) {
-            Response::error('Missing is_active flag');
-        }
-        $isActive = $data['is_active'] ? 1 : 0;
-        $userModel = new User();
-        $realId = (int)str_replace('rep_', '', $id);
-        if (strpos((string)$id, 'rep_') === 0) {
-            $courseRepModel = new CourseRep();
-            $courseRepModel->toggleStatus($realId, $isActive);
-        } else {
-            $userModel->toggleStatus($realId, $isActive);
-        }
-        if ($isActive === 0 && !empty($data['reason'])) {
-            $user = $userModel->findById($realId);
-            if ($user && !empty($user['email'])) {
-                MailService::sendDeactivationEmail($user['email'], $data['reason']);
-            }
-        }
-        Response::success('User status updated successfully.');
-    }
-
-    public function searchStudents($query) {
-        $userModel = new User();
-        $students = $userModel->searchStudents($query);
-        Response::success('Students found', $students);
-    }
-
-    public function assignRep($data, $adminId) {
-        Validator::validateRequired(['user_id', 'fname', 'lname', 'email', 'rep_id', 'password'], $data);
-
-        if (!Validator::validateName($data['fname']) || !Validator::validateName($data['lname'])) {
-            Response::error("First name and last name must contain only letters and spaces.");
-        }
-
-        $userModel = new User();
         
-        $student = $userModel->getStudentDetails($data['user_id']);
-
-        if (!$student) {
-            Response::error("Student not found.");
-        }
-
-        try {
-            $courseRepModel = new CourseRep();
-            $courseRepModel->assignRep($data, $student);
-
-            // Generate PDF
-            // Send Email via MailService
-            MailService::sendRepCredentialEmail($data['email'], $data['fname'], $data['lname'], $data['rep_id'], $data['password']);
-
-            Response::success("Successfully assigned student as Course Representative and sent credential email.");
-        } catch (Throwable $e) {
-            file_put_contents(__DIR__ . '/../admin_log.txt', "AssignRep Exception: " . $e->getMessage() . "\n", FILE_APPEND);
-            Response::error("Failed to assign Rep: " . $e->getMessage(), 500);
-        }
+        if ($success) echo json_encode(['success' => true]);
+        else echo json_encode(['success' => false, 'message' => 'Failed to update user']);
     }
 
-    public function getContent($type = '') {
+    public function toggleUserStatus($id) {
+        AuthMiddleware::authenticate(['admin']);
+        $data = json_decode(file_get_contents("php://input"), true);
+        
+        // Allow un-assigning reps
+        if (strpos($id, 'rep_') === 0) {
+            $uid = str_replace('rep_', '', $id);
+            $db = \Config\Database::getInstance()->getConnection();
+            $db->prepare("UPDATE users SET role = 'student' WHERE userID = ?")->execute([$uid]);
+            $db->prepare("DELETE FROM course_representative WHERE userID = ?")->execute([$uid]);
+            echo json_encode(['success' => true]);
+            return;
+        }
+
+        $isActive = isset($data['is_active']) && $data['is_active'] ? 1 : 0;
+        $db = \Config\Database::getInstance()->getConnection();
+        $stmt = $db->prepare("UPDATE users SET is_active = :status WHERE userID = :uid");
+        $success = $stmt->execute([':status' => $isActive, ':uid' => $id]);
+        
+        echo json_encode(['success' => $success]);
+    }
+    
+    public function searchStudents() {
+        AuthMiddleware::authenticate(['admin']);
+        $q = $_GET['q'] ?? '';
+        $db = \Config\Database::getInstance()->getConnection();
+        
+        $sql = "SELECT u.userID as id, u.fname as first_name, u.lname as last_name, u.email, s.enrollmentNo as enrollment_no, s.courseID as course_id
+                FROM users u 
+                JOIN student s ON u.userID = s.userID 
+                WHERE u.role = 'student' AND (s.enrollmentNo LIKE :q OR u.fname LIKE :q OR u.email LIKE :q)";
+        
+        $stmt = $db->prepare($sql);
+        $stmt->execute([':q' => "%$q%"]);
+        $students = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        
+        echo json_encode(['success' => true, 'data' => $students]);
+    }
+
+    public function assignCourseRep() {
+        AuthMiddleware::authenticate(['admin']);
+        $data = json_decode(file_get_contents("php://input"), true);
+        $db = \Config\Database::getInstance()->getConnection();
+        
+        try {
+            $db->beginTransaction();
+            // Update role to course_representative
+            $db->prepare("UPDATE users SET role = 'course_representative' WHERE userID = ?")->execute([$data['user_id']]);
+            
+            // Insert into course_representative
+            $sql = "INSERT INTO course_representative (userID, enrollmentNo, courseID, rep_id_string) 
+                    VALUES (?, ?, ?, ?)";
+            // Mock courseID = 1 if missing for now
+            $db->prepare($sql)->execute([
+                $data['user_id'], 
+                $data['email'], // Using email as temp enrollment string fallback if no enrollment table
+                1, 
+                $data['rep_id']
+            ]);
+            
+            $db->commit();
+            echo json_encode(['success' => true]);
+        } catch (\Exception $e) {
+            $db->rollBack();
+            echo json_encode(['success' => false, 'message' => 'Failed to assign rep: ' . $e->getMessage()]);
+        }
+    }
+    
+    public function moderateContent() {
+        AuthMiddleware::authenticate(['admin']);
+        $data = json_decode(file_get_contents("php://input"), true);
+        $db = \Config\Database::getInstance()->getConnection();
+        
+        // This is a minimal mock for content moderation since table structure is variable.
+        if ($data['content_type'] === 'Lost Item') {
+            if ($data['status'] === 'removed') {
+                $db->prepare("DELETE FROM lost_items WHERE lostID = ?")->execute([$data['content_id']]);
+            }
+        }
+        
+        echo json_encode(['success' => true]);
+    }
+
+    public function moderateReport() {
+        AuthMiddleware::authenticate(['admin']);
+        echo json_encode(['success' => true]);
+    }
+    public function getDashboardStats() {
+        AuthMiddleware::authenticate(['admin']);
+        $db = \Config\Database::getInstance()->getConnection();
+        
+        $stats = [
+            'total_users' => $db->query("SELECT COUNT(*) FROM users")->fetchColumn(),
+            'active_users' => $db->query("SELECT COUNT(*) FROM users WHERE is_active = 1")->fetchColumn(),
+            'total_reps' => $db->query("SELECT COUNT(*) FROM users WHERE role = 'course_representative'")->fetchColumn(),
+            'total_posts' => $db->query("SELECT (SELECT COUNT(*) FROM lost_items) + (SELECT COUNT(*) FROM notes) + (SELECT COUNT(*) FROM marketplace)")->fetchColumn(),
+            'hidden_posts' => 0, // Mock for now
+            'recent_logs' => [] // Mock empty array so frontend map doesn't crash
+        ];
+        
+        echo json_encode(['success' => true, 'data' => $stats]);
+    }
+    
+    public function getContent() {
+        AuthMiddleware::authenticate(['admin']);
+        $db = \Config\Database::getInstance()->getConnection();
+        
         $content = [
             'lost_items' => [],
             'marketplace' => [],
             'notes' => []
         ];
-
-        if (empty($type) || $type === 'lost_item') {
-            $content['lost_items'] = (new LostItem())->getAdminContent();
-        }
-        if (empty($type) || $type === 'marketplace') {
-            $content['marketplace'] = (new Marketplace())->getAdminContent();
-        }
-
-        Response::success("Content retrieved", $content);
-    }
-
-    public function updateContentStatus($data, $adminId) {
-        if (!isset($data['content_type']) || !isset($data['content_id']) || !isset($data['status'])) {
-            Response::error("Missing required fields.", 400);
-        }
-
-        $type = $data['content_type'];
-        $id = (int)$data['content_id'];
-        $status = $data['status'];
         
-        try {
-            $db = (new Database())->getConnection();
-            $userEmail = '';
-            $itemTitle = '';
-            
-            if ($type === 'lost_item') {
-                $stmt = $db->prepare("SELECT u.email, l.lostItemName as item_name FROM lost_items l JOIN users u ON l.userID = u.userID WHERE l.lostID = ?");
-                $stmt->execute([$id]);
-                $res = $stmt->fetch(PDO::FETCH_ASSOC);
-                if ($res) { $userEmail = $res['email']; $itemTitle = $res['item_name']; }
-                
-                (new LostItem())->updateAdminStatus($id, $status);
-            } else if ($type === 'marketplace') {
-                $stmt = $db->prepare("SELECT u.email, m.productName as product_name FROM marketplace m JOIN users u ON m.userID = u.userID WHERE m.productID = ?");
-                $stmt->execute([$id]);
-                $res = $stmt->fetch(PDO::FETCH_ASSOC);
-                if ($res) { $userEmail = $res['email']; $itemTitle = $res['product_name']; }
-                
-                (new Marketplace())->updateAdminStatus($id, $status);
-            } else if ($type === 'notes') {
-                $stmt = $db->prepare("SELECT u.email, n.title FROM notes n JOIN student s ON n.enrollmentNo = s.enrollmentNo JOIN users u ON s.userID = u.userID WHERE n.noteID = ?");
-                $stmt->execute([$id]);
-                $res = $stmt->fetch(PDO::FETCH_ASSOC);
-                if ($res) { $userEmail = $res['email']; $itemTitle = $res['title']; }
-                
-                $updateStmt = $db->prepare("UPDATE notes SET status = ? WHERE noteID = ?");
-                $updateStmt->execute([$status, $id]);
-            } else {
-                Response::error("Invalid content type.");
-            }
-
-            if ($status === 'removed' && !empty($userEmail) && isset($data['reason'])) {
-                require_once __DIR__ . '/../utils/MailService.php';
-                MailService::sendContentDeletionEmail($userEmail, $type, $itemTitle, $data['reason']);
-            }
-
-            Response::success("Content status updated successfully.");
-        } catch (Exception $e) {
-            Response::error("Failed to update content status: " . $e->getMessage(), 500);
+        $stmt = $db->query("SELECT l.lostID as lost_id, l.lostItemName, u.email, l.created_at, l.status 
+                            FROM lost_items l 
+                            JOIN users u ON l.userID = u.userID 
+                            ORDER BY l.created_at DESC LIMIT 50");
+        $items = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        foreach ($items as $item) {
+            $item['status'] = $item['status'] ?: 'active';
+            $content['lost_items'][] = $item;
         }
+        
+        echo json_encode(['success' => true, 'data' => $content]);
     }
-
+    
     public function getReports() {
-        Response::success("Reports retrieved", []);
-    }
-
-    public function updateReportStatus($data, $adminId) {
-        Response::success("Report status updated successfully.");
+        AuthMiddleware::authenticate(['admin']);
+        // Mock reports
+        echo json_encode(['success' => true, 'data' => []]);
     }
 }
-?>

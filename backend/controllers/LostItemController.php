@@ -1,168 +1,93 @@
-
 <?php
-require_once __DIR__ . '/../models/LostItem.php';
-require_once __DIR__ . '/../utils/Response.php';
-require_once __DIR__ . '/../utils/Validator.php';
-require_once __DIR__ . '/../utils/SMSService.php';
+namespace Controllers;
+use Models\LostItem;
+use Middleware\AuthMiddleware;
+use PDO;
 
-require_once __DIR__ . '/BaseController.php';
-
-class LostItemController extends BaseController {
-
-    public function getItems() {
+class LostItemController {
+    public function handleRequest($method, $id = null) {
+        $decoded = AuthMiddleware::authenticate();
         $model = new LostItem();
-        $items = $model->getAll();
-        Response::success("Lost and found items retrieved", $items);
-    }
 
-    public function createItem($data, $file, $user_id) {
-
-        Validator::validateRequired([
-            'lostItemName',
-            'description',
-            'last_seen_datetime',
-            'last_seen_place',
-            'contact_number'
-        ], $data);
-
-        if (!preg_match('/^[0-9]+$/', $data['contact_number'])) {
-            Response::error("Contact number must contain only numbers.");
-            return;
-        }
-
-        if (strtotime($data['last_seen_datetime']) > time()) {
-            Response::error("Last seen date cannot be in the future.");
-            return;
-        }
-
-        
-        $imagePath = null;
-
-        if ($file && isset($file['error']) && $file['error'] === 0) {
-
-            $uploadDir = __DIR__ . "/../uploads/lost_items/";
-
-            if (!file_exists($uploadDir)) {
-                mkdir($uploadDir, 0777, true);
+        if ($method === 'GET') {
+            echo json_encode(['success' => true, 'data' => $model->view($id)]);
+        } elseif ($method === 'POST') {
+            
+            $data = $_POST;
+            $data['userID'] = $decoded->userID;
+            
+       
+            if (isset($_FILES['item_image']) && $_FILES['item_image']['error'] === UPLOAD_ERR_OK) {
+                $uploadDir = __DIR__ . '/../uploads/lost_items/';
+                if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
+                
+                $fileName = time() . '_' . basename($_FILES['item_image']['name']);
+                $targetFile = $uploadDir . $fileName;
+                
+                if (move_uploaded_file($_FILES['item_image']['tmp_name'], $targetFile)) {
+                    $data['item_image'] = 'uploads/lost_items/' . $fileName;
+                }
             }
-
-            $fileName = time() . "_" . basename($file['name']);
-            $targetFile = $uploadDir . $fileName;
-
-            move_uploaded_file($file['tmp_name'], $targetFile);
-
-            $imagePath = "uploads/lost_items/" . $fileName;
-        }
-
-        
-        $itemData = [
-            'user_id' => $user_id,
-            'lostItemName' => $data['lostItemName'],
-            'description' => $data['description'],
-            'last_seen_datetime' => $data['last_seen_datetime'],
-            'last_seen_place' => $data['last_seen_place'],
-            'contact_number' => $data['contact_number'],
-            'item_image' => $imagePath
-        ];
-
-        $model = new LostItem();
-
-    
-        if ($model->create($itemData)) {
-            // Trigger SMS notifications to ALL registered users who have a phone number
-            try {
-                $db = (new Database())->getConnection();
-                $stmt = $db->prepare("SELECT phoneNum FROM Users WHERE phoneNum IS NOT NULL AND phoneNum != '' AND lost_item_sms_notification = 1");
-                $stmt->execute();
-                $allUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-                if (!empty($allUsers)) {
-                    $smsMessage = "UniCore Alert: A new lost item '" . $data['lostItemName'] . "' has been reported at " . $data['last_seen_place'] . ". Contact: " . $data['contact_number'];
-                    foreach ($allUsers as $user) {
-                        SMSService::sendSMS($user['phoneNum'], $smsMessage);
+            
+            
+            if (isset($data['update_id'])) {
+                $success = $model->update($data['update_id'], $data);
+                echo json_encode(['success' => $success]);
+            } else {
+                $lostID = $model->create($data);
+                
+                // Trigger SMS Broadcast if requested
+                if (isset($data['send_sms_alert']) && ($data['send_sms_alert'] === 'true' || $data['send_sms_alert'] === true || $data['send_sms_alert'] === '1')) {
+                    try {
+                        $db = \Config\Database::getInstance()->getConnection();
+                        // Query users who have opted in (assuming lost_item_sms_notification = 1) and have a valid contactNumber
+                        $stmt = $db->query("SELECT contactNumber FROM users WHERE contactNumber IS NOT NULL AND contactNumber != '' AND lost_item_sms_notification = 1");
+                        $users = $stmt->fetchAll(PDO::FETCH_COLUMN);
+                        
+                        $itemName = $data['lostItemName'] ?? 'An item';
+                        $message = "A new lost item was just reported: $itemName. Check the UniCore portal for details!";
+                        
+                        foreach ($users as $phone) {
+                            \Utils\SMSService::sendSMS($phone, $message);
+                        }
+                    } catch (\Exception $e) {
+                        error_log("[UniCore SMS] Broadcast failed: " . $e->getMessage());
                     }
                 }
-            } catch (Exception $e) {
-                // Fail silently so item reporting completes even if SMS gateway encounters issues
+                
+                echo json_encode(['success' => true, 'lostID' => $lostID]);
             }
-
-            Response::success("Item reported successfully.");
-        } else {
-            Response::error("Failed to report the item.", 500);
-        }
-    }
-
-
-    public function updateItem($data, $file, $user_id) {
-        Validator::validateRequired([
-            'update_id',
-            'lostItemName',
-            'description',
-            'last_seen_datetime',
-            'last_seen_place',
-            'contact_number'
-        ], $data);
-
-        if (!preg_match('/^[0-9]+$/', $data['contact_number'])) {
-            Response::error("Contact number must contain only numbers.");
-            return;
-        }
-
-        if (strtotime($data['last_seen_datetime']) > time()) {
-            Response::error("Last seen date cannot be in the future.");
-            return;
-        }
-
-        
-        $imagePath = null;
-
-        if ($file && isset($file['error']) && $file['error'] === 0) {
-            $uploadDir = __DIR__ . "/../uploads/lost_items/";
-
-            if (!file_exists($uploadDir)) {
-                mkdir($uploadDir, 0777, true);
+            
+        } elseif ($method === 'PUT') {
+            $data = json_decode(file_get_contents("php://input"), true);
+            if (!$data) $data = $_POST; // Fallback
+            
+            // Handle User SMS Preference update
+            if (isset($data['update_preference'])) {
+                $db = \Config\Database::getInstance()->getConnection();
+                
+                // Ensure columns exist (creates them if they don't, to prevent DB errors during demo)
+                try {
+                    $db->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS lost_item_sms_notification TINYINT(1) DEFAULT 0");
+                    $db->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS has_seen_lost_item_popup TINYINT(1) DEFAULT 0");
+                } catch (\Exception $e) {}
+                
+                $stmt = $db->prepare("UPDATE users SET lost_item_sms_notification = :sms, has_seen_lost_item_popup = :popup WHERE userID = :uid");
+                $success = $stmt->execute([
+                    ':sms' => $data['lost_item_sms_notification'] ?? 0,
+                    ':popup' => $data['has_seen_lost_item_popup'] ?? 1,
+                    ':uid' => $decoded->userID
+                ]);
+                echo json_encode(['success' => $success]);
+                return;
             }
-
-            $fileName = time() . "_" . basename($file['name']);
-            $targetFile = $uploadDir . $fileName;
-
-            move_uploaded_file($file['tmp_name'], $targetFile);
-
-            $imagePath = "uploads/lost_items/" . $fileName;
-        }
-
-
-        $itemData = [
-            'lost_id' => $data['update_id'],
-            'user_id' => $user_id,
-            'lostItemName' => $data['lostItemName'],
-            'description' => $data['description'],
-            'last_seen_datetime' => $data['last_seen_datetime'],
-            'last_seen_place' => $data['last_seen_place'],
-            'contact_number' => $data['contact_number'],
-            'item_image' => $imagePath
-        ];
-
-        $model = new LostItem();
-
-        
-        if ($model->update($itemData)) {
-            Response::success("Item updated successfully.");
-        } else {
-            Response::error("Failed to update the item.", 500);
-        }
-    }
-
-    public function deleteItem($itemId, $userId) {
-
-        $model = new LostItem();
-        if ($model->delete($itemId, $userId)) {
-            Response::success("Item deleted successfully.");
-        } else {
-            Response::error("Failed to delete the item. You may not be authorized.", 403);
+            
+            $success = $model->update($id, $data);
+            echo json_encode(['success' => $success]);
+            
+        } elseif ($method === 'DELETE') {
+            $success = $model->delete($id, $decoded->userID);
+            echo json_encode(['success' => $success]);
         }
     }
 }
-?>
-
-

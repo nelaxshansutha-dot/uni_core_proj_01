@@ -1,56 +1,45 @@
 <?php
-require_once __DIR__ . '/../models/Course.php';
-require_once __DIR__ . '/../utils/Response.php';
-require_once __DIR__ . '/../config/Database.php';
+namespace Controllers;
+use Models\Course;
+use Models\CourseUnit;
+use Middleware\AuthMiddleware;
 
-require_once __DIR__ . '/BaseController.php';
+class CourseController {
+    public function handleCourses($method) {
+        $decoded = AuthMiddleware::authenticate();
+        // Return courses logic (skeleton for now)
+        echo json_encode(['success' => true, 'data' => []]);
+    }
 
-class CourseController extends BaseController {
-    public function getModules($courseID, $year, $semester, $userID) {
-        if (empty($year) || empty($semester)) {
-            Response::error("Missing year or semester.");
-        }
+    public function handleCourseUnits($method, $action) {
+        $decoded = AuthMiddleware::authenticate();
         
-       
-        if ($userID) {
-            $db = (new Database())->getConnection();
-            $stmt = $db->prepare("SELECT courseID, std_year, enrollmentNo FROM Student WHERE userID = ?");
-            $stmt->execute([$userID]);
-            $studentRow = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            if ($studentRow) {
-                $courseID = $studentRow['courseID'];
-
-              
-                if (empty($courseID) && !empty($studentRow['enrollmentNo'])) {
-                    $parts = explode('/', strtoupper(trim($studentRow['enrollmentNo'])));
-                    if (count($parts) >= 2 && !empty($parts[1])) {
-                        $code = $parts[1]; // e.g. "CST"
-                        $stmt2 = $db->prepare("SELECT courseID FROM Course WHERE courseName LIKE ? LIMIT 1");
-                        $stmt2->execute(['%' . $code . '%']);
-                        $courseRow = $stmt2->fetch(PDO::FETCH_ASSOC);
-                        if ($courseRow) {
-                            $courseID = (int)$courseRow['courseID'];
-                            // Update the student record so future lookups are fast
-                            $db->prepare("UPDATE Student SET courseID = ? WHERE userID = ?")->execute([$courseID, $userID]);
-                        }
-                    }
-                }
-
-          
-                if (empty($year) && !empty($studentRow['std_year'])) {
-                    $year = $studentRow['std_year'];
-                }
+        if ($method === 'GET' && $action === 'my-modules') {
+            $year = $_GET['year'] ?? '';
+            $semester = $_GET['semester'] ?? '';
+            $userID = $decoded->userID;
+            
+            $db = \Config\Database::getInstance()->getConnection();
+            
+            // Extract the user's course ID automatically
+            $stmt = $db->prepare("SELECT courseID FROM student WHERE userID = :uid");
+            $stmt->execute([':uid' => $userID]);
+            $courseID = $stmt->fetchColumn();
+            
+            if (!$courseID) {
+                echo json_encode(['status' => 'error', 'message' => 'No course associated with this user.']);
+                return;
             }
+            
+            // Fetch relevant modules for their course, year, and semester
+            $stmt = $db->prepare("SELECT courseUnitID, courseUniName AS courseUnitName FROM course_units WHERE courseID = :cid AND academicYear = :year AND semester = :sem");
+            $stmt->execute([':cid' => $courseID, ':year' => $year, ':sem' => $semester]);
+            $modules = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            
+            echo json_encode(['status' => 'success', 'data' => $modules]);
+            return;
         }
 
-        if (empty($courseID)) {
-            Response::error("Could not determine your course. Please update your profile with your course details.");
-        }
-
-        $model = new Course();
-        $modules = $model->getModulesByCourseYearSemester($courseID, $year, $semester);
-        Response::success("Modules retrieved successfully", $modules);
+        echo json_encode(['success' => true, 'data' => []]);
     }
 }
-?>

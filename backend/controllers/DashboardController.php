@@ -1,59 +1,54 @@
 <?php
-require_once __DIR__ . '/../config/Database.php';
-require_once __DIR__ . '/../utils/Response.php';
+namespace Controllers;
+use Middleware\AuthMiddleware;
+use Config\Database;
 
-require_once __DIR__ . '/BaseController.php';
-
-class DashboardController extends BaseController {
-    
-    public function getRecentActivity($user) {
+class DashboardController {
+    public function getRecentActivity() {
+        $decoded = AuthMiddleware::authenticate();
+        $userID = $decoded->userID;
+        
+        $db = Database::getInstance()->getConnection();
         $activities = [];
 
- 
-        require_once __DIR__ . '/../models/LostItem.php';
-        $lostItemModel = new LostItem();
-        $lostItems = $lostItemModel->getLatestItems(5);
-        foreach ($lostItems as $row) {
-            $row['description'] = "A lost item '" . $row['title'] . "' was reported.";
-            $row['link'] = "/lost-items";
-            $activities[] = $row;
-        }
-
-        require_once __DIR__ . '/../models/Marketplace.php';
-        $marketplaceModel = new Marketplace();
-        $marketplaceItems = $marketplaceModel->getLatestItems(5);
-        foreach ($marketplaceItems as $row) {
-            $row['description'] = "New product '" . $row['title'] . "' added to marketplace.";
-            $row['link'] = "/marketplace";
-            $activities[] = $row;
-        }
-
-        // 3. Fetch latest Notes (if user is student/rep)
-        // Note feature not fully implemented in backend yet
-        /*
-        if ($user['role'] === 'student' || $user['role'] === 'rep') {
-            require_once __DIR__ . '/../models/Note.php';
-            $noteModel = new Note();
-            $notes = $noteModel->getLatestNotes(5);
-            foreach ($notes as $row) {
-                $row['description'] = "New note '" . $row['title'] . "' was uploaded.";
-                $row['link'] = "/notes";
-                $activities[] = $row;
+        // Fetch recent app notifications
+        try {
+            $stmt = $db->prepare("SELECT message, created_at FROM app_notification an JOIN student s ON an.enrollmentNo = s.enrollmentNo WHERE s.userID = :uid ORDER BY an.created_at DESC LIMIT 5");
+            $stmt->execute([':uid' => $userID]);
+            $notifications = $stmt->fetchAll();
+            
+            foreach ($notifications as $notif) {
+                $activities[] = [
+                    'id' => uniqid(),
+                    'type' => 'notification',
+                    'title' => 'New Notification',
+                    'description' => $notif['message'],
+                    'timestamp' => $notif['created_at'],
+                    'link' => '#'
+                ];
             }
+            
+            // If no activities found, provide a default welcome message
+            if (empty($activities)) {
+                $activities[] = [
+                    'id' => uniqid(),
+                    'type' => 'system',
+                    'title' => 'Welcome to UniCore',
+                    'description' => 'Your recent activities will appear here once you start exploring the platform.',
+                    'timestamp' => date('Y-m-d H:i:s'),
+                    'link' => '#'
+                ];
+            }
+            
+        } catch (\Exception $e) {
+            // Silently fail and return empty if error
         }
-        */
 
-        // Sort combined activities by created_at descending
-        usort($activities, function($a, $b) {
-            return strtotime($b['created_at']) - strtotime($a['created_at']);
-        });
-
-        // Return top 10 recent activities
-        $recentActivities = array_slice($activities, 0, 10);
-
-        Response::success("Recent activity fetched successfully.", [
-            'activities' => $recentActivities
+        echo json_encode([
+            'status' => 'success',
+            'data' => [
+                'activities' => $activities
+            ]
         ]);
     }
 }
-?>

@@ -28,11 +28,11 @@ const OTPVerification = () => {
     const navigate = useNavigate();
     const { login } = useContext(AuthContext);
 
-    if (!location.state?.userId) {
+    if (!location.state?.email) {
         return <Navigate to="/login" replace />;
     }
 
-    const { userId, email } = location.state;
+    const { userId, email, otpDebug } = location.state;
 
     // OTP expiry countdown
     useEffect(() => {
@@ -76,16 +76,16 @@ const OTPVerification = () => {
         setError('');
 
         try {
-            const response = await api.post('/auth.php?action=verify-otp', {
+            const response = await api.post('/auth/verify-otp', {
                 user_id: userId,
                 otp
             });
 
-            if (response.data.status === 'success') {
+            if (response.data.success) {
                 clearInterval(expiryTimerRef.current);
                 navigate('/login', { state: { verifiedSuccess: true } });
             } else {
-                setError(response.data.message);
+                setError(response.data.message || 'Invalid OTP.');
             }
         } catch (err) {
             setError(err.response?.data?.message || 'Invalid OTP, please enter a valid OTP.');
@@ -100,7 +100,7 @@ const OTPVerification = () => {
         setError('');
 
         try {
-            await api.post('/auth.php?action=resend-otp', { user_id: userId });
+            await api.post('/auth/resend-otp', { user_id: userId });
 
             // Reset expiry timer and expiry state
             clearInterval(expiryTimerRef.current);

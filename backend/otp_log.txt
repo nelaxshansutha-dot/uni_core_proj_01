@@ -1,6 +1,0 @@
-2026-07-08 14:01:35 | OTP for cst23085@std.uwu.ac.lk: 671553 [SMTP ERROR: SMTP Error: Could not connect to SMTP host.]
-2026-07-08 14:04:13 | OTP for cst23085@std.uwu.ac.lk: 927011 [SMTP ERROR: SMTP Error: Could not connect to SMTP host.]
-2026-07-08 14:10:41 | OTP for cst23079@std.uwu.ac.lk: 713637 [SMTP ERROR: SMTP Error: Could not connect to SMTP host.]
-2026-07-09 17:56:02 | OTP for cst23085@std.uwu.ac.lk: 488018 [SMTP ERROR: SMTP Error: Could not connect to SMTP host.]
-2026-07-10 05:49:06 | OTP for cst23085@std.uwu.ac.lk: 255206 [SMTP ERROR: SMTP Error: Could not connect to SMTP host. Failed to connect to server SMTP server error: Failed to connect to server SMTP code: 10060 Additional SMTP info: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond]
-2026-07-10 05:50:52 | OTP for cst23085@std.uwu.ac.lk: 565832 [SMTP ERROR: SMTP Error: Could not connect to SMTP host.]
