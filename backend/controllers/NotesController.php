@@ -23,9 +23,11 @@ class NotesController {
             echo json_encode(['success' => true, 'data' => $model->view($id, $filters)]);
         } elseif ($method === 'POST') {
             $data = $_POST;
-            $data['enrollmentNo'] = $decoded->enrollmentNo ?? null;
+            $data['enrollmentNo'] = $decoded->enrollmentNo ?? $decoded->enrollment_no ?? null;
+            $data['userID'] = $decoded->userID ?? null;
+            $data['file_url'] = null; // Default value to prevent undefined key error
             
-            // Handle File Upload
+        
             if (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
                 $uploadDir = __DIR__ . '/../uploads/notes/';
                 if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
@@ -35,7 +37,20 @@ class NotesController {
                 
                 if (move_uploaded_file($_FILES['file']['tmp_name'], $targetFile)) {
                     $data['file_url'] = 'uploads/notes/' . $fileName;
+                } else {
+                    file_put_contents(__DIR__ . '/../error_log.txt', date('[Y-m-d H:i:s] ') . "Notes Upload Move Failed. From " . $_FILES['file']['tmp_name'] . " to " . $targetFile . "\n", FILE_APPEND);
                 }
+            } else {
+                if (isset($_FILES['file'])) {
+                    file_put_contents(__DIR__ . '/../error_log.txt', date('[Y-m-d H:i:s] ') . "Notes Upload File Error: " . $_FILES['file']['error'] . "\n", FILE_APPEND);
+                } else {
+                    file_put_contents(__DIR__ . '/../error_log.txt', date('[Y-m-d H:i:s] ') . "Notes Upload No File Provided in POST.\n", FILE_APPEND);
+                }
+            }
+
+            if (!$data['file_url']) {
+                echo json_encode(['success' => false, 'message' => 'File upload failed.']);
+                return;
             }
 
             $nid = $model->upload($data);

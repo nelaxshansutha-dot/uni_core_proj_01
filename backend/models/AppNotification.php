@@ -11,7 +11,7 @@ class AppNotification {
     }
 
     public function send($data) {
-        // Respect user's peer_learning_app_notification preference
+        
         $stmt = $this->conn->prepare("SELECT peer_learning_app_notification FROM users u JOIN student s ON u.userID = s.userID WHERE s.enrollmentNo = :enr");
         $stmt->execute([':enr' => $data['enrollmentNo']]);
         $pref = $stmt->fetchColumn();
@@ -35,8 +35,7 @@ class AppNotification {
     }
 
     public function markAsRead($appID) {
-        // Usually involves a flag, but schema doesn't have is_read.
-        // We could delete it or just return true if it's stateless.
+      
         return true; 
     }
 }

@@ -543,12 +543,17 @@ const AdminPanel = () => {
                                                 </td>
                                                 <td className="text-end">
                                                     <div className="d-flex justify-content-end gap-2">
-                                                        <button 
-                                                            className={`btn btn-sm ${u.is_active ? 'btn-outline-danger' : 'btn-outline-success'}`}
-                                                            onClick={() => handleDeactivateClick(u)}
-                                                        >
-                                                            {u.is_active ? <UserX size={14} /> : <UserCheck size={14} />}
-                                                        </button>
+                                                        {u.role === 'admin' ? (
+                                                            <span className="text-muted small fst-italic px-2">—</span>
+                                                        ) : (
+                                                            <button 
+                                                                className={`btn btn-sm ${u.is_active ? 'btn-outline-danger' : 'btn-outline-success'}`}
+                                                                onClick={() => handleDeactivateClick(u)}
+                                                                title={u.is_active ? 'Deactivate user' : 'Activate user'}
+                                                            >
+                                                                {u.is_active ? <UserX size={14} /> : <UserCheck size={14} />}
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </td>
                                             </tr>
@@ -733,15 +738,24 @@ const AdminPanel = () => {
                                                     className={`list-group-item list-group-item-action p-3 d-flex justify-content-between align-items-center ${selectedStudent?.id === student.id ? 'active' : ''}`}
                                                     onClick={() => {
                                                         setSelectedStudent(student);
+                                                        // Auto-generate rep ID: rep_ + lowercase enrollment number
+                                                        const autoRepId = 'rep_' + (student.enrollment_no || '').toLowerCase();
+                                                        // Auto-detect academic year from enrollment batch number
+                                                        const enrParts = (student.enrollment_no || '').split('/');
+                                                        const batchYr = enrParts.length >= 3 ? parseInt(enrParts[2]) : null;
+                                                        const now = new Date();
+                                                        const acYear = now.getMonth() < 9 ? now.getFullYear() - 1 : now.getFullYear();
+                                                        const detectedYr = batchYr ? (acYear % 100) - batchYr : null;
                                                         setRepForm({
                                                             ...repForm,
                                                             fname: student.first_name || '',
                                                             lname: student.last_name || '',
                                                             phone: student.phone_number || '',
                                                             email: student.email || '',
-                                                            rep_id: 'REP_' + student.enrollment_no,
+                                                            rep_id: autoRepId,
                                                             course: student.course || '',
-                                                            year: student.year || '1'
+                                                            year: detectedYr ? String(detectedYr) : '1',
+                                                            detected_year: detectedYr
                                                         });
                                                     }}
                                                 >
@@ -772,12 +786,21 @@ const AdminPanel = () => {
                                     {selectedStudent ? (
                                         <form onSubmit={handleAssignRep}>
                                             {selectedStudent.role === 'rep' ? (
-                                                <div className="alert alert-success py-2 small mb-4">
-                                                    <strong>{selectedStudent.first_name} {selectedStudent.last_name}</strong> ({selectedStudent.enrollment_no}) is <strong>already assigned</strong> as a Course Representative!
+                                                <div className="alert alert-success py-2 small mb-3 d-flex align-items-center gap-2">
+                                                    <UserCheck size={16}/>
+                                                    <span><strong>{selectedStudent.first_name} {selectedStudent.last_name}</strong> ({selectedStudent.enrollment_no}) is <strong>already</strong> a Course Representative.</span>
                                                 </div>
                                             ) : (
-                                                <div className="alert alert-info py-2 small mb-4">
-                                                    Promoting <strong>{selectedStudent.first_name} {selectedStudent.last_name}</strong> ({selectedStudent.enrollment_no}) to Course Representative.
+                                                <div className="alert alert-info py-2 small mb-3">
+                                                    <div className="fw-semibold mb-1">Promoting to Course Representative:</div>
+                                                    <div>{selectedStudent.first_name} {selectedStudent.last_name}</div>
+                                                    <div className="text-muted">{selectedStudent.enrollment_no}</div>
+                                                    {repForm.detected_year && (
+                                                        <div className="mt-1">
+                                                            <span className="badge bg-primary">Year {repForm.detected_year} Rep</span>
+                                                            <span className="ms-2 text-muted">Will manage Year {repForm.detected_year} students</span>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             )}
 
@@ -829,27 +852,28 @@ const AdminPanel = () => {
 
 
                                             <div className="mb-3">
-                                                <label className="form-label">Rep ID</label>
+                                                <label className="form-label fw-semibold">Rep ID <span className="text-muted fw-normal small">(auto-generated)</span></label>
                                                 <input 
                                                     type="text" 
-                                                    className="form-control" 
+                                                    className="form-control bg-light font-monospace"
                                                     value={repForm.rep_id}
-                                                    onChange={(e) => setRepForm({ ...repForm, rep_id: e.target.value })}
+                                                    onChange={(e) => setRepForm({ ...repForm, rep_id: e.target.value.toLowerCase() })}
                                                     required 
                                                 />
+                                                <div className="form-text">Format: <code>rep_uwu/cst/23/088</code> — students use this to identify their rep.</div>
                                             </div>
 
                                             <div className="mb-4">
-                                                <label className="form-label">Rep Login Password</label>
+                                                <label className="form-label fw-semibold">Rep Login Password</label>
                                                 <input 
                                                     type="password" 
                                                     className="form-control" 
                                                     value={repForm.password}
                                                     onChange={(e) => setRepForm({ ...repForm, password: e.target.value })}
-                                                    placeholder="Set a dedicated password for the Rep dashboard..."
+                                                    placeholder="Set a secure password for the Rep dashboard..."
                                                     required 
                                                 />
-                                                <div className="form-text small"> emailed to the student.</div>
+                                                <div className="form-text small">This password will be emailed to the student along with their Rep ID.</div>
                                             </div>
 
                                             <button type="submit" className="btn btn-warning w-100 py-2 fw-semibold d-flex align-items-center justify-content-center gap-2">

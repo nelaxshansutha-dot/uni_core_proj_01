@@ -28,7 +28,7 @@ class DashboardController {
                 ];
             }
             
-            // If no activities found, provide a default welcome message
+        
             if (empty($activities)) {
                 $activities[] = [
                     'id' => uniqid(),

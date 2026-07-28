@@ -50,14 +50,19 @@ try {
             elseif ($action === 'verify-reset-otp') $controller->verifyResetOtp();
             elseif ($action === 'reset-password') $controller->resetPassword();
             elseif ($action === 'update-profile') $controller->updateProfile();
+            elseif ($action === 'force-change-rep-password') $controller->forceChangeRepPassword();
             else http_response_code(404);
             break;
-            
+
         case 'profile':
             $controller = new Controllers\AuthController();
-            $controller->getProfile();
+            if ($method === 'PUT' || $method === 'POST') {
+                $controller->updateProfile();
+            } else {
+                $controller->getProfile();
+            }
             break;
-            
+
         case 'lost-items':
             $controller = new Controllers\LostItemController();
             $controller->handleRequest($method, $action); // action holds ID if present
@@ -92,8 +97,13 @@ try {
 
         case 'notifications':
             $controller = new Controllers\NotificationController();
-            if ($action === 'app') $controller->handleApp($method, $id);
-            elseif ($action === 'sms') $controller->handleSms($method, $id);
+            if ($action === 'app' && method_exists($controller, 'handleApp')) {
+                $controller->handleApp($method, $id);
+            } elseif ($action === 'sms' && method_exists($controller, 'handleSms')) {
+                $controller->handleSms($method, $id);
+            } else {
+                $controller->getNotifications();
+            }
             break;
 
         case 'courses':
@@ -109,10 +119,7 @@ try {
             break;
 
 
-        case 'notifications':
-            $controller = new Controllers\NotificationController();
-            $controller->getNotifications();
-            break;
+
 
         case 'course-units':
             $controller = new Controllers\CourseController();
@@ -126,8 +133,7 @@ try {
                 if ($method === 'GET') $controller->handleUsers($method, $id);
                 elseif ($method === 'POST') $controller->createUser();
                 elseif ($method === 'PUT') $controller->updateUser($id);
-            }
-            elseif ($action === 'users-status') $controller->toggleUserStatus($id);
+            } elseif ($action === 'users-status') $controller->toggleUserStatus($id);
             elseif ($action === 'search-students') $controller->searchStudents();
             elseif ($action === 'assign-rep') $controller->assignCourseRep();
             elseif ($action === 'content') $controller->getContent();
@@ -149,3 +155,5 @@ try {
     http_response_code(500);
     echo json_encode(["success" => false, "message" => $e->getMessage()]);
 }
+
+

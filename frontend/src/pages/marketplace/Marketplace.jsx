@@ -8,6 +8,12 @@ import {
 import './Marketplace.css';
 
 const BASE_URL = 'http://localhost/uni_core_proj_01/backend/api';
+const BACKEND_STATIC = 'http://localhost/uni_core_proj_01/backend/';
+const getImageUrl = (url) => {
+    if (!url) return '';
+    if (url.startsWith('http') || url.startsWith('data:')) return url;
+    return BACKEND_STATIC + url;
+};
 
 /* ─── Image Uploader Component ─── */
 const ImageUploader = ({ label, value, onChange }) => {
@@ -46,7 +52,7 @@ const ImageUploader = ({ label, value, onChange }) => {
             <input ref={inputRef} type="file" accept="image/*" className="d-none" onChange={handleFile} />
             {value ? (
                 <div className="img-preview-wrap">
-                    <img src={value} alt={label} className="img-preview" />
+                    <img src={getImageUrl(value)} alt={label} className="img-preview" />
                     <button
                         type="button"
                         className="img-remove-btn"
@@ -244,7 +250,7 @@ const Marketplace = () => {
                                         {images.length > 0 ? (
                                             <div className="market-img-grid" data-count={Math.min(images.length, 4)}>
                                                 {images.slice(0, 4).map((url, i) => (
-                                                    <img key={i} src={url} alt={item.productName} className="market-thumb" />
+                                                    <img key={i} src={getImageUrl(url)} alt={item.productName} className="market-thumb" />
                                                 ))}
                                             </div>
                                         ) : (
@@ -578,7 +584,7 @@ const Marketplace = () => {
                                         <div className="flex-grow-1 d-flex align-items-center justify-content-center position-relative mb-3">
                                             {detailImages.length > 0 ? (
                                                 <img
-                                                    src={detailImages[activeImageIndex]}
+                                                    src={getImageUrl(detailImages[activeImageIndex])}
                                                     alt={selectedItem.productName}
                                                     style={{ maxWidth: '100%', maxHeight: '280px', objectFit: 'contain', borderRadius: '10px' }}
                                                 />
@@ -596,7 +602,7 @@ const Marketplace = () => {
                                                 {detailImages.map((url, i) => (
                                                     <img
                                                         key={i}
-                                                        src={url}
+                                                        src={getImageUrl(url)}
                                                         alt={`thumbnail ${i}`}
                                                         onClick={() => setActiveImageIndex(i)}
                                                         style={{

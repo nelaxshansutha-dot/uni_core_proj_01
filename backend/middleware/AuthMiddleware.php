@@ -10,17 +10,14 @@ use PDO;
 
 class AuthMiddleware {
     
-    // In a real app, this should be in .env. Hardcoded fallback for now.
+
     private static $secret_key = "YOUR_SUPER_SECRET_KEY"; 
     
     public static function getSecretKey() {
         return $_ENV['JWT_SECRET'] ?? self::$secret_key;
     }
 
-    /**
-     * Protect route. Validates JWT and optionally checks allowed roles.
-     * Returns decoded token payload if valid, otherwise dies with JSON response.
-     */
+   
     public static function authenticate(array $allowedRoles = []) {
         $headers = getallheaders();
         $authHeader = isset($headers['Authorization']) ? $headers['Authorization'] : '';

@@ -1,20 +1,19 @@
 <?php
 namespace Controllers;
-use Models\UserFactory;
+
 use Middleware\AuthMiddleware;
 
 class AdminController {
     public function handleUsers($method, $id = null) {
         $decoded = AuthMiddleware::authenticate(['admin']);
-        $admin = UserFactory::create('admin');
+        $admin = new \Models\Admin();
         $db = \Config\Database::getInstance()->getConnection();
         
         if ($method === 'GET') {
             $q = $_GET['q'] ?? '';
             $role = $_GET['role'] ?? 'all';
-            if ($role === '') $role = 'all'; // Fix empty string from frontend filter
+            if ($role === '') $role = 'all'; 
             
-            // Map frontend role 'rep' to backend 'course_representative'
             if ($role === 'rep') $role = 'course_representative';
             
             $sql = "SELECT 
@@ -45,7 +44,7 @@ class AdminController {
             $stmt->execute($params);
             $users = $stmt->fetchAll(\PDO::FETCH_ASSOC);
             
-            // Map course_representative back to rep for frontend
+        
             foreach ($users as &$u) {
                 if ($u['role'] === 'course_representative') {
                     $u['role'] = 'rep';
@@ -79,7 +78,13 @@ class AdminController {
         $data['std_year'] = isset($data['year']) && !empty($data['year']) ? $data['year'] : 1;
         
         try {
-            $user = UserFactory::create($role, $data);
+            switch ($role) {
+                case 'admin': $user = new \Models\Admin($data); break;
+                case 'staff': $user = new \Models\Staff($data); break;
+                case 'course_representative': $user = new \Models\CourseRepresentative($data); break;
+                case 'student':
+                default: $user = new \Models\Student($data); break;
+            }
             $userID = $user->register();
             
             // Auto verify admin created users
@@ -138,7 +143,7 @@ class AdminController {
         $q = $_GET['q'] ?? '';
         $db = \Config\Database::getInstance()->getConnection();
         
-        $sql = "SELECT u.userID as id, u.fname as first_name, u.lname as last_name, u.email, s.enrollmentNo as enrollment_no, s.courseID as course_id
+        $sql = "SELECT u.userID as id, u.fname as first_name, u.lname as last_name, u.email, u.phoneNum as phone_number, u.role, s.enrollmentNo as enrollment_no, s.courseID as course, s.std_year as year
                 FROM users u 
                 JOIN student s ON u.userID = s.userID 
                 WHERE u.role = 'student' AND (s.enrollmentNo LIKE :q OR u.fname LIKE :q OR u.email LIKE :q)";
@@ -157,27 +162,90 @@ class AdminController {
         
         try {
             $db->beginTransaction();
-            // Update role to course_representative
-            $db->prepare("UPDATE users SET role = 'course_representative' WHERE userID = ?")->execute([$data['user_id']]);
-            
-            // Insert into course_representative
-            $sql = "INSERT INTO course_representative (userID, enrollmentNo, courseID, rep_id_string) 
-                    VALUES (?, ?, ?, ?)";
-            // Mock courseID = 1 if missing for now
-            $db->prepare($sql)->execute([
-                $data['user_id'], 
-                $data['email'], // Using email as temp enrollment string fallback if no enrollment table
-                1, 
-                $data['rep_id']
-            ]);
+
+            $userID = $data['user_id'];
+
+            // Get student's current record
+            $stmt = $db->prepare("SELECT enrollmentNo, courseID FROM student WHERE userID = ?");
+            $stmt->execute([$userID]);
+            $student = $stmt->fetch(\PDO::FETCH_ASSOC);
+            $enrollmentNo = $student ? $student['enrollmentNo'] : null;
+
+            if (!$enrollmentNo) {
+                $db->rollBack();
+                echo json_encode(['success' => false, 'message' => 'Student enrollment number not found.']);
+                return;
+            }
+
+            // Auto-detect courseID from enrollment number (e.g. UWU/CST/23/088 → CST → courseID 1)
+            $courseID = $student['courseID'] ?? null;
+            $enrUpper = strtoupper(trim($enrollmentNo));
+            $enrParts = explode('/', $enrUpper);
+            if (!$courseID) {
+                $courseCode = $enrParts[1] ?? '';
+                if ($courseCode === 'CST') $courseID = 1;
+            }
+
+            // Auto-detect academic year from batch year in enrollment number
+            $batchYear = isset($enrParts[2]) ? (int)$enrParts[2] : null;
+            $currentYear = (int)date('Y');
+            $currentMonth = (int)date('m');
+            $academicYear = ($currentMonth < 10) ? $currentYear - 1 : $currentYear;
+            $stdYear = $batchYear ? ($academicYear % 100 - $batchYear) : null;
+
+            // Update student's courseID and year if not set
+            if ($courseID) {
+                $db->prepare("UPDATE student SET courseID = :cid, std_year = COALESCE(std_year, :yr) WHERE userID = :uid")
+                   ->execute([':cid' => $courseID, ':yr' => $stdYear, ':uid' => $userID]);
+            }
+
+            // Do NOT promote user role to course_representative here.
+            // We want to keep them as 'student' in the users table so they can
+            // login to both their student dashboard and rep dashboard independently.
+            // Rep ID: use provided rep_id or auto-generate as rep_ + lowercase enrollment
+            $repId = !empty($data['rep_id']) 
+                ? strtolower(trim($data['rep_id'])) 
+                : 'rep_' . strtolower($enrollmentNo);
+
+            $hashPass = password_hash($data['password'], PASSWORD_BCRYPT);
+
+            // Check if already a rep (update) or new (insert)
+            $existCheck = $db->prepare("SELECT repID FROM course_representative WHERE userID = ?");
+            $existCheck->execute([$userID]);
+            $existRep = $existCheck->fetch(\PDO::FETCH_ASSOC);
+
+            if ($existRep) {
+                // Update existing rep record
+                $db->prepare("UPDATE course_representative SET rep_id_string = ?, hash_password = ?, courseID = ? WHERE userID = ?")
+                   ->execute([$repId, $hashPass, $courseID, $userID]);
+            } else {
+                // Insert new rep record
+                $db->prepare(
+                    "INSERT INTO course_representative (userID, enrollmentNo, courseID, rep_id_string, hash_password) VALUES (?, ?, ?, ?, ?)"
+                )->execute([$userID, $enrollmentNo, $courseID, $repId, $hashPass]);
+            }
+
+            // Send credentials email
+            require_once __DIR__ . '/../utils/MailService.php';
+            \Utils\MailService::sendRepCredentialEmail(
+                $data['email']  ?? '',
+                $data['fname']  ?? '',
+                $data['lname']  ?? '',
+                $repId,
+                $data['password']
+            );
             
             $db->commit();
-            echo json_encode(['success' => true]);
+            echo json_encode([
+                'success' => true,
+                'message' => "Successfully assigned {$enrollmentNo} as Course Representative (Rep ID: {$repId})."
+            ]);
         } catch (\Exception $e) {
             $db->rollBack();
             echo json_encode(['success' => false, 'message' => 'Failed to assign rep: ' . $e->getMessage()]);
         }
     }
+
     
     public function moderateContent() {
         AuthMiddleware::authenticate(['admin']);

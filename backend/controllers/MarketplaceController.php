@@ -19,12 +19,14 @@ class MarketplaceController {
             $data = json_decode(file_get_contents("php://input"), true);
             $data['userID'] = $decoded->userID;
             
+            $model = new Marketplace($data);
             $pid = $model->create($data);
             echo json_encode(['success' => true, 'productID' => $pid]);
             
         } elseif ($method === 'PUT') {
             $data = json_decode(file_get_contents("php://input"), true);
             if (!$data) $data = $_POST; // Fallback
+            $model = new Marketplace($data);
             $success = $model->update($id, $decoded->userID, $data);
             echo json_encode(['success' => $success]);
             

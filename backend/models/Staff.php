@@ -26,9 +26,8 @@ class Staff extends User {
      
     }
 
-    public function hydrate(array $data) {
-        parent::hydrate($data);
-        return $this;
+    public function __construct(array $data = []) {
+        parent::__construct($data);
     }
 
     public function register() {

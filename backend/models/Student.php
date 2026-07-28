@@ -10,21 +10,38 @@ class Student extends User {
     protected $courseID;
     protected $std_year;
 
-    public function getEnrollmentNo() { return $this->enrollmentNo; }
-    public function setEnrollmentNo($val) { $this->enrollmentNo = $val; return $this; }
+    public function getEnrollmentNo() 
+    { return $this->enrollmentNo; }
 
-    public function getCourseID() { return $this->courseID; }
-    public function setCourseID($val) { $this->courseID = $val; return $this; }
+    public function setEnrollmentNo($val)
+    { $this->enrollmentNo = $val; return $this; }
 
-    public function getStdYear() { return $this->std_year; }
-    public function setStdYear($val) { $this->std_year = $val; return $this; }
+    public function getCourseID() 
+    { return $this->courseID; }
+    public function setCourseID($val)
+    { $this->courseID = $val; return $this; }
 
-    public function hydrate(array $data) {
-        parent::hydrate($data);
-        $this->enrollmentNo = $data['enrollmentNo'] ?? $this->enrollmentNo;
-        $this->courseID = $data['courseID'] ?? $this->courseID;
-        $this->std_year = $data['std_year'] ?? $this->std_year;
-        return $this;
+    public function getStdYear() 
+    { return $this->std_year; }
+    public function setStdYear($val)
+    { $this->std_year = $val; return $this; }
+
+    public function __construct(array $data = []) {
+        parent::__construct($data);
+        if (!empty($data)) {
+            $this->enrollmentNo = $data['enrollmentNo'] ?? $this->enrollmentNo;
+            $this->courseID = $data['courseID'] ?? $this->courseID;
+            $this->std_year = $data['std_year'] ?? $this->std_year;
+            
+            if (!empty($this->enrollmentNo) && strpos(strtoupper($this->enrollmentNo), 'UWU/CST') !== false) {
+                if (empty($this->courseID)) {
+                    $this->courseID = 1; 
+                }
+                if (empty($this->std_year)) {
+                    $this->std_year = 1;
+                }
+            }
+        }
     }
 
     public function register() {
@@ -67,7 +84,7 @@ class Student extends User {
         }
     }
 
-    // Standard Student Methods
+   
     public function postLostItem() {}
     public function updateLostItem() {}
     public function deleteLostItem() {}

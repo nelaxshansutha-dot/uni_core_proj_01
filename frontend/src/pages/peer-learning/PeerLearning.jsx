@@ -1,20 +1,21 @@
 import React, { useState, useEffect, useContext } from 'react';
 import api from '../../services/api';
 import { AuthContext } from '../../context/AuthContext';
-import { Users, Plus, CheckCircle, XCircle, BookOpen } from 'lucide-react';
+import { Users, CheckCircle, XCircle, BookOpen, Clock, AlertCircle } from 'lucide-react';
 
 const PeerLearning = () => {
     const { user } = useContext(AuthContext);
     const [requests, setRequests] = useState([]);
-    
+
     // Semester/Module Selection State
-    const [showSemPopup, setShowSemPopup] = useState(user?.role === 'student');
-    const [loading, setLoading] = useState(user?.role === 'rep' || (user?.role !== 'student'));
+    const [showSemPopup, setShowSemPopup] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
-    const [courseFilters, setCourseFilters] = useState({ year: '1', semester: '1' });
+    const [selectedSemester, setSelectedSemester] = useState('1');
+    const [detectedYear, setDetectedYear] = useState(null);
 
     const [modules, setModules] = useState([]);
-    
+
     const [formData, setFormData] = useState({
         courseUnitName: '',
         courseUnitID: '',
@@ -23,30 +24,27 @@ const PeerLearning = () => {
 
     const [actionStatus, setActionStatus] = useState({ show: false, message: '', type: '' });
 
-    const showToast = (message, type) => {
+    const showToast = (message, type = 'success') => {
         setActionStatus({ show: true, message, type });
         setTimeout(() => setActionStatus({ show: false, message: '', type: '' }), 4000);
     };
 
-    // Update state when user object loads
+    // On mount: show semester popup for students, load requests for reps
     useEffect(() => {
-        if (user && user.role === 'student' && modules.length === 0) {
+        if (!user) return;
+        if (user.role === 'student') {
             setShowSemPopup(true);
             setLoading(false);
-        } else if (user && user.role === 'rep') {
-            setShowSemPopup(false);
-            setLoading(true); // fetchRequests will set to false
+        } else {
+            // Rep or other role — load requests directly
+            fetchRequests();
         }
     }, [user]);
 
     const fetchRequests = async () => {
         try {
             setLoading(true);
-            const endpoint = user?.role === 'rep' 
-                ? '/peer-learning-requests/course-requests?courseUnitID=CS101' 
-                : '/peer-learning-requests/my-requests';
-            // Note: hardcoded CS101 for rep to simplify, ideally should fetch rep's course
-            const res = await api.get(endpoint);
+            const res = await api.get('/peer-learning-requests');
             if (res.data.status === 'success') {
                 setRequests(res.data.data);
             }
@@ -61,126 +59,177 @@ const PeerLearning = () => {
         e?.preventDefault();
         try {
             setLoading(true);
-            // courseID is intentionally omitted — backend auto-extracts it from the user's enrollment number
-            const res = await api.get(`/course-units/my-modules?year=${courseFilters.year}&semester=${courseFilters.semester}`);
+            // Year is auto-detected from enrollment number on the backend
+            const res = await api.get(`/course-units/my-modules?semester=${selectedSemester}`);
             if (res.data.status === 'success') {
                 setModules(res.data.data);
+                setDetectedYear(res.data.std_year);
                 setShowSemPopup(false);
+                // Also reload requests for this student
+                fetchRequests();
             } else {
-                console.error(res.data.message);
+                showToast(res.data.message || 'Failed to load modules.', 'danger');
             }
         } catch (err) {
             console.error(err);
+            showToast('Network error. Could not load modules.', 'danger');
         } finally {
             setLoading(false);
         }
     };
 
-    // Always fetch requests on mount for any logged-in user
-    useEffect(() => {
-        if (user) {
-            fetchRequests();
-        }
-    }, [user]);
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+    const handleRequestUnit = async (mod) => {
         try {
-            const res = await api.post('/peer-learning-requests', formData);
+            const res = await api.post('/peer-learning-requests', {
+                courseUnitID: mod.courseUnitID,
+                courseUnitName: mod.courseUnitName,
+                semester: selectedSemester,
+                description: 'General unit request'
+            });
             if (res.data.status === 'success') {
-                setShowModal(false);
-                setFormData({ courseUnitName: '', courseUnitID: '', description: '' });
                 fetchRequests();
-                showToast('Request submitted successfully!', 'success');
+                showToast(res.data.message || 'Request submitted!', 'success');
             } else {
                 showToast(res.data.message || 'Failed to submit request.', 'danger');
             }
         } catch (err) {
-            console.error(err);
+            showToast('Failed to request unit.', 'danger');
+        }
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            const res = await api.post('/peer-learning-requests', {
+                ...formData,
+                semester: selectedSemester
+            });
+            if (res.data.status === 'success') {
+                setShowModal(false);
+                setFormData({ courseUnitName: '', courseUnitID: '', description: '' });
+                fetchRequests();
+                showToast(res.data.message || 'Request submitted successfully!', 'success');
+            } else {
+                showToast(res.data.message || 'Failed to submit request.', 'danger');
+            }
+        } catch (err) {
             showToast('An error occurred while submitting the request.', 'danger');
         }
     };
 
-    const handleStatusUpdate = async (courseUnitName, courseUnitID, status) => {
+    const handleStatusUpdate = async (courseUnitID, courseUnitName, status) => {
         try {
-            const res = await api.put('/peer-learning-requests', { courseUnitName, courseUnitID, status });
+            const res = await api.put('/peer-learning-requests', { courseUnitID, courseUnitName, status });
             if (res.data.status === 'success') {
                 fetchRequests();
+                showToast(`Requests ${status === 'approved' ? 'approved' : 'rejected'} and students notified.`, 'success');
+            } else {
+                showToast('Failed to update status.', 'danger');
             }
         } catch (err) {
             console.error(err);
         }
     };
 
-    const handleModuleClick = (courseUnitID) => {
-        setFormData({ ...formData, courseUnitID: courseUnitID });
-        setShowModal(true);
+    const getStatusBadge = (status) => {
+        const map = {
+            pending:  { cls: 'bg-warning text-dark', label: 'Pending' },
+            approved: { cls: 'bg-success text-white', label: 'Approved' },
+            rejected: { cls: 'bg-danger text-white',  label: 'Rejected' },
+            completed:{ cls: 'bg-primary text-white', label: 'Completed' },
+        };
+        const s = map[status] || { cls: 'bg-secondary text-white', label: status };
+        return <span className={`badge ${s.cls}`}>{s.label}</span>;
     };
 
     return (
         <div>
+            {/* Toast */}
             {actionStatus.show && (
-                <div className={`alert alert-${actionStatus.type} d-flex align-items-center position-fixed top-0 end-0 m-3 z-index-toast shadow`} style={{ zIndex: 1050 }}>
-                    {actionStatus.type === 'success' ? <CheckCircle className="me-2" size={20} /> : <XCircle className="me-2" size={20} />}
+                <div
+                    className={`alert alert-${actionStatus.type} d-flex align-items-center position-fixed top-0 end-0 m-3 shadow`}
+                    style={{ zIndex: 1050, minWidth: 280 }}
+                >
+                    {actionStatus.type === 'success'
+                        ? <CheckCircle className="me-2" size={20} />
+                        : <XCircle className="me-2" size={20} />}
                     {actionStatus.message}
                 </div>
             )}
+
+            {/* Page Header */}
             <div className="d-flex justify-content-between align-items-center mb-4">
                 <div>
                     <h3 className="fw-bold text-dark mb-1">Peer Learning</h3>
-                    <p className="text-muted m-0">Request help or assist peers</p>
+                    <p className="text-muted m-0">
+                        {user?.role === 'course_representative'
+                            ? 'Review and manage student module requests for your batch'
+                            : 'Request help from your course representative'}
+                    </p>
                 </div>
-                {user?.role === 'student' && !showSemPopup && (
-                    <button className="btn btn-outline-primary rounded-pill px-4" onClick={() => setShowSemPopup(true)}>
-                        Change Semester / Year
+                {user?.role === 'student' && !showSemPopup && modules.length > 0 && (
+                    <button
+                        className="btn btn-outline-primary rounded-pill px-4"
+                        onClick={() => setShowSemPopup(true)}
+                    >
+                        Change Semester
                     </button>
                 )}
             </div>
 
             {loading ? (
-                <div className="text-center mt-5"><div className="spinner-border text-primary"></div></div>
+                <div className="text-center mt-5">
+                    <div className="spinner-border text-primary" />
+                    <p className="text-muted mt-3">Loading...</p>
+                </div>
+
             ) : showSemPopup ? (
+                /* ── SEMESTER SELECTION POPUP (Student only) ── */
                 <>
-                    <div className="card border-0 shadow-sm mx-auto mb-4" style={{maxWidth: '500px'}}>
+                    <div className="card border-0 shadow-sm mx-auto mb-4" style={{ maxWidth: 500 }}>
                         <div className="card-body p-4">
-                            <h5 className="fw-bold mb-1">Select Semester Details</h5>
-                            <p className="text-muted small mb-4">Your course is automatically detected from your profile.</p>
+                            <h5 className="fw-bold mb-1">Select Semester</h5>
+                            <p className="text-muted small mb-1">
+                                Your course and academic year are automatically detected from your enrollment number.
+                            </p>
+                            {user?.enrollment_no && (
+                                <p className="text-muted small mb-4">
+                                    Enrollment: <strong>{user.enrollment_no}</strong>
+                                </p>
+                            )}
                             <form onSubmit={fetchModules}>
-                                <div className="mb-3">
-                                    <label className="form-label text-muted small fw-bold">YEAR</label>
-                                    <select className="form-select" value={courseFilters.year} onChange={e => setCourseFilters({...courseFilters, year: e.target.value})}>
-                                        <option value="1">Year 1</option>
-                                        <option value="2">Year 2</option>
-                                        <option value="3">Year 3</option>
-                                        <option value="4">Year 4</option>
-                                    </select>
-                                </div>
                                 <div className="mb-4">
                                     <label className="form-label text-muted small fw-bold">SEMESTER</label>
-                                    <select className="form-select" value={courseFilters.semester} onChange={e => setCourseFilters({...courseFilters, semester: e.target.value})}>
+                                    <select
+                                        className="form-select"
+                                        value={selectedSemester}
+                                        onChange={e => setSelectedSemester(e.target.value)}
+                                    >
                                         <option value="1">Semester 1</option>
                                         <option value="2">Semester 2</option>
                                     </select>
                                 </div>
-                                <button type="submit" className="btn btn-primary w-100 rounded-pill">Load Modules</button>
+                                <button type="submit" className="btn btn-primary w-100 rounded-pill">
+                                    Load Modules
+                                </button>
                             </form>
                         </div>
                     </div>
 
-                    {/* Always show existing requests even when popup is open */}
+                    {/* Show existing requests even while popup is open */}
                     {requests.length > 0 && (
                         <>
-                            <h5 className="mb-3 fw-bold border-top pt-4">Your Requests</h5>
-                            <div className="row g-4">
+                            <h5 className="mb-3 fw-bold border-top pt-4">Your Existing Requests</h5>
+                            <div className="row g-3">
                                 {requests.map((req, idx) => (
                                     <div className="col-md-6" key={req.requestID || idx}>
                                         <div className="card border-0 shadow-sm">
-                                            <div className="card-body p-4">
-                                                <div className="d-flex justify-content-between align-items-start mb-2">
+                                            <div className="card-body p-3 d-flex justify-content-between align-items-center">
+                                                <div>
                                                     <h6 className="fw-bold m-0">{req.courseUnitName}</h6>
+                                                    <small className="text-muted">{req.courseUnitID}</small>
                                                 </div>
-                                                <span className="badge bg-secondary mb-2">{req.courseUnitID}</span>
-                                                <p className="text-muted small mb-0">{req.description}</p>
+                                                {getStatusBadge(req.status)}
                                             </div>
                                         </div>
                                     </div>
@@ -189,148 +238,217 @@ const PeerLearning = () => {
                         </>
                     )}
                 </>
+
             ) : user?.role === 'student' && modules.length > 0 ? (
+                /* ── STUDENT MODULE GRID ── */
                 <>
-                    <h5 className="mb-3 fw-bold">Select a Module for Peer Learning</h5>
+                    {detectedYear && (
+                        <div className="alert alert-info d-flex align-items-center py-2 mb-4 border-0 rounded-3">
+                            <AlertCircle size={18} className="me-2" />
+                            You are in <strong className="mx-1">Year {detectedYear}</strong>, Semester {selectedSemester}
+                            — detected automatically from your enrollment number.
+                        </div>
+                    )}
+
+                    <h5 className="mb-3 fw-bold">Select a Module to Request Peer Learning</h5>
                     <div className="row g-3 mb-5">
-                        {modules.map(mod => (
-                            <div className="col-md-4" key={mod.courseUnitID}>
-                                <div className="card border-0 shadow-sm h-100">
-                                    <div className="card-body p-4 text-center d-flex flex-column">
-                                        <BookOpen className="text-primary mb-3 mx-auto" size={32} />
-                                        <h6 className="fw-bold m-0 flex-grow-1">{mod.courseUnitName}</h6>
-                                        <span className="badge bg-light text-dark mt-2 mb-3 border mx-auto">{mod.courseUnitID}</span>
-                                        <button 
-                                            className="btn btn-sm btn-outline-primary mt-auto rounded-pill"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                const autoSubmit = async () => {
-                                                    try {
-                                                        const res = await api.post('/peer-learning-requests', {
-                                                            courseUnitID: mod.courseUnitID,
-                                                            courseUnitName: mod.courseUnitName,
-                                                            description: 'General unit request'
-                                                        });
-                                                        if (res.data.status === 'success') {
-                                                            fetchRequests();
-                                                            showToast('Unit request submitted!', 'success');
-                                                        }
-                                                    } catch (err) {
-                                                        showToast('Failed to request unit.', 'danger');
-                                                    }
-                                                };
-                                                autoSubmit();
-                                            }}
-                                        >
-                                            Request Unit
-                                        </button>
-                                        <button 
-                                            className="btn btn-link text-decoration-none small text-muted mt-2 p-0"
-                                            onClick={() => handleModuleClick(mod.courseUnitID)}
-                                        >
-                                            Ask specific question
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                    
-                    <h5 className="mb-3 fw-bold border-top pt-4">Your Requests</h5>
-                    <div className="row g-4">
-                        {requests.length === 0 ? (
-                            <div className="col-12 text-center text-muted py-5">
-                                <Users size={48} className="mb-3 opacity-50" />
-                                <h6>No requests found</h6>
-                            </div>
-                        ) : (
-                            requests.map((req, idx) => (
-                                <div className="col-md-6" key={req.requestID || idx}>
-                                    <div className="card border-0 shadow-sm">
-                                        <div className="card-body p-4">
-                                            <div className="d-flex justify-content-between align-items-start mb-2">
-                                                <h6 className="fw-bold m-0">{req.courseUnitName}</h6>
-                                            </div>
-                                            <span className="badge bg-secondary mb-2">{req.courseUnitID}</span>
-                                            <p className="text-muted small mb-0">{req.description}</p>
+                        {modules.map(mod => {
+                            const alreadyRequested = requests.some(
+                                r => r.courseUnitID === mod.courseUnitID && r.status === 'pending'
+                            );
+                            return (
+                                <div className="col-md-4" key={mod.courseUnitID}>
+                                    <div className={`card border-0 shadow-sm h-100 ${alreadyRequested ? 'border border-success' : ''}`}>
+                                        <div className="card-body p-4 text-center d-flex flex-column">
+                                            <BookOpen className="text-primary mb-3 mx-auto" size={32} />
+                                            <h6 className="fw-bold flex-grow-1">{mod.courseUnitName}</h6>
+                                            <span className="badge bg-light text-dark mt-2 mb-3 border mx-auto">
+                                                {mod.courseUnitID}
+                                            </span>
+                                            {alreadyRequested ? (
+                                                <span className="badge bg-success py-2">
+                                                    <CheckCircle size={14} className="me-1" /> Request Sent
+                                                </span>
+                                            ) : (
+                                                <>
+                                                    <button
+                                                        className="btn btn-sm btn-primary mt-auto rounded-pill mb-2"
+                                                        onClick={() => handleRequestUnit(mod)}
+                                                    >
+                                                        Request Unit
+                                                    </button>
+                                                    <button
+                                                        className="btn btn-link text-decoration-none small text-muted p-0"
+                                                        onClick={() => {
+                                                            setFormData({ ...formData, courseUnitID: mod.courseUnitID, courseUnitName: mod.courseUnitName });
+                                                            setShowModal(true);
+                                                        }}
+                                                    >
+                                                        Ask specific question
+                                                    </button>
+                                                </>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
-                            ))
-                        )}
+                            );
+                        })}
                     </div>
-                </>
-            ) : (
-                <div className="row g-4">
+
+                    {/* My Requests */}
+                    <h5 className="mb-3 fw-bold border-top pt-4">My Submitted Requests</h5>
                     {requests.length === 0 ? (
-                        <div className="col-12 text-center text-muted py-5">
-                            <Users size={48} className="mb-3 opacity-50" />
-                            <h5>No requests found</h5>
+                        <div className="text-center text-muted py-4">
+                            <Clock size={40} className="mb-2 opacity-50" />
+                            <p>No requests submitted yet.</p>
                         </div>
                     ) : (
-                        requests.map((req, idx) => (
-                            <div className="col-md-6" key={req.id || idx}>
-                                <div className="card h-100 border-0 shadow-sm">
-                                    <div className="card-body p-4">
-                                        <div className="d-flex justify-content-between align-items-start mb-3">
+                        <div className="row g-3">
+                            {requests.map((req, idx) => (
+                                <div className="col-md-6" key={req.requestID || idx}>
+                                    <div className="card border-0 shadow-sm">
+                                        <div className="card-body p-3 d-flex justify-content-between align-items-center">
                                             <div>
-                                                <h5 className="fw-bold m-0">{req.courseUnitName}</h5>
-                                                <span className="badge bg-secondary mt-1">{req.courseUnitID}</span>
+                                                <h6 className="fw-bold m-0">{req.courseUnitName}</h6>
+                                                <small className="text-muted">{req.courseUnitID}</small>
+                                                {req.description && (
+                                                    <p className="text-muted small mt-1 mb-0">{req.description}</p>
+                                                )}
                                             </div>
+                                            {getStatusBadge(req.status)}
                                         </div>
-                                        
-                                        {user?.role === 'rep' && req.request_count && (
-                                            <div className="alert alert-info py-2 small fw-bold mb-3">
-                                                {req.request_count} student(s) requested this
-                                            </div>
-                                        )}
-
-                                        {!req.request_count && <p className="text-muted small">{req.description}</p>}
-
-                                        {user?.role === 'rep' && req.status === 'pending' && (
-                                            <div className="d-flex flex-column gap-2 mt-3">
-                                                <button className="btn btn-sm btn-success w-100 rounded-pill mb-2" onClick={() => handleStatusUpdate(req.courseUnitName, req.courseUnitID, 'approved')}>
-                                                    Approve
-                                                </button>
-                                                <button className="btn btn-sm btn-danger w-100 rounded-pill" onClick={() => handleStatusUpdate(req.courseUnitName, req.courseUnitID, 'rejected')}>
-                                                    <XCircle size={16} /> Reject
-                                                </button>
-                                            </div>
-                                        )}
                                     </div>
                                 </div>
-                            </div>
-                        ))
+                            ))}
+                        </div>
                     )}
+                </>
+
+            ) : user?.role === 'course_representative' ? (
+                /* ── REP VIEW — Grouped requests ── */
+                <>
+                    {requests.length === 0 ? (
+                        <div className="text-center text-muted py-5">
+                            <Users size={56} className="mb-3 opacity-50" />
+                            <h5>No requests yet</h5>
+                            <p className="small">Students from your batch will appear here when they request peer learning.</p>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="alert alert-primary d-flex align-items-center py-2 mb-4 border-0 rounded-3">
+                                <Users size={18} className="me-2" />
+                                Showing requests from students in your batch — grouped by module.
+                            </div>
+                            <div className="row g-4">
+                                {requests.map((req, idx) => (
+                                    <div className="col-md-6" key={idx}>
+                                        <div className="card border-0 shadow-sm h-100">
+                                            <div className="card-body p-4">
+                                                <div className="d-flex justify-content-between align-items-start mb-2">
+                                                    <div>
+                                                        <h5 className="fw-bold m-0">{req.courseUnitName}</h5>
+                                                        <span className="badge bg-light text-dark border mt-1">
+                                                            {req.courseUnitID}
+                                                        </span>
+                                                    </div>
+                                                    {getStatusBadge(req.status)}
+                                                </div>
+
+                                                {/* Student count pill */}
+                                                <div className="d-flex align-items-center gap-2 mt-3 mb-2">
+                                                    <span className="badge bg-primary fs-6 px-3 py-2 rounded-pill">
+                                                        <Users size={14} className="me-1" />
+                                                        {req.request_count} student{req.request_count > 1 ? 's' : ''} requested
+                                                    </span>
+                                                </div>
+
+                                                {req.student_list && (
+                                                    <p className="text-muted small mb-0 mt-1">
+                                                        <strong>Students:</strong> {req.student_list}
+                                                    </p>
+                                                )}
+
+                                                {req.semester && (
+                                                    <p className="text-muted small mb-0 mt-1">
+                                                        Semester {req.semester}
+                                                        {req.std_year ? ` · Year ${req.std_year}` : ''}
+                                                    </p>
+                                                )}
+
+                                                {/* Approve / Reject buttons for pending */}
+                                                {req.status === 'pending' && (
+                                                    <div className="d-flex gap-2 mt-3">
+                                                        <button
+                                                            className="btn btn-success btn-sm rounded-pill flex-grow-1"
+                                                            onClick={() => handleStatusUpdate(req.courseUnitID, req.courseUnitName, 'approved')}
+                                                        >
+                                                            <CheckCircle size={14} className="me-1" /> Approve All
+                                                        </button>
+                                                        <button
+                                                            className="btn btn-danger btn-sm rounded-pill flex-grow-1"
+                                                            onClick={() => handleStatusUpdate(req.courseUnitID, req.courseUnitName, 'rejected')}
+                                                        >
+                                                            <XCircle size={14} className="me-1" /> Reject All
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </>
+                    )}
+                </>
+
+            ) : (
+                /* Fallback: student with no modules loaded yet */
+                <div className="text-center mt-5">
+                    <BookOpen size={56} className="text-muted mb-3 opacity-50" />
+                    <h5 className="text-muted">No modules loaded</h5>
+                    <button className="btn btn-primary rounded-pill mt-2" onClick={() => setShowSemPopup(true)}>
+                        Select Semester
+                    </button>
                 </div>
             )}
 
-            {/* Request Modal */}
+            {/* Ask Specific Question Modal */}
             {showModal && (
                 <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
                     <div className="modal-dialog modal-dialog-centered">
                         <div className="modal-content border-0 shadow">
                             <div className="modal-header border-0 pb-0">
                                 <h5 className="fw-bold">Request Peer Learning</h5>
-                                <button type="button" className="btn-close" onClick={() => setShowModal(false)}></button>
+                                <button type="button" className="btn-close" onClick={() => setShowModal(false)} />
                             </div>
                             <div className="modal-body p-4">
                                 <form onSubmit={handleSubmit}>
                                     <div className="mb-3">
-                                        <label className="form-label text-muted small fw-bold">Course Code</label>
+                                        <label className="form-label text-muted small fw-bold">COURSE CODE</label>
                                         <input type="text" className="form-control bg-light" value={formData.courseUnitID} readOnly />
                                     </div>
                                     <div className="mb-3">
-                                        <label className="form-label text-muted small fw-bold">Course Unit Name</label>
-                                        <input type="text" className="form-control" placeholder="e.g. Loops in Java" value={formData.courseUnitName} onChange={e => setFormData({...formData, courseUnitName: e.target.value})} required />
+                                        <label className="form-label text-muted small fw-bold">MODULE NAME</label>
+                                        <input type="text" className="form-control bg-light" value={formData.courseUnitName} readOnly />
                                     </div>
                                     <div className="mb-4">
-                                        <label className="form-label text-muted small fw-bold">Description / Where you need help</label>
-                                        <textarea className="form-control" rows="3" placeholder="Provide specific details..." value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} required></textarea>
+                                        <label className="form-label text-muted small fw-bold">DESCRIBE WHERE YOU NEED HELP</label>
+                                        <textarea
+                                            className="form-control"
+                                            rows="3"
+                                            placeholder="Provide specific details about what you need help with..."
+                                            value={formData.description}
+                                            onChange={e => setFormData({ ...formData, description: e.target.value })}
+                                            required
+                                        />
                                     </div>
                                     <div className="d-flex gap-2 justify-content-end">
-                                        <button type="button" className="btn btn-light rounded-pill px-4" onClick={() => setShowModal(false)}>Cancel</button>
-                                        <button type="submit" className="btn btn-primary rounded-pill px-4">Submit</button>
+                                        <button type="button" className="btn btn-light rounded-pill px-4" onClick={() => setShowModal(false)}>
+                                            Cancel
+                                        </button>
+                                        <button type="submit" className="btn btn-primary rounded-pill px-4">
+                                            Submit Request
+                                        </button>
                                     </div>
                                 </form>
                             </div>

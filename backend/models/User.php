@@ -25,8 +25,24 @@ abstract class User {
     protected $lost_item_sms_notification;
     protected $has_seen_lost_item_popup;
 
-    public function __construct() {
+    public function __construct(array $data = []) {
         $this->conn = Database::getInstance()->getConnection();
+        if (!empty($data)) {
+            $this->userID = $data['userID'] ?? $this->userID;
+            $this->fname = $data['fname'] ?? $this->fname;
+            $this->lname = $data['lname'] ?? $this->lname;
+            $this->phoneNum = $data['phoneNum'] ?? $this->phoneNum;
+            $this->email = $data['email'] ?? $this->email;
+            $this->hash_password = $data['hash_password'] ?? $this->hash_password;
+            $this->role = $data['role'] ?? $this->role;
+            $this->is_active = $data['is_active'] ?? $this->is_active;
+            $this->is_verified = $data['is_verified'] ?? $this->is_verified;
+            $this->last_login = $data['last_login'] ?? $this->last_login;
+            $this->created_at = $data['created_at'] ?? $this->created_at;
+            $this->peer_learning_app_notification = $data['peer_learning_app_notification'] ?? $this->peer_learning_app_notification;
+            $this->lost_item_sms_notification = $data['lost_item_sms_notification'] ?? $this->lost_item_sms_notification;
+            $this->has_seen_lost_item_popup = $data['has_seen_lost_item_popup'] ?? $this->has_seen_lost_item_popup;
+        }
     }
 
     
@@ -58,23 +74,7 @@ abstract class User {
     public function setIsVerified($val) { $this->is_verified = $val; return $this; }
 
     
-    public function hydrate(array $data) {
-        $this->userID = $data['userID'] ?? $this->userID;
-        $this->fname = $data['fname'] ?? $this->fname;
-        $this->lname = $data['lname'] ?? $this->lname;
-        $this->phoneNum = $data['phoneNum'] ?? $this->phoneNum;
-        $this->email = $data['email'] ?? $this->email;
-        $this->hash_password = $data['hash_password'] ?? $this->hash_password;
-        $this->role = $data['role'] ?? $this->role;
-        $this->is_active = $data['is_active'] ?? $this->is_active;
-        $this->is_verified = $data['is_verified'] ?? $this->is_verified;
-        $this->last_login = $data['last_login'] ?? $this->last_login;
-        $this->created_at = $data['created_at'] ?? $this->created_at;
-        $this->peer_learning_app_notification = $data['peer_learning_app_notification'] ?? $this->peer_learning_app_notification;
-        $this->lost_item_sms_notification = $data['lost_item_sms_notification'] ?? $this->lost_item_sms_notification;
-        $this->has_seen_lost_item_popup = $data['has_seen_lost_item_popup'] ?? $this->has_seen_lost_item_popup;
-        return $this;
-    }
+
 
     public function register() {
         $query = "INSERT INTO users (fname, lname, email, phoneNum, hash_password, role) 
@@ -140,19 +140,22 @@ abstract class User {
     }
 
     public function forgotPassword() {
-        // Issue token / email logic
+        
     }
 
     public function verifyOTP($otpCode) {
-        $query = "SELECT * FROM otp_verification WHERE userID = :uid AND otp_code = :otp AND expired_at > NOW() AND verified_at IS NULL LIMIT 1";
+        $now = date('Y-m-d H:i:s');
+        $query = "SELECT * FROM otp_verification WHERE userID = :uid AND otp_code = :otp AND expired_at > :now AND verified_at IS NULL LIMIT 1";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':uid', $this->userID);
         $stmt->bindParam(':otp', $otpCode);
+        $stmt->bindParam(':now', $now);
         $stmt->execute();
         $row = $stmt->fetch();
 
         if ($row) {
-            $upd = $this->conn->prepare("UPDATE otp_verification SET verified_at = NOW() WHERE otpID = :id");
+            $upd = $this->conn->prepare("UPDATE otp_verification SET verified_at = :now WHERE otpID = :id");
+            $upd->bindParam(':now', $now);
             $upd->bindParam(':id', $row['otpID']);
             $upd->execute();
 
@@ -163,5 +166,73 @@ abstract class User {
             return true;
         }
         return false;
+    }
+
+    public static function loadByIdentifier(string $identifier, string $role) {
+        $db = Database::getInstance()->getConnection();
+        
+        if ($role === 'student') {
+            $sql = "SELECT u.*, s.enrollmentNo, s.courseID, s.std_year 
+                    FROM users u 
+                    JOIN student s ON u.userID = s.userID 
+                    WHERE s.enrollmentNo = :identifier";
+        } elseif ($role === 'course_representative') {
+            // Rep can login using their rep_id_string (e.g. rep_uwu/cst/23/088)
+            // The users table role may still be 'student' — dual-login is supported
+            $sql = "SELECT u.*, s.enrollmentNo, s.courseID, s.std_year, c.repID, c.rep_id_string, c.is_first_login, c.hash_password as rep_hash_password
+                    FROM course_representative c
+                    JOIN users u ON u.userID = c.userID
+                    LEFT JOIN student s ON s.userID = c.userID
+                    WHERE c.rep_id_string = :identifier OR s.enrollmentNo = :identifier";
+        } elseif ($role === 'staff') {
+            $sql = "SELECT u.*, st.staffID FROM users u JOIN staff st ON u.userID = st.userID WHERE st.staffID = :identifier OR u.email = :identifier";
+        } elseif ($role === 'admin') {
+            $sql = "SELECT u.*, a.adminID FROM users u JOIN admin a ON u.userID = a.userID WHERE a.adminID = :identifier OR u.email = :identifier";
+        } else {
+            return null;
+        }
+
+        $stmt = $db->prepare($sql);
+        $stmt->bindParam(':identifier', $identifier);
+        $stmt->execute();
+        $fullData = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($fullData) {
+            $fullData['role'] = $role;
+            switch ($role) {
+                case 'admin': return new Admin($fullData);
+                case 'staff': return new Staff($fullData);
+                case 'course_representative':
+                    if (isset($fullData['rep_hash_password']) && !empty($fullData['rep_hash_password'])) {
+                        $fullData['hash_password'] = $fullData['rep_hash_password'];
+                    }
+                    return new CourseRepresentative($fullData);
+                case 'student':
+                default: return new Student($fullData);
+            }
+        }
+        return null;
+    }
+
+    public static function loadByEmail(string $email) {
+        $db = Database::getInstance()->getConnection();
+        
+        $sql = "SELECT * FROM users WHERE email = :email";
+        $stmt = $db->prepare($sql);
+        $stmt->bindParam(':email', $email);
+        $stmt->execute();
+        $userData = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($userData) {
+            $role = $userData['role'];
+            switch ($role) {
+                case 'admin': return new Admin($userData);
+                case 'staff': return new Staff($userData);
+                case 'course_representative': return new CourseRepresentative($userData);
+                case 'student':
+                default: return new Student($userData);
+            }
+        }
+        return null;
     }
 }
