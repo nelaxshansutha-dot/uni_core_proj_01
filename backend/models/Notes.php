@@ -19,7 +19,61 @@ class Notes {
         $this->conn = Database::getInstance()->getConnection();
     }
 
+    // Getters and Setters
+    public function getNoteID() 
+    { return $this->noteID; }
+    public function setNoteID($val) 
+    { $this->noteID = $val; }
+
+    public function getEnrollmentNo() 
+    { return $this->enrollmentNo; }
+    public function setEnrollmentNo($val) 
+    { $this->enrollmentNo = $val; }
+
+    public function getCourseID() 
+    { return $this->courseID; }
+    public function setCourseID($val) 
+    { $this->courseID = $val; }
+
+    public function getCourseUnitID() 
+    { return $this->courseUnitID; }
+    public function setCourseUnitID($val) 
+    { $this->courseUnitID = $val; }
+
+    public function getTitle() 
+    { return $this->title; }
+    public function setTitle($val) 
+    { $this->title = $val; }
+
+    public function getFileUrl() 
+    { return $this->file_url; }
+    public function setFileUrl($val) 
+    { $this->file_url = $val; }
+
+    public function getDescription() 
+    { return $this->description; }
+    public function setDescription($val) 
+    { $this->description = $val; }
+
+    public function getStatus() 
+    { return $this->status; }
+    public function setStatus($val) 
+    { $this->status = $val; }
+
+    public function getCreatedAt() 
+    { return $this->created_at; }
+    public function setCreatedAt($val) 
+    { $this->created_at = $val; }
+
     public function upload($data) {
+        if (empty($data['enrollmentNo']) && !empty($data['userID'])) {
+            $stmt = $this->conn->prepare("SELECT enrollmentNo FROM student WHERE userID = :uid UNION SELECT enrollmentNo FROM course_representative WHERE userID = :uid LIMIT 1");
+            $stmt->execute([':uid' => $data['userID']]);
+            $res = $stmt->fetch();
+            if ($res && !empty($res['enrollmentNo'])) {
+                $data['enrollmentNo'] = $res['enrollmentNo'];
+            }
+        }
         $courseID = $data['courseID'] ?? null;
         if (!$courseID && !empty($data['courseUnitID'])) {
             $stmt = $this->conn->prepare("SELECT courseID FROM course_units WHERE courseUnitID = :cuid");
@@ -28,20 +82,40 @@ class Notes {
             if ($res) $courseID = $res['courseID'];
         }
         
-        $query = "INSERT INTO notes (enrollmentNo, courseID, courseUnitID, title, file_url, description, academicYear, noteType) 
-                  VALUES (:enr, :cid, :cuid, :title, :file, :desc, :ayear, :ntype)";
-        $stmt = $this->conn->prepare($query);
-        $stmt->execute([
-            ':enr' => $data['enrollmentNo'],
-            ':cid' => $courseID,
-            ':cuid' => $data['courseUnitID'],
-            ':title' => $data['title'],
-            ':file' => $data['file_url'],
-            ':desc' => $data['description'] ?? null,
-            ':ayear' => $data['academicYear'] ?? null,
-            ':ntype' => $data['noteType'] ?? 'notes'
-        ]);
-        return $this->conn->lastInsertId();
+        // Fallback: If courseUnitID was custom (e.g. cst204) and not in DB, get courseID from student table
+        if (!$courseID && !empty($data['enrollmentNo'])) {
+            $stmt = $this->conn->prepare("SELECT courseID FROM student WHERE enrollmentNo = :enr");
+            $stmt->execute([':enr' => $data['enrollmentNo']]);
+            $res = $stmt->fetch();
+            if ($res) $courseID = $res['courseID'];
+        }
+
+        // Final fallback: If still null, try extracting from enrollmentNo manually
+        if (!$courseID && !empty($data['enrollmentNo'])) {
+            $enrParts = explode('/', strtoupper(trim($data['enrollmentNo'])));
+            $courseCode = $enrParts[1] ?? '';
+            if ($courseCode === 'CST') $courseID = 1;
+        }
+        
+        try {
+            $query = "INSERT INTO notes (enrollmentNo, courseID, courseUnitID, title, file_url, description, academicYear, noteType) 
+                      VALUES (:enr, :cid, :cuid, :title, :file, :desc, :ayear, :ntype)";
+            $stmt = $this->conn->prepare($query);
+            $stmt->execute([
+                ':enr' => $data['enrollmentNo'],
+                ':cid' => $courseID,
+                ':cuid' => $data['courseUnitID'],
+                ':title' => $data['title'],
+                ':file' => $data['file_url'],
+                ':desc' => $data['description'] ?? null,
+                ':ayear' => $data['academicYear'] ?? null,
+                ':ntype' => $data['noteType'] ?? 'notes'
+            ]);
+            return $this->conn->lastInsertId();
+        } catch (\Exception $e) {
+            file_put_contents(__DIR__ . '/../error_log.txt', date('[Y-m-d H:i:s] ') . "Notes Upload DB Error: " . $e->getMessage() . "\n", FILE_APPEND);
+            throw $e;
+        }
     }
 
     public function view($noteID = null, $filters = []) {
@@ -53,7 +127,7 @@ class Notes {
             $query = "SELECT n.*, cu.courseUniName FROM notes n LEFT JOIN course_units cu ON n.courseUnitID = cu.courseUnitID WHERE 1=1";
             $params = [];
             
-            // Access control by user's course
+        
             if (!empty($filters['enrollmentNo'])) {
                 $parts = explode('/', strtolower($filters['enrollmentNo']));
                 if (count($parts) >= 3) {

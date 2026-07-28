@@ -6,7 +6,6 @@ use PDO;
 class OtpVerification {
     private $conn;
 
-    // Strictly the user requested attributes
     private $otpID;
     private $otpCode;
     private $created_at;
@@ -54,12 +53,13 @@ class OtpVerification {
     }
 
     public function verify($userID, $otp) {
-        $this->otpCode = $otp; // Map parameter to property
+        $this->otpCode = $otp; 
+        $now = date('Y-m-d H:i:s');
         
-        $query = "SELECT * FROM otp_verification WHERE userID = :uid AND otp_code = :otp AND expired_at > NOW() AND verified_at IS NULL LIMIT 1";
+        $query = "SELECT * FROM otp_verification WHERE userID = :uid AND otp_code = :otp AND expired_at > :now AND verified_at IS NULL LIMIT 1";
         $stmt = $this->conn->prepare($query);
         // Note: $userID is not a property so it is passed directly
-        $stmt->execute([':uid' => $userID, ':otp' => $this->otpCode]);
+        $stmt->execute([':uid' => $userID, ':otp' => $this->otpCode, ':now' => $now]);
         $row = $stmt->fetch();
 
         if ($row) {
@@ -67,7 +67,7 @@ class OtpVerification {
             $this->otpID = $row['otpID'];
             $this->created_at = $row['created_at'];
             $this->expired_at = $row['expired_at'];
-            $this->verified_at = date('Y-m-d H:i:s');
+            $this->verified_at = $now;
             
             $upd = $this->conn->prepare("UPDATE otp_verification SET verified_at = :ver WHERE otpID = :id");
             $upd->execute([

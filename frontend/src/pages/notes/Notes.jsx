@@ -54,7 +54,8 @@ const Notes = () => {
 
         try {
             const res = await api.post('/notes', data, {
-                headers: { 'Content-Type': 'multipart/form-data' }
+                // Do not set Content-Type manually so the browser can attach the proper boundary
+                headers: { 'Content-Type': undefined }
             });
             if (res.data.success) {
                 setShowModal(false);

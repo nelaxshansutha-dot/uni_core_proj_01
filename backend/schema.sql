@@ -114,18 +114,19 @@ CREATE TABLE `notes` (
 
 CREATE TABLE `peer_learning_request` (
     `requestID` INT AUTO_INCREMENT PRIMARY KEY,
-    `courseUnitID` INT NOT NULL,
-    `enrollmentNo` VARCHAR(50) NOT NULL,
     `repID` INT NOT NULL,
-    `std_year` INT,
-    `status` VARCHAR(50) DEFAULT 'pending',
-    `courseUnitName` VARCHAR(150),
-    `semester` VARCHAR(50),
+    `courseUnitID` VARCHAR(20) NULL,
+    `enrollmentNo` VARCHAR(50) NOT NULL,
+    `courseUnitName` VARCHAR(200) NOT NULL,
+    `semester` INT NULL,
+    `std_year` INT NULL,
+    `description` TEXT NULL,
+    `status` ENUM('pending', 'approved', 'rejected', 'completed') DEFAULT 'pending',
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (`courseUnitID`) REFERENCES `course_units`(`courseUnitID`) ON DELETE CASCADE,
     FOREIGN KEY (`enrollmentNo`) REFERENCES `student`(`enrollmentNo`) ON DELETE CASCADE,
     FOREIGN KEY (`repID`) REFERENCES `course_representative`(`repID`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 
 CREATE TABLE `app_notification` (
     `appID` INT AUTO_INCREMENT PRIMARY KEY,

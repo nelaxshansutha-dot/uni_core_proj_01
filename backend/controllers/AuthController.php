@@ -1,6 +1,6 @@
 <?php
 namespace Controllers;
-use Models\UserFactory;
+
 use Models\OtpVerification;
 use Firebase\JWT\JWT;
 use Middleware\AuthMiddleware;
@@ -14,10 +14,23 @@ class AuthController {
             return;
         }
 
+        if (isset($data['phoneNum']) && !empty($data['phoneNum'])) {
+            if (!preg_match('/^0[0-9]{9}$/', $data['phoneNum'])) {
+                echo json_encode(['success' => false, 'message' => 'Phone number must start with 0 and be exactly 10 digits.']);
+                return;
+            }
+        }
+
         $role = $data['role'] ?? 'student';
         $data['hash_password'] = password_hash($data['password'], PASSWORD_BCRYPT);
         
-        $user = UserFactory::create($role, $data);
+        switch ($role) {
+            case 'admin': $user = new \Models\Admin($data); break;
+            case 'staff': $user = new \Models\Staff($data); break;
+            case 'course_representative': $user = new \Models\CourseRepresentative($data); break;
+            case 'student':
+            default: $user = new \Models\Student($data); break;
+        }
         try {
             $userID = $user->register();
             if ($userID) {
@@ -46,7 +59,7 @@ class AuthController {
         $role = $data['role'] ?? 'student';
         $password = $data['password'] ?? '';
 
-        $user = UserFactory::loadByIdentifier($identifier, $role);
+        $user = \Models\User::loadByIdentifier($identifier, $role);
         if (!$user) {
             echo json_encode(['success' => false, 'message' => 'Invalid credentials or role mismatch.']);
             return;
@@ -85,7 +98,7 @@ class AuthController {
                     'first_name'   => $userRow['fname'],
                     'last_name'    => $userRow['lname'],
                     'email'        => $userRow['email'],
-                    'role'         => $userRow['role'],
+                    'role'         => $user->getRole(),
                     'phone_number' => $userRow['phoneNum'],
                     'lost_item_sms_notification' => $userRow['lost_item_sms_notification'] ?? 0,
                     'peer_learning_app_notification' => $userRow['peer_learning_app_notification'] ?? 1,
@@ -94,7 +107,22 @@ class AuthController {
                 if (method_exists($user, 'getEnrollmentNo')) {
                     $userObj['enrollment_no'] = $user->getEnrollmentNo();
                 }
-                echo json_encode(['success' => true, 'token' => $token, 'user' => $userObj]);
+
+                // For course reps, include is_first_login so frontend can force password reset
+                $isFirstLogin = false;
+                if ($user->getRole() === 'course_representative') {
+                    $repStmt = $db->prepare("SELECT is_first_login FROM course_representative WHERE userID = :uid LIMIT 1");
+                    $repStmt->execute([':uid' => $user->getUserID()]);
+                    $repRow = $repStmt->fetch(\PDO::FETCH_ASSOC);
+                    $isFirstLogin = $repRow ? (bool)$repRow['is_first_login'] : false;
+                }
+
+                echo json_encode([
+                    'success'        => true,
+                    'token'          => $token,
+                    'user'           => $userObj,
+                    'is_first_login' => $isFirstLogin
+                ]);
             } else {
                 echo json_encode(['success' => false, 'message' => 'Invalid credentials']);
             }
@@ -105,9 +133,45 @@ class AuthController {
 
     public function logout() {
         $decoded = AuthMiddleware::authenticate();
-        $user = UserFactory::create($decoded->role);
+        switch ($decoded->role) {
+            case 'admin': $user = new \Models\Admin(); break;
+            case 'staff': $user = new \Models\Staff(); break;
+            case 'course_representative': $user = new \Models\CourseRepresentative(); break;
+            case 'student':
+            default: $user = new \Models\Student(); break;
+        }
         $user->logout($decoded->jti, $decoded->exp);
         echo json_encode(['success' => true, 'message' => 'Logged out successfully']);
+    }
+
+    /**
+     * Called when a rep logs in for the first time and must set a new password.
+     * Updates hash_password in course_representative table, sets is_first_login = 0.
+     */
+    public function forceChangeRepPassword() {
+        $data     = json_decode(file_get_contents("php://input"), true);
+        $userID   = $data['user_id'] ?? null;
+        $newPass  = $data['new_password'] ?? '';
+
+        if (!$userID || strlen($newPass) < 6) {
+            echo json_encode(['status' => 'error', 'message' => 'User ID and a password of at least 6 characters are required.']);
+            return;
+        }
+
+        $db   = \Config\Database::getInstance()->getConnection();
+        $hash = password_hash($newPass, PASSWORD_BCRYPT);
+
+        // Update the password in course_representative table and mark first login as done
+        $stmt = $db->prepare(
+            "UPDATE course_representative SET hash_password = :hash, is_first_login = 0 WHERE userID = :uid"
+        );
+        $ok = $stmt->execute([':hash' => $hash, ':uid' => $userID]);
+
+        if ($ok && $stmt->rowCount() > 0) {
+            echo json_encode(['status' => 'success', 'message' => 'Password updated successfully. You can now log in.']);
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'Failed to update password. Please contact your admin.']);
+        }
     }
 
     public function verifyOtp() {
@@ -131,7 +195,13 @@ class AuthController {
             return;
         }
 
-        $user = \Models\UserFactory::create($userData['role'], $userData);
+        switch ($userData['role']) {
+            case 'admin': $user = new \Models\Admin($userData); break;
+            case 'staff': $user = new \Models\Staff($userData); break;
+            case 'course_representative': $user = new \Models\CourseRepresentative($userData); break;
+            case 'student':
+            default: $user = new \Models\Student($userData); break;
+        }
 
         if ($user->verifyOTP($otp)) {
             echo json_encode(['success' => true, 'message' => 'Account verified.']);
@@ -220,7 +290,13 @@ class AuthController {
             return;
         }
 
-        $user = \Models\UserFactory::create($userData['role'], $userData);
+        switch ($userData['role']) {
+            case 'admin': $user = new \Models\Admin($userData); break;
+            case 'staff': $user = new \Models\Staff($userData); break;
+            case 'course_representative': $user = new \Models\CourseRepresentative($userData); break;
+            case 'student':
+            default: $user = new \Models\Student($userData); break;
+        }
 
         if ($user->verifyOTP($otp)) {
             // Generate a temporary reset token (for demo purposes, a simple hash)
@@ -279,7 +355,7 @@ class AuthController {
                 'first_name' => $userRow['fname'],
                 'last_name' => $userRow['lname'],
                 'email' => $userRow['email'],
-                'role' => $userRow['role'],
+                'role' => $decoded->role,
                 'phone_number' => $userRow['phoneNum'],
                 'lost_item_sms_notification' => $userRow['lost_item_sms_notification'],
                 'peer_learning_app_notification' => $userRow['peer_learning_app_notification'],
@@ -287,6 +363,16 @@ class AuthController {
             ];
             if (isset($userRow['enrollmentNo'])) $userData['enrollment_no'] = $userRow['enrollmentNo'];
             if (isset($userRow['staffID'])) $userData['staff_id'] = $userRow['staffID'];
+
+            // Fetch rep_id_string for course representatives
+            if ($decoded->role === 'course_representative') {
+                $repStmt = $db->prepare("SELECT rep_id_string FROM course_representative WHERE userID = :uid LIMIT 1");
+                $repStmt->execute([':uid' => $decoded->userID]);
+                $repRow = $repStmt->fetch(\PDO::FETCH_ASSOC);
+                if ($repRow) {
+                    $userData['rep_id'] = $repRow['rep_id_string'];
+                }
+            }
             
             echo json_encode(['success' => true, 'data' => $userData]);
         } else {
@@ -315,6 +401,12 @@ class AuthController {
         $fname = $data['first_name'] ?? '';
         $lname = $data['last_name'] ?? '';
         $phoneNum = $data['phone_number'] ?? '';
+        
+        if (!empty($phoneNum) && !preg_match('/^0[0-9]{9}$/', $phoneNum)) {
+            echo json_encode(['status' => 'error', 'message' => 'Phone number must start with 0 and be exactly 10 digits.']);
+            return;
+        }
+        
         $smsPref = $data['lost_item_sms_notification'] ?? 0;
         $peerPref = $data['peer_learning_app_notification'] ?? 1;
 
@@ -361,7 +453,7 @@ class AuthController {
                     'first_name' => $updatedUser['fname'],
                     'last_name' => $updatedUser['lname'],
                     'email' => $updatedUser['email'],
-                    'role' => $updatedUser['role'],
+                    'role' => $decoded->role,
                     'phone_number' => $updatedUser['phoneNum'],
                     'lost_item_sms_notification' => $updatedUser['lost_item_sms_notification'],
                     'peer_learning_app_notification' => $updatedUser['peer_learning_app_notification']
@@ -373,7 +465,7 @@ class AuthController {
                 // Generate a fresh token matching login structure
                 $payload = [
                     'userID' => $updatedUser['userID'],
-                    'role' => $updatedUser['role'],
+                    'role' => $decoded->role,
                     'jti' => uniqid('jwt_', true),
                     'iat' => time(),
                     'exp' => time() + 3600 * 24 // 24 hrs

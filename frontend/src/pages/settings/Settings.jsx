@@ -256,7 +256,7 @@ const Settings = () => {
                                         <span>Notification Preferences</span>
                                     </h5>
 
-                                    {user?.role !== 'rep' && (
+                                    {user?.role !== 'rep' && user?.role !== 'course_representative' && (
                                         <div className="col-md-6">
                                         <div className="card bg-light border-0 p-3 h-100">
                                             <div className="form-check form-switch d-flex align-items-center justify-content-between p-0">

@@ -31,10 +31,12 @@ class LostItemController {
             
             
             if (isset($data['update_id'])) {
-                $success = $model->update($data['update_id'], $data);
+                $model = new LostItem($data);
+                $success = $model->update($data['update_id']);
                 echo json_encode(['success' => $success]);
             } else {
-                $lostID = $model->create($data);
+                $model = new LostItem($data);
+                $lostID = $model->create();
                 
                 // Trigger SMS Broadcast if requested
                 if (isset($data['send_sms_alert']) && ($data['send_sms_alert'] === 'true' || $data['send_sms_alert'] === true || $data['send_sms_alert'] === '1')) {
@@ -82,7 +84,8 @@ class LostItemController {
                 return;
             }
             
-            $success = $model->update($id, $data);
+            $model = new LostItem($data);
+            $success = $model->update($id);
             echo json_encode(['success' => $success]);
             
         } elseif ($method === 'DELETE') {

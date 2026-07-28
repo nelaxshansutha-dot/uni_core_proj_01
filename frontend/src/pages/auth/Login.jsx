@@ -35,9 +35,9 @@ const Login = () => {
         switch (role) {
             case 'admin': return 'e.g. admin123';
             case 'staff': return 'e.g. staff/2021/01';
-            case 'rep': return 'e.g. REP_UWU/CST/21/0042';
+            case 'rep': return 'e.g. rep_uwu/cst/23/088';
             case 'student':
-            default: return 'e.g. UWU/CST/21/0042';
+            default: return 'e.g. UWU/CST/23/088';
         }
     };
 
@@ -63,16 +63,28 @@ const Login = () => {
             });
 
             if (response.data.success) {
-                // Merge JWT payload fields (userID, enrollmentNo etc.) into user object
+                const userRole = response.data.user.role;
+
+                // If rep is logging in for the first time, force password reset
+                if (userRole === 'course_representative' && response.data.is_first_login) {
+                    navigate('/change-rep-password', {
+                        state: {
+                            userId: response.data.user.userID,
+                            repId: response.data.user.enrollment_no
+                        }
+                    });
+                    return;
+                }
+
+                // Normal login — store token & user, then navigate
                 const userData = {
                     ...response.data.user,
                     userID: response.data.user.userID ?? response.data.userID,
                     enrollmentNo: response.data.user.enrollmentNo,
-                    role: response.data.user.role,
+                    role: userRole,
                 };
                 login(response.data.token, userData);
 
-                const userRole = response.data.user.role;
                 if (userRole === 'admin') {
                     navigate('/admin');
                 } else if (userRole === 'course_representative') {

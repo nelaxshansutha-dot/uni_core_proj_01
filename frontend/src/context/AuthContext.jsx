@@ -14,18 +14,18 @@ export const AuthProvider = ({ children }) => {
 
             if (token && storedUser) {
                 try {
-                    // Start by trusting the stored user for instant UI rendering
+            
                     setUser(JSON.parse(storedUser));
                     
-                    // Securely verify and fetch true profile from the backend
+                    
                     const res = await api.get('/profile');
                     if (res.data.success && res.data.data) {
-                        // The backend returned the verified user data (which cannot be forged)
+                      
                         const verifiedUser = res.data.data;
                         setUser(verifiedUser);
-                        localStorage.setItem('user', JSON.stringify(verifiedUser)); // Fix local storage if it was tampered with
+                        localStorage.setItem('user', JSON.stringify(verifiedUser)); 
                     } else {
-                        // Token might be invalid or expired
+                    
                         logout();
                     }
                 } catch (e) {

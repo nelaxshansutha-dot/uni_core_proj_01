@@ -3,13 +3,15 @@ import api from '../../services/api';
 import { User, Save, ShieldAlert, CheckCircle, AlertTriangle } from 'lucide-react';
 
 const Profile = () => {
+    const storedUser = (() => { try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; } })();
     const [profile, setProfile] = useState({
         first_name: '',
         last_name: '',
         email: '',
         enrollment_no: '',
+        rep_id: '',
         phone_number: '',
-        role: '',
+        role: storedUser.role || '',
         lost_item_sms_notification: 0,
         peer_learning_app_notification: 1,
         course: '',
@@ -25,8 +27,8 @@ const Profile = () => {
 
     const fetchProfile = async () => {
         try {
-            const res = await api.get('/profile.php');
-            if (res.data.status === 'success') {
+            const res = await api.get('/profile');
+            if (res.data.success) {
                 setProfile(res.data.data);
             }
         } catch (err) {
@@ -39,6 +41,17 @@ const Profile = () => {
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
+        
+        if (name === 'phone_number') {
+            // Only allow numbers
+            const numericValue = value.replace(/\D/g, '');
+            setProfile({
+                ...profile,
+                [name]: numericValue
+            });
+            return;
+        }
+
         setProfile({
             ...profile,
             [name]: type === 'checkbox' ? (checked ? 1 : 0) : value
@@ -51,7 +64,7 @@ const Profile = () => {
         setStatusMessage({ type: '', text: '' });
 
         try {
-            const res = await api.put('/profile.php', profile);
+            const res = await api.put('/profile', profile);
             if (res.data.status === 'success') {
                 setStatusMessage({ type: 'success', text: 'Profile updated successfully!' });
                 fetchProfile();
@@ -137,14 +150,18 @@ const Profile = () => {
                                             {
                                                 profile.role === 'admin' ? 'Admin ID' : 
                                                 profile.role === 'staff' ? 'Staff ID' : 
-                                                profile.role === 'rep' ? 'Rep ID' : 
+                                                (profile.role === 'rep' || profile.role === 'course_representative') ? 'Rep ID' : 
                                                 'Enrollment No'
                                             }
                                         </label>
                                         <input
                                             type="text"
                                             className="form-control bg-light"
-                                            value={profile.role === 'admin' ? (profile.admin_id || '') : (profile.enrollment_no || '')}
+                                            value={
+                                                profile.role === 'admin' ? (profile.admin_id || '') :
+                                                profile.role === 'course_representative' ? (profile.rep_id || '') :
+                                                (profile.enrollment_no || '')
+                                            }
                                             disabled
                                         />
                                     </div>
@@ -154,9 +171,12 @@ const Profile = () => {
                                             type="text"
                                             className="form-control"
                                             name="phone_number"
-                                            placeholder="e.g. +94771234567"
+                                            placeholder="e.g. 0771234567"
                                             value={profile.phone_number || ''}
                                             onChange={handleChange}
+                                            pattern="^0[0-9]{9}$"
+                                            maxLength="10"
+                                            title="Phone number must start with 0 and be exactly 10 digits"
                                         />
                                     </div>
 
@@ -169,7 +189,7 @@ const Profile = () => {
                                     Preferences
                                 </h5>
 
-                                {profile.role !== 'rep' && (
+                                {profile.role !== 'rep' && profile.role !== 'course_representative' && (
                                 <div className="card bg-light border-0 p-3 mb-3">
                                     <div className="form-check form-switch d-flex align-items-center justify-content-between p-0">
                                         <div>
