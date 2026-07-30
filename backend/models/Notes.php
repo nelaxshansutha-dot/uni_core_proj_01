@@ -97,6 +97,22 @@ class Notes {
             if ($courseCode === 'CST') $courseID = 1;
         }
         
+        // Fuzzy match courseUnitID
+        $providedCuid = $data['courseUnitID'] ?? '';
+        $normalizedInput = strtoupper(str_replace([' ', '-'], '', $providedCuid));
+        
+        $stmtUnit = $this->conn->prepare("SELECT courseUnitID FROM course_units");
+        $stmtUnit->execute();
+        $allUnits = $stmtUnit->fetchAll(\PDO::FETCH_ASSOC);
+        
+        foreach ($allUnits as $unit) {
+            $dbUnit = strtoupper(str_replace([' ', '-'], '', $unit['courseUnitID']));
+            if ($dbUnit === $normalizedInput || strpos($dbUnit, $normalizedInput) === 0) {
+                $data['courseUnitID'] = $unit['courseUnitID'];
+                break;
+            }
+        }
+        
         try {
             $query = "INSERT INTO notes (enrollmentNo, courseID, courseUnitID, title, file_url, description, academicYear, noteType) 
                       VALUES (:enr, :cid, :cuid, :title, :file, :desc, :ayear, :ntype)";
@@ -113,18 +129,22 @@ class Notes {
             ]);
             return $this->conn->lastInsertId();
         } catch (\Exception $e) {
-            file_put_contents(__DIR__ . '/../error_log.txt', date('[Y-m-d H:i:s] ') . "Notes Upload DB Error: " . $e->getMessage() . "\n", FILE_APPEND);
+            $msg = $e->getMessage();
+            if (strpos($msg, 'foreign key constraint fails') !== false && strpos($msg, 'courseUnitID') !== false) {
+                throw new \Exception("The Course Code you entered does not exist in the system. Please verify the code.");
+            }
+            file_put_contents(__DIR__ . '/../error_log.txt', date('[Y-m-d H:i:s] ') . "Notes Upload DB Error: " . $msg . "\n", FILE_APPEND);
             throw $e;
         }
     }
 
     public function view($noteID = null, $filters = []) {
         if ($noteID) {
-            $stmt = $this->conn->prepare("SELECT n.*, cu.courseUniName FROM notes n LEFT JOIN course_units cu ON n.courseUnitID = cu.courseUnitID WHERE n.noteID = :nid");
+            $stmt = $this->conn->prepare("SELECT n.*, cu.courseUnitName AS courseUniName FROM notes n LEFT JOIN course_units cu ON n.courseUnitID = cu.courseUnitID WHERE n.noteID = :nid");
             $stmt->execute([':nid' => $noteID]);
             return $stmt->fetch();
         } else {
-            $query = "SELECT n.*, cu.courseUniName FROM notes n LEFT JOIN course_units cu ON n.courseUnitID = cu.courseUnitID WHERE 1=1";
+            $query = "SELECT n.*, cu.courseUnitName AS courseUniName FROM notes n LEFT JOIN course_units cu ON n.courseUnitID = cu.courseUnitID WHERE 1=1";
             $params = [];
             
         
@@ -142,6 +162,23 @@ class Notes {
             if (!empty($filters['courseUnitID'])) {
                 $query .= " AND n.courseUnitID = :cuid";
                 $params[':cuid'] = $filters['courseUnitID'];
+            }
+            
+            if (!empty($filters['academicYear'])) {
+                $query .= " AND n.academicYear = :ayear";
+                $params[':ayear'] = $filters['academicYear'];
+            }
+            
+            if (!empty($filters['semester'])) {
+                // If notes don't explicitly store semester, we might need to join course_units
+                $query .= " AND cu.semester = :sem";
+                $params[':sem'] = $filters['semester'];
+            }
+            
+            if (!empty($filters['courseCode'])) {
+                // n.enrollmentNo looks like UWU/CST/...
+                $query .= " AND LOWER(n.enrollmentNo) LIKE :cCode";
+                $params[':cCode'] = "%/" . strtolower($filters['courseCode']) . "/%";
             }
             
             $query .= " ORDER BY n.academicYear DESC, n.created_at DESC";

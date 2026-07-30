@@ -361,8 +361,17 @@ class AuthController {
                 'peer_learning_app_notification' => $userRow['peer_learning_app_notification'],
                 'has_seen_lost_item_popup' => $userRow['has_seen_lost_item_popup']
             ];
-            if (isset($userRow['enrollmentNo'])) $userData['enrollment_no'] = $userRow['enrollmentNo'];
             if (isset($userRow['staffID'])) $userData['staff_id'] = $userRow['staffID'];
+
+            // Fetch enrollmentNo for students and course representatives
+            if ($decoded->role === 'student' || $decoded->role === 'course_representative') {
+                $studentStmt = $db->prepare("SELECT enrollmentNo FROM student WHERE userID = :uid LIMIT 1");
+                $studentStmt->execute([':uid' => $decoded->userID]);
+                $studentRow = $studentStmt->fetch(\PDO::FETCH_ASSOC);
+                if ($studentRow) {
+                    $userData['enrollment_no'] = $studentRow['enrollmentNo'];
+                }
+            }
 
             // Fetch rep_id_string for course representatives
             if ($decoded->role === 'course_representative') {
@@ -459,7 +468,16 @@ class AuthController {
                     'peer_learning_app_notification' => $updatedUser['peer_learning_app_notification']
                 ];
                 
-                if (isset($updatedUser['enrollmentNo'])) $userData['enrollment_no'] = $updatedUser['enrollmentNo'];
+                // Fetch enrollmentNo for students and course representatives
+                if ($decoded->role === 'student' || $decoded->role === 'course_representative') {
+                    $studentStmt = $db->prepare("SELECT enrollmentNo FROM student WHERE userID = :uid LIMIT 1");
+                    $studentStmt->execute([':uid' => $decoded->userID]);
+                    $studentRow = $studentStmt->fetch(\PDO::FETCH_ASSOC);
+                    if ($studentRow) {
+                        $userData['enrollment_no'] = $studentRow['enrollmentNo'];
+                    }
+                }
+
                 if (isset($updatedUser['staffID'])) $userData['staff_id'] = $updatedUser['staffID'];
                 
                 // Generate a fresh token matching login structure
@@ -470,7 +488,7 @@ class AuthController {
                     'iat' => time(),
                     'exp' => time() + 3600 * 24 // 24 hrs
                 ];
-                if (isset($updatedUser['enrollmentNo'])) $payload['enrollmentNo'] = $updatedUser['enrollmentNo'];
+                if (isset($userData['enrollment_no'])) $payload['enrollmentNo'] = $userData['enrollment_no'];
                 if (isset($updatedUser['repID'])) $payload['repID'] = $updatedUser['repID'];
                 if (isset($updatedUser['adminID'])) $payload['adminID'] = $updatedUser['adminID'];
                 if (isset($updatedUser['staffID'])) $payload['staffID'] = $updatedUser['staffID'];

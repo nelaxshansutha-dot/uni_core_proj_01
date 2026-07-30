@@ -11,6 +11,7 @@ const PeerLearning = () => {
     const [showSemPopup, setShowSemPopup] = useState(false);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
+    const [selectedRepModule, setSelectedRepModule] = useState(null);
     const [selectedSemester, setSelectedSemester] = useState('1');
     const [detectedYear, setDetectedYear] = useState(null);
 
@@ -122,7 +123,10 @@ const PeerLearning = () => {
             const res = await api.put('/peer-learning-requests', { courseUnitID, courseUnitName, status });
             if (res.data.status === 'success') {
                 fetchRequests();
-                showToast(`Requests ${status === 'approved' ? 'approved' : 'rejected'} and students notified.`, 'success');
+                const msg = status === 'broadcast_help' 
+                    ? 'Help request broadcasted to your batch and seniors.' 
+                    : `Requests ${status === 'approved' ? 'approved' : 'rejected'} and students notified.`;
+                showToast(msg, 'success');
             } else {
                 showToast('Failed to update status.', 'danger');
             }
@@ -339,64 +343,92 @@ const PeerLearning = () => {
                                 <Users size={18} className="me-2" />
                                 Showing requests from students in your batch — grouped by module.
                             </div>
-                            <div className="row g-4">
-                                {requests.map((req, idx) => (
-                                    <div className="col-md-6" key={idx}>
-                                        <div className="card border-0 shadow-sm h-100">
-                                            <div className="card-body p-4">
-                                                <div className="d-flex justify-content-between align-items-start mb-2">
-                                                    <div>
-                                                        <h5 className="fw-bold m-0">{req.courseUnitName}</h5>
-                                                        <span className="badge bg-light text-dark border mt-1">
-                                                            {req.courseUnitID}
-                                                        </span>
+                            
+                            {/* Group requests by semester */}
+                            {Object.entries(requests.reduce((acc, req) => {
+                                const sem = req.semester || 'Other';
+                                if (!acc[sem]) acc[sem] = [];
+                                acc[sem].push(req);
+                                return acc;
+                            }, {})).sort(([a], [b]) => a.localeCompare(b)).map(([semester, semsRequests]) => (
+                                <div key={semester} className="mb-5">
+                                    <h5 className="fw-bold mb-3 border-bottom pb-2">
+                                        {semester === 'Other' ? 'Other Semesters' : `Semester ${semester}`}
+                                    </h5>
+                                    <div className="row g-4">
+                                        {semsRequests.map((req, idx) => (
+                                            <div className="col-md-6" key={idx}>
+                                                <div className="card border-0 shadow-sm h-100">
+                                                    <div className="card-body p-4">
+                                                        <div className="d-flex justify-content-between align-items-start mb-2">
+                                                            <div>
+                                                                <h5 className="fw-bold m-0">{req.courseUnitName}</h5>
+                                                                <span className="badge bg-light text-dark border mt-1">
+                                                                    {req.courseUnitID}
+                                                                </span>
+                                                            </div>
+                                                            {getStatusBadge(req.status)}
+                                                        </div>
+
+                                                        {/* Student count progress bar (line graph style) */}
+                                                        <div className="mt-4 mb-2">
+                                                            <div className="d-flex justify-content-between align-items-center mb-1">
+                                                                <span className="text-muted small fw-bold">
+                                                                    <Users size={14} className="me-1" />
+                                                                    {req.request_count} student{req.request_count > 1 ? 's' : ''} requested
+                                                                </span>
+                                                            </div>
+                                                            <div className="progress" style={{ height: '8px' }}>
+                                                                <div 
+                                                                    className="progress-bar bg-primary rounded-pill" 
+                                                                    role="progressbar" 
+                                                                    style={{ width: `${Math.min((req.request_count / 30) * 100, 100)}%` }} 
+                                                                    aria-valuenow={req.request_count} 
+                                                                    aria-valuemin="0" 
+                                                                    aria-valuemax="30"
+                                                                ></div>
+                                                            </div>
+                                                        </div>
+
+                                                        {req.semester && (
+                                                            <p className="text-muted small mb-0 mt-1">
+                                                                Semester {req.semester}
+                                                                {req.std_year ? ` · Year ${req.std_year}` : ''}
+                                                            </p>
+                                                        )}
+
+                                                        {/* View Topics Button */}
+                                                        {req.descriptions_list && req.descriptions_list.length > 0 && (
+                                                            <div className="mt-3">
+                                                                <button
+                                                                    className="btn btn-outline-primary btn-sm rounded-pill w-100"
+                                                                    onClick={() => setSelectedRepModule(req)}
+                                                                >
+                                                                    <BookOpen size={14} className="me-1" /> View Requested Topics
+                                                                </button>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Broadcast Help button for pending */}
+                                                        {req.status === 'pending' && (
+                                                            <div className="d-flex mt-3">
+                                                                <button
+                                                                    className="btn btn-success btn-sm rounded-pill w-100"
+                                                                    onClick={() => {
+                                                                        handleStatusUpdate(req.courseUnitID, req.courseUnitName, 'broadcast_help');
+                                                                    }}
+                                                                >
+                                                                    <CheckCircle size={14} className="me-1" /> Ask for Help (Notify Seniors)
+                                                                </button>
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                    {getStatusBadge(req.status)}
                                                 </div>
-
-                                                {/* Student count pill */}
-                                                <div className="d-flex align-items-center gap-2 mt-3 mb-2">
-                                                    <span className="badge bg-primary fs-6 px-3 py-2 rounded-pill">
-                                                        <Users size={14} className="me-1" />
-                                                        {req.request_count} student{req.request_count > 1 ? 's' : ''} requested
-                                                    </span>
-                                                </div>
-
-                                                {req.student_list && (
-                                                    <p className="text-muted small mb-0 mt-1">
-                                                        <strong>Students:</strong> {req.student_list}
-                                                    </p>
-                                                )}
-
-                                                {req.semester && (
-                                                    <p className="text-muted small mb-0 mt-1">
-                                                        Semester {req.semester}
-                                                        {req.std_year ? ` · Year ${req.std_year}` : ''}
-                                                    </p>
-                                                )}
-
-                                                {/* Approve / Reject buttons for pending */}
-                                                {req.status === 'pending' && (
-                                                    <div className="d-flex gap-2 mt-3">
-                                                        <button
-                                                            className="btn btn-success btn-sm rounded-pill flex-grow-1"
-                                                            onClick={() => handleStatusUpdate(req.courseUnitID, req.courseUnitName, 'approved')}
-                                                        >
-                                                            <CheckCircle size={14} className="me-1" /> Approve All
-                                                        </button>
-                                                        <button
-                                                            className="btn btn-danger btn-sm rounded-pill flex-grow-1"
-                                                            onClick={() => handleStatusUpdate(req.courseUnitID, req.courseUnitName, 'rejected')}
-                                                        >
-                                                            <XCircle size={14} className="me-1" /> Reject All
-                                                        </button>
-                                                    </div>
-                                                )}
                                             </div>
-                                        </div>
+                                        ))}
                                     </div>
-                                ))}
-                            </div>
+                                </div>
+                            ))}
                         </>
                     )}
                 </>
@@ -451,6 +483,49 @@ const PeerLearning = () => {
                                         </button>
                                     </div>
                                 </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Rep View Anonymous Topics Modal */}
+            {selectedRepModule && (
+                <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1055 }}>
+                    <div className="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+                        <div className="modal-content border-0 shadow">
+                            <div className="modal-header border-0 pb-0">
+                                <div>
+                                    <h5 className="fw-bold mb-0">Requested Topics</h5>
+                                    <small className="text-muted">{selectedRepModule.courseUnitName}</small>
+                                </div>
+                                <button type="button" className="btn-close" onClick={() => setSelectedRepModule(null)} />
+                            </div>
+                            <div className="modal-body p-4">
+                                <div className="alert alert-info d-flex align-items-center py-2 mb-4 border-0 rounded-3 small">
+                                    <Users size={16} className="me-2 flex-shrink-0" />
+                                    <div>These requests are completely anonymous to protect student privacy.</div>
+                                </div>
+                                
+                                {selectedRepModule.descriptions_list && selectedRepModule.descriptions_list.filter(d => d !== 'General unit request').length > 0 ? (
+                                    <div className="d-flex flex-column gap-3">
+                                        {selectedRepModule.descriptions_list.filter(d => d !== 'General unit request').map((desc, idx) => (
+                                            <div key={idx} className="p-3 bg-light rounded-3 border-start border-4 border-primary shadow-sm">
+                                                <div className="text-primary small fw-bold mb-1">Anonymous Student</div>
+                                                <div className="text-dark" style={{ whiteSpace: 'pre-wrap' }}>{desc}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="text-center text-muted py-4">
+                                        <p>No specific topics requested for this module.</p>
+                                    </div>
+                                )}
+                            </div>
+                            <div className="modal-footer border-0 pt-0">
+                                <button type="button" className="btn btn-light rounded-pill px-4 w-100" onClick={() => setSelectedRepModule(null)}>
+                                    Close
+                                </button>
                             </div>
                         </div>
                     </div>

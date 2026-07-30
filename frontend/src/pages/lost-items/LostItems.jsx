@@ -150,11 +150,7 @@ const handleDelete = async () => {
             
             // PHP does not support parsing multipart/form-data via PUT natively. 
             // We use POST and let the backend look for 'update_id'.
-            const res = await api.post(endpoint, data, {
-                headers: {
-                    'Content-Type': 'multipart/form-data'
-                }
-            });
+            const res = await api.post(endpoint, data);
 
             if (res.data.success) {
                 setShowModal(false);
@@ -230,7 +226,7 @@ const handleDelete = async () => {
                                     <div>
                                         {item.item_image ? (
                                             <img
-                                                src={`http://localhost/uni_core_proj_01/backend/${item.item_image}`}
+                                                src={item.item_image?.startsWith('http') ? item.item_image : `http://localhost/uni_core_proj_01/backend/${item.item_image}`}
                                                 alt={item.lostItemName}
                                                 style={{
                                                     height: '150px',

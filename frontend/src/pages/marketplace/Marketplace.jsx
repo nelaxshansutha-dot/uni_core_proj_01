@@ -8,11 +8,8 @@ import {
 import './Marketplace.css';
 
 const BASE_URL = 'http://localhost/uni_core_proj_01/backend/api';
-const BACKEND_STATIC = 'http://localhost/uni_core_proj_01/backend/';
 const getImageUrl = (url) => {
-    if (!url) return '';
-    if (url.startsWith('http') || url.startsWith('data:')) return url;
-    return BACKEND_STATIC + url;
+    return url || '';
 };
 
 /* ─── Image Uploader Component ─── */
@@ -29,11 +26,7 @@ const ImageUploader = ({ label, value, onChange }) => {
         try {
             const form = new FormData();
             form.append('image', file);
-            const res = await api.post('/upload', form, {
-                headers: {
-                    'Content-Type': 'multipart/form-data'
-                }
-            });
+            const res = await api.post('/upload', form);
             const json = res.data;
             if (json.status === 'success') {
                 onChange(json.data.url);
