@@ -28,6 +28,29 @@ class DashboardController {
                 ];
             }
             
+            // Also fetch recent notes
+            $stmtNotes = $db->prepare("SELECT title, courseUnitID, created_at FROM notes ORDER BY created_at DESC LIMIT 5");
+            $stmtNotes->execute();
+            $recentNotes = $stmtNotes->fetchAll();
+            
+            foreach ($recentNotes as $n) {
+                $activities[] = [
+                    'id' => uniqid(),
+                    'type' => 'note',
+                    'title' => 'New Note Uploaded',
+                    'description' => ($n['title'] ?: 'Course Material') . ' for ' . $n['courseUnitID'],
+                    'timestamp' => $n['created_at'],
+                    'link' => '/notes'
+                ];
+            }
+
+            // Sort mixed activities by timestamp descending
+            usort($activities, function($a, $b) {
+                return strtotime($b['timestamp']) - strtotime($a['timestamp']);
+            });
+            
+            // Limit total to 5
+            $activities = array_slice($activities, 0, 5);
         
             if (empty($activities)) {
                 $activities[] = [

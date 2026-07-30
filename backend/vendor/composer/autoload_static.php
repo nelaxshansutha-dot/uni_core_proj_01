@@ -22,6 +22,7 @@ class ComposerStaticInit5d0e1d76c8194e3979dcc201c14897ef
             'Symfony\\Polyfill\\Php80\\' => 23,
             'Symfony\\Polyfill\\Mbstring\\' => 26,
             'Symfony\\Polyfill\\Ctype\\' => 23,
+            'Services\\' => 9,
         ),
         'P' =>
         array (
@@ -104,6 +105,10 @@ class ComposerStaticInit5d0e1d76c8194e3979dcc201c14897ef
         'Config\\' =>
         array (
             0 => __DIR__ . '/../..' . '/config',
+        ),
+        'Services\\' =>
+        array (
+            0 => __DIR__ . '/../..' . '/services',
         ),
     );
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import api from '../../services/api';
 import { AuthContext } from '../../context/AuthContext';
-import { Upload, BookOpen, Download, FileText, Search } from 'lucide-react';
+import { Upload, BookOpen, Download, FileText, Search, Trash2 } from 'lucide-react';
 
 const Notes = () => {
     const { user } = useContext(AuthContext);
@@ -19,6 +19,7 @@ const Notes = () => {
         noteType: 'notes'
     });
     const [file, setFile] = useState(null);
+    const [error, setError] = useState('');
 
     const fetchNotes = async () => {
         setLoading(true);
@@ -39,12 +40,28 @@ const Notes = () => {
         fetchNotes();
     }, []);
 
+    const handleDeleteNote = async (noteID) => {
+        if (!window.confirm("Are you sure you want to delete this note?")) return;
+        try {
+            const res = await api.delete(`/notes/${noteID}`);
+            if (res.data.success) {
+                fetchNotes();
+            } else {
+                alert(res.data.message || 'Failed to delete note');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('An error occurred while deleting the note.');
+        }
+    };
+
     const handleFilterChange = (e) => {
         setFilters({ ...filters, [e.target.name]: e.target.value });
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setError('');
         
         const data = new FormData();
         Object.keys(formData).forEach(key => data.append(key, formData[key]));
@@ -53,18 +70,18 @@ const Notes = () => {
         }
 
         try {
-            const res = await api.post('/notes', data, {
-                // Do not set Content-Type manually so the browser can attach the proper boundary
-                headers: { 'Content-Type': undefined }
-            });
+            const res = await api.post('/notes', data);
             if (res.data.success) {
                 setShowModal(false);
                 setFormData({ title: '', description: '', courseUnitID: '', academicYear: '1', noteType: 'notes' });
                 setFile(null);
                 fetchNotes();
+            } else {
+                setError(res.data.message || 'Upload failed');
             }
         } catch (err) {
             console.error(err);
+            setError(err.response?.data?.message || 'An error occurred during upload.');
         }
     };
 
@@ -99,15 +116,34 @@ const Notes = () => {
             <div className="card border-0 shadow-sm mb-4">
                 <div className="card-body p-3">
                     <div className="row g-3 align-items-center">
-                        <div className="col-md-9">
-                            <div className="input-group">
-                                <span className="input-group-text bg-white border-end-0"><Search size={18} className="text-muted" /></span>
-                                <input type="text" className="form-control border-start-0 ps-0" name="courseUnitID" placeholder="Search by Course Unit (e.g. CS101)" value={filters.courseUnitID} onChange={handleFilterChange} />
-                            </div>
+                        <div className="col-md-3">
+                            <select className="form-select" name="courseCode" value={filters.courseCode || ''} onChange={handleFilterChange}>
+                                <option value="">All Courses</option>
+                                <option value="CST">Computer Science & Technology (CST)</option>
+                                <option value="SCT">Science & Technology (SCT)</option>
+                                <option value="IIT">Industrial Information Tech (IIT)</option>
+                                <option value="ENM">Entrepreneurship & Mgt (ENM)</option>
+                            </select>
+                        </div>
+                        <div className="col-md-3">
+                            <select className="form-select" name="academicYear" value={filters.academicYear || ''} onChange={handleFilterChange}>
+                                <option value="">All Years</option>
+                                <option value="1">1st Year</option>
+                                <option value="2">2nd Year</option>
+                                <option value="3">3rd Year</option>
+                                <option value="4">4th Year</option>
+                            </select>
+                        </div>
+                        <div className="col-md-3">
+                            <select className="form-select" name="semester" value={filters.semester || ''} onChange={handleFilterChange}>
+                                <option value="">All Semesters</option>
+                                <option value="1">Semester 1</option>
+                                <option value="2">Semester 2</option>
+                            </select>
                         </div>
                         <div className="col-md-3">
                             <button className="btn btn-dark w-100" onClick={fetchNotes}>
-                                Search
+                                Filter
                             </button>
                         </div>
                     </div>
@@ -141,16 +177,33 @@ const Notes = () => {
                                                             if (note.noteType === 'scheme') label = 'Scheme';
                                                             
                                                             return (
-                                                                <a 
+                                                                <React.Fragment key={note.noteID}>
+                                                                <button 
                                                                     key={note.noteID} 
-                                                                    href={`http://localhost/uni_core_proj_01/backend/${note.file_url}`} 
-                                                                    target="_blank" 
-                                                                    rel="noreferrer" 
+                                                                    onClick={(e) => {
+                                                                        e.preventDefault();
+                                                                        const url = note.file_url?.startsWith('http') ? note.file_url : `http://localhost/uni_core_proj_01/backend/${note.file_url}`;
+                                                                        if (url && url !== `http://localhost/uni_core_proj_01/backend/undefined`) {
+                                                                            window.open(url, '_blank');
+                                                                        } else {
+                                                                            alert('File URL is not available');
+                                                                        }
+                                                                    }}
                                                                     className="btn btn-sm btn-light border d-flex align-items-center gap-1"
                                                                     title={note.title}
                                                                 >
                                                                     <Download size={12} className="text-primary" /> {label}
-                                                                </a>
+                                                                </button>
+                                                                {user && user.enrollment_no && user.enrollment_no.toLowerCase() === note.enrollmentNo?.toLowerCase() && (
+                                                                    <button 
+                                                                        onClick={() => handleDeleteNote(note.noteID)}
+                                                                        className="btn btn-sm btn-outline-danger border d-flex align-items-center gap-1"
+                                                                        title="Delete Note"
+                                                                    >
+                                                                        <Trash2 size={12} />
+                                                                    </button>
+                                                                )}
+                                                                </React.Fragment>
                                                             );
                                                         })}
                                                     </div>
@@ -175,6 +228,7 @@ const Notes = () => {
                                 <button type="button" className="btn-close" onClick={() => setShowModal(false)}></button>
                             </div>
                             <div className="modal-body p-4">
+                                {error && <div className="alert alert-danger py-2">{error}</div>}
                                 <form onSubmit={handleSubmit}>
                                     <div className="mb-3">
                                         <label className="form-label text-muted small fw-bold">Title (Optional)</label>

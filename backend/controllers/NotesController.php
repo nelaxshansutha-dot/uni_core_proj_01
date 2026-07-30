@@ -27,24 +27,56 @@ class NotesController {
             $data['userID'] = $decoded->userID ?? null;
             $data['file_url'] = null; // Default value to prevent undefined key error
             
-        
-            if (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
-                $uploadDir = __DIR__ . '/../uploads/notes/';
-                if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
-                
-                $fileName = time() . '_' . uniqid() . '_' . basename($_FILES['file']['name']);
-                $targetFile = $uploadDir . $fileName;
-                
-                if (move_uploaded_file($_FILES['file']['tmp_name'], $targetFile)) {
-                    $data['file_url'] = 'uploads/notes/' . $fileName;
-                } else {
-                    file_put_contents(__DIR__ . '/../error_log.txt', date('[Y-m-d H:i:s] ') . "Notes Upload Move Failed. From " . $_FILES['file']['tmp_name'] . " to " . $targetFile . "\n", FILE_APPEND);
+            if (isset($_FILES['file'])) {
+                if ($_FILES['file']['error'] !== UPLOAD_ERR_OK) {
+                    $uploadErrors = [
+                        UPLOAD_ERR_INI_SIZE => 'File exceeds upload_max_filesize in php.ini',
+                        UPLOAD_ERR_FORM_SIZE => 'File exceeds MAX_FILE_SIZE in HTML form',
+                        UPLOAD_ERR_PARTIAL => 'File was only partially uploaded',
+                        UPLOAD_ERR_NO_FILE => 'No file was uploaded',
+                        UPLOAD_ERR_NO_TMP_DIR => 'Missing a temporary folder',
+                        UPLOAD_ERR_CANT_WRITE => 'Failed to write file to disk',
+                        UPLOAD_ERR_EXTENSION => 'A PHP extension stopped the file upload',
+                    ];
+                    $errorMsg = $uploadErrors[$_FILES['file']['error']] ?? 'Unknown upload error';
+                    echo json_encode(['success' => false, 'message' => 'Upload failed: ' . $errorMsg]);
+                    return;
                 }
-            } else {
-                if (isset($_FILES['file'])) {
-                    file_put_contents(__DIR__ . '/../error_log.txt', date('[Y-m-d H:i:s] ') . "Notes Upload File Error: " . $_FILES['file']['error'] . "\n", FILE_APPEND);
-                } else {
-                    file_put_contents(__DIR__ . '/../error_log.txt', date('[Y-m-d H:i:s] ') . "Notes Upload No File Provided in POST.\n", FILE_APPEND);
+                
+                $mimeType = mime_content_type($_FILES['file']['tmp_name']);
+                $allowedDocTypes = [
+                    'application/pdf', 
+                    'application/msword', 
+                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // docx
+                    'application/vnd.ms-powerpoint', 
+                    'application/vnd.openxmlformats-officedocument.presentationml.presentation', // pptx
+                    'image/jpeg', 'image/png', 'image/webp'
+                ];
+                
+                if (!in_array($mimeType, $allowedDocTypes)) {
+                    echo json_encode(['success' => false, 'message' => 'Invalid file type. Only PDF, DOC, PPT, and Images are allowed.']);
+                    return;
+                }
+
+                try {
+                    $url = \Services\CloudinaryUploader::upload($_FILES['file']['tmp_name'], 'auto');
+                    $data['file_url'] = $url;
+                } catch (\Exception $e) {
+                    file_put_contents(__DIR__ . '/../error_log.txt', date('[Y-m-d H:i:s] ') . "Notes Cloudinary Upload Error: " . $e->getMessage() . "\n", FILE_APPEND);
+                    
+                    // Fallback to local upload
+                    $uploadDir = __DIR__ . '/../uploads/notes/';
+                    if (!is_dir($uploadDir)) {
+                        mkdir($uploadDir, 0777, true);
+                    }
+                    $fileName = time() . '_' . uniqid() . '_' . preg_replace("/[^a-zA-Z0-9\._-]/", "", basename($_FILES['file']['name']));
+                    $destPath = $uploadDir . $fileName;
+                    if (move_uploaded_file($_FILES['file']['tmp_name'], $destPath)) {
+                        $data['file_url'] = 'uploads/notes/' . $fileName;
+                    } else {
+                        echo json_encode(['success' => false, 'message' => 'Cloudinary upload failed, and local fallback also failed.']);
+                        return;
+                    }
                 }
             }
 
@@ -59,7 +91,40 @@ class NotesController {
             $data = json_decode(file_get_contents("php://input"), true);
             echo json_encode(['success' => $model->update($id, $data)]);
         } elseif ($method === 'DELETE') {
-            echo json_encode(['success' => $model->delete($id)]);
+            $note = $model->view($id);
+            if (!$note) {
+                echo json_encode(['success' => false, 'message' => 'Note not found']);
+                return;
+            }
+            
+            $canDelete = false;
+            if ($decoded->role === 'student' || $decoded->role === 'student') { // Just to be safe if it's student
+                if (isset($decoded->enrollmentNo) && strtolower($decoded->enrollmentNo) === strtolower($note['enrollmentNo'])) {
+                    $canDelete = true;
+                }
+            } elseif ($decoded->role === 'course_representative' || $decoded->role === 'rep') {
+                // Check if rep belongs to the same course and year
+                $db = \Config\Database::getInstance()->getConnection();
+                $stmt = $db->prepare("SELECT s.courseID, s.std_year FROM student s WHERE s.enrollmentNo = :enr");
+                $stmt->execute([':enr' => $decoded->enrollmentNo]);
+                $repData = $stmt->fetch(\PDO::FETCH_ASSOC);
+                
+                if ($repData && $repData['courseID'] == $note['courseID']) {
+                    // Assuming academicYear in notes table represents the year (1, 2, 3, 4)
+                    if ($note['academicYear'] == $repData['std_year']) {
+                        $canDelete = true;
+                    }
+                }
+            } elseif ($decoded->role === 'admin') {
+                $canDelete = true;
+            }
+
+            if ($canDelete) {
+                echo json_encode(['success' => $model->delete($id)]);
+            } else {
+                http_response_code(403);
+                echo json_encode(['success' => false, 'message' => 'Unauthorized to delete this note']);
+            }
         }
     }
 }

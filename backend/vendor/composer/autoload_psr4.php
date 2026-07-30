@@ -19,4 +19,5 @@ return array(
     'Dotenv\\' => array($vendorDir . '/vlucas/phpdotenv/src'),
     'Controllers\\' => array($baseDir . '/controllers'),
     'Config\\' => array($baseDir . '/config'),
+    'Services\\' => array($baseDir . '/services'),
 );

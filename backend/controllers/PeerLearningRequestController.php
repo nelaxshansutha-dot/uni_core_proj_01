@@ -79,19 +79,32 @@ class PeerLearningRequestController {
                     "SELECT 
                         courseUnitID,
                         courseUnitName,
-                        semester,
-                        std_year,
-                        status,
-                        COUNT(*) AS request_count,
-                        GROUP_CONCAT(enrollmentNo ORDER BY created_at ASC SEPARATOR ', ') AS student_list,
+                        MAX(semester) as semester,
+                        MAX(std_year) as std_year,
+                        CASE WHEN SUM(status = 'pending') > 0 THEN 'pending' ELSE MAX(status) END AS status,
+                        COUNT(DISTINCT enrollmentNo) AS request_count,
+                        GROUP_CONCAT(description ORDER BY created_at ASC SEPARATOR '|||') AS descriptions,
                         MAX(created_at) AS latest_request
                      FROM peer_learning_request
                      WHERE repID = :rid
-                     GROUP BY courseUnitID, courseUnitName, semester, std_year, status
+                     GROUP BY courseUnitID, courseUnitName
                      ORDER BY request_count DESC, latest_request DESC"
                 );
                 $stmt->execute([':rid' => $repID]);
                 $grouped = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+                // Convert grouped descriptions into arrays and filter out "General unit request" if there are specific ones
+                foreach ($grouped as &$row) {
+                    if ($row['descriptions']) {
+                        $allDesc = array_filter(explode('|||', $row['descriptions']));
+                        // Optional: filter out exact "General unit request" strings if you only want to show specific questions
+                        // But let's keep all for now so the count matches.
+                        $row['descriptions_list'] = array_values($allDesc);
+                    } else {
+                        $row['descriptions_list'] = [];
+                    }
+                    unset($row['descriptions']); // clean up the raw string
+                }
 
                 echo json_encode(['status' => 'success', 'data' => $grouped]);
 
@@ -212,6 +225,23 @@ class PeerLearningRequestController {
             $repRow = $repStmt->fetch(\PDO::FETCH_ASSOC);
             $repID  = $repRow ? (int)$repRow['repID'] : null;
 
+            // Special handling for broadcast_help
+            if ($status === 'broadcast_help') {
+                $stmt = $db->prepare(
+                    "UPDATE peer_learning_request 
+                     SET status = 'completed' 
+                     WHERE repID = :rid AND courseUnitID = :cuid AND status = 'pending'"
+                );
+                $ok = $stmt->execute([':rid' => $repID, ':cuid' => $courseUnitID]);
+
+                if ($ok) {
+                    $this->dispatchBroadcastNotifications($repID, $courseUnitID, $db);
+                }
+
+                echo json_encode(['status' => $ok ? 'success' : 'error']);
+                return;
+            }
+
             // Update ALL pending requests for this courseUnit assigned to this rep
             $stmt = $db->prepare(
                 "UPDATE peer_learning_request 
@@ -250,6 +280,46 @@ class PeerLearningRequestController {
         $ins = $db->prepare("INSERT INTO app_notification (repID, enrollmentNo, message) VALUES (:rid, :enr, :msg)");
         while ($row = $students->fetch(\PDO::FETCH_ASSOC)) {
             $ins->execute([':rid' => $repID, ':enr' => $row['enrollmentNo'], ':msg' => $message]);
+        }
+    }
+
+    /**
+     * Notify all seniors and batch mates for help.
+     */
+    private function dispatchBroadcastNotifications(int $repID, string $courseUnitID, $db): void {
+        // Get courseUnitName
+        $cu = $db->prepare("SELECT courseUnitName FROM course_units WHERE courseUnitID = :id");
+        $cu->execute([':id' => $courseUnitID]);
+        $unitName = $cu->fetchColumn() ?: $courseUnitID;
+
+        // Get Rep's details (rep_id_string)
+        $repStmt = $db->prepare("SELECT rep_id_string FROM course_representative WHERE repID = :rid LIMIT 1");
+        $repStmt->execute([':rid' => $repID]);
+        $rep_id_string = $repStmt->fetchColumn();
+        if (!$rep_id_string) return;
+
+        // Extract course code and batch year from rep_id_string
+        $parts = explode('/', strtoupper(trim($rep_id_string)));
+        if (count($parts) < 3) return;
+        $courseCode = $parts[1]; // CST
+        $batchYear = (int)$parts[2]; // 23
+
+        $message = "Students in Batch {$batchYear} have requested Peer Learning for \"{$unitName}\". If you can help, please reach out to the Course Rep!";
+
+        // Find all students in this course with batch year <= rep's batch year
+        $pattern = '%/' . strtolower($courseCode) . '/%';
+        $students = $db->prepare(
+            "SELECT enrollmentNo FROM student WHERE LOWER(enrollmentNo) LIKE :pat"
+        );
+        $students->execute([':pat' => $pattern]);
+
+        $ins = $db->prepare("INSERT INTO app_notification (repID, enrollmentNo, message) VALUES (:rid, :enr, :msg)");
+        while ($row = $students->fetch(\PDO::FETCH_ASSOC)) {
+            $studentBatch = $this->getBatchYear($row['enrollmentNo']);
+            if ($studentBatch !== null && $studentBatch <= $batchYear) {
+                // Insert notification
+                $ins->execute([':rid' => $repID, ':enr' => $row['enrollmentNo'], ':msg' => $message]);
+            }
         }
     }
 }

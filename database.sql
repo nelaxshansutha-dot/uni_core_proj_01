@@ -188,3 +188,16 @@ INSERT INTO Admin (userID) VALUES (LAST_INSERT_ID());
 
 -- Insert default SMS settings
 INSERT INTO sms_settings (api_token, api_url, sender_id) VALUES ('4810|NgGYVtUHjSS98YTck7nLSlYG9NgjUiv5agw5Enje1071d5c9', 'https://app.text.lk/api/v3/sms/send', 'TextLKDemo');
+
+-- Insert Default Course
+INSERT INTO Course (courseName) VALUES ('Computer Science and Technology');
+
+-- Insert Course Units for 1st Year, 1st Semester
+INSERT INTO Course_units (courseUnitID, courseID, courseUnitName, academicYear, semester) VALUES
+('CST 102-2', 1, 'Introduction to Computer Science', 1, 1),
+('CST 101-2', 1, 'Fundamentals of Electronics', 1, 1),
+('CST 121-3', 1, 'Structured Programming', 1, 1),
+('CST 111-2', 1, 'Essential Mathematics', 1, 1),
+('ESD 121-2', 1, 'English Language Level I', 1, 1),
+('CST 122-2', 1, 'Web Programming', 1, 1),
+('CST 131-2', 1, 'Fundamentals of Computer Networks', 1, 1);

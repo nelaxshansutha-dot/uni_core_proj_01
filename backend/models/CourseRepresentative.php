@@ -5,10 +5,9 @@ namespace Models;
 use PDO;
 
 class CourseRepresentative extends Student {
-    
-    protected $repID;
-    protected $rep_id_string;
-    protected $is_first_login;
+    private $repID;
+    private $rep_id_string;
+    private $is_first_login;
   
 
     public function getRepID()
