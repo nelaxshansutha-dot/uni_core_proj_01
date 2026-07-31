@@ -8,18 +8,22 @@ const Notes = () => {
     const [notes, setNotes] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
+    const [deleteNoteID, setDeleteNoteID] = useState(null);
     
     const [filters, setFilters] = useState({ courseUnitID: '' });
     
     const [formData, setFormData] = useState({
         title: '',
         description: '',
+        courseCode: 'CST',
         courseUnitID: '',
         academicYear: '1',
         noteType: 'notes'
     });
     const [file, setFile] = useState(null);
     const [error, setError] = useState('');
+
+    const [allCourseUnits, setAllCourseUnits] = useState([]);
 
     const fetchNotes = async () => {
         setLoading(true);
@@ -36,16 +40,29 @@ const Notes = () => {
         }
     };
 
+    const fetchCourseUnits = async () => {
+        try {
+            const res = await api.get('/course-units/all');
+            if (res.data.status === 'success') {
+                setAllCourseUnits(res.data.data);
+            }
+        } catch (err) {
+            console.error('Failed to fetch course units:', err);
+        }
+    };
+
     useEffect(() => {
         fetchNotes();
+        fetchCourseUnits();
     }, []);
 
-    const handleDeleteNote = async (noteID) => {
-        if (!window.confirm("Are you sure you want to delete this note?")) return;
+    const handleDeleteNote = async () => {
+        if (!deleteNoteID) return;
         try {
-            const res = await api.delete(`/notes/${noteID}`);
+            const res = await api.delete(`/notes/${deleteNoteID}`);
             if (res.data.success) {
                 fetchNotes();
+                setDeleteNoteID(null);
             } else {
                 alert(res.data.message || 'Failed to delete note');
             }
@@ -64,7 +81,20 @@ const Notes = () => {
         setError('');
         
         const data = new FormData();
-        Object.keys(formData).forEach(key => data.append(key, formData[key]));
+        Object.keys(formData).forEach(key => {
+            if (key === 'courseUnitID') {
+                // If user didn't type the course code prefix, prepend it
+                let cuid = formData.courseUnitID.trim();
+                const prefix = formData.courseCode.toUpperCase();
+                if (!cuid.toUpperCase().startsWith(prefix)) {
+                    cuid = `${prefix} ${cuid}`;
+                }
+                data.append('courseUnitID', cuid);
+            } else if (key !== 'courseCode') {
+                data.append(key, formData[key]);
+            }
+        });
+        
         if (file) {
             data.append('file', file);
         }
@@ -73,7 +103,7 @@ const Notes = () => {
             const res = await api.post('/notes', data);
             if (res.data.success) {
                 setShowModal(false);
-                setFormData({ title: '', description: '', courseUnitID: '', academicYear: '1', noteType: 'notes' });
+                setFormData({ title: '', description: '', courseCode: 'CST', courseUnitID: '', academicYear: '1', noteType: 'notes' });
                 setFile(null);
                 fetchNotes();
             } else {
@@ -196,7 +226,7 @@ const Notes = () => {
                                                                 </button>
                                                                 {user && user.enrollment_no && user.enrollment_no.toLowerCase() === note.enrollmentNo?.toLowerCase() && (
                                                                     <button 
-                                                                        onClick={() => handleDeleteNote(note.noteID)}
+                                                                        onClick={() => setDeleteNoteID(note.noteID)}
                                                                         className="btn btn-sm btn-outline-danger border d-flex align-items-center gap-1"
                                                                         title="Delete Note"
                                                                     >
@@ -234,9 +264,33 @@ const Notes = () => {
                                         <label className="form-label text-muted small fw-bold">Title (Optional)</label>
                                         <input type="text" className="form-control" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} placeholder="e.g., Midterm Paper" />
                                     </div>
-                                    <div className="mb-3">
-                                        <label className="form-label text-muted small fw-bold">Course Code</label>
-                                        <input type="text" className="form-control" value={formData.courseUnitID} onChange={e => setFormData({...formData, courseUnitID: e.target.value})} required placeholder="e.g., CST101" />
+                                    <div className="row g-3 mb-3">
+                                        <div className="col-4">
+                                            <label className="form-label text-muted small fw-bold">Course</label>
+                                            <select className="form-select" value={formData.courseCode} onChange={e => setFormData({...formData, courseCode: e.target.value})} required>
+                                                <option value="CST">CST</option>
+                                                <option value="SCT">SCT</option>
+                                                <option value="MRT">MRT</option>
+                                                <option value="IIT">IIT</option>
+                                                <option value="PMT">PMT</option>
+                                                <option value="AQT">AQT</option>
+                                                <option value="BBST">BBST</option>
+                                            </select>
+                                        </div>
+                                        <div className="col-8">
+                                            <label className="form-label text-muted small fw-bold">Course Code</label>
+                                            <select className="form-select" value={formData.courseUnitID} onChange={e => setFormData({...formData, courseUnitID: e.target.value})} required>
+                                                <option value="">Select Course Code</option>
+                                                {allCourseUnits.filter(unit => 
+                                                    unit.courseUnitID.toUpperCase().startsWith(formData.courseCode.toUpperCase()) &&
+                                                    String(unit.academicYear) === String(formData.academicYear)
+                                                ).map(unit => (
+                                                    <option key={unit.courseUnitID} value={unit.courseUnitID}>
+                                                        {unit.courseUnitID} - {unit.courseUnitName}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
                                     </div>
                                     <div className="row g-3 mb-3">
                                         <div className="col-6">
@@ -266,6 +320,27 @@ const Notes = () => {
                                         <button type="submit" className="btn btn-primary rounded-pill px-4" disabled={!file}>Upload</button>
                                     </div>
                                 </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {deleteNoteID && (
+                <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                    <div className="modal-dialog modal-dialog-centered">
+                        <div className="modal-content border-0 shadow">
+                            <div className="modal-header border-0 pb-0">
+                                <h5 className="fw-bold text-danger">Delete Note</h5>
+                                <button type="button" className="btn-close" onClick={() => setDeleteNoteID(null)}></button>
+                            </div>
+                            <div className="modal-body p-4">
+                                <p>Are you sure you want to delete this note? This action cannot be undone.</p>
+                                <div className="d-flex gap-2 justify-content-end mt-4">
+                                    <button type="button" className="btn btn-light rounded-pill px-4" onClick={() => setDeleteNoteID(null)}>Cancel</button>
+                                    <button type="button" className="btn btn-danger rounded-pill px-4" onClick={handleDeleteNote}>Delete</button>
+                                </div>
                             </div>
                         </div>
                     </div>

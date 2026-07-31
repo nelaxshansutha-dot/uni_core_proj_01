@@ -56,6 +56,42 @@ const Settings = () => {
         setSuccess('');
     };
 
+    const handleToggleChange = async (e) => {
+        const { name, checked } = e.target;
+        const newValue = checked ? 1 : 0;
+        
+        setFormData(prev => ({ ...prev, [name]: newValue }));
+        
+        const payload = {
+            first_name: user?.role === 'admin' ? 'Admin' : formData.first_name,
+            last_name: user?.role === 'admin' ? 'Admin' : formData.last_name,
+            email: formData.email,
+            phone_number: user?.role === 'admin' ? '0000000000' : formData.phone_number,
+            course: user?.role === 'admin' ? '' : formData.course,
+            year: user?.role === 'admin' ? '' : formData.year,
+            lost_item_sms_notification: name === 'lost_item_sms_notification' ? newValue : formData.lost_item_sms_notification,
+            peer_learning_app_notification: name === 'peer_learning_app_notification' ? newValue : formData.peer_learning_app_notification,
+            old_password: '',
+            new_password: '',
+            confirm_password: ''
+        };
+        
+        try {
+            const response = await api.post('/auth/update-profile', payload);
+            if (response.data.status === 'success') {
+                login(response.data.data.token, response.data.data.user);
+                setSuccess('Preference updated automatically.');
+                setTimeout(() => setSuccess(''), 3000);
+            } else {
+                setFormData(prev => ({ ...prev, [name]: checked ? 0 : 1 }));
+                setError(response.data.message);
+            }
+        } catch (err) {
+            setFormData(prev => ({ ...prev, [name]: checked ? 0 : 1 }));
+            setError('Failed to update preference automatically.');
+        }
+    };
+
     const handleSubmitProfile = async (e) => {
         e.preventDefault();
         setLoading(true);
@@ -274,7 +310,7 @@ const Settings = () => {
                                                     id="smsNotifSwitch"
                                                     name="lost_item_sms_notification"
                                                     checked={formData.lost_item_sms_notification === 1}
-                                                    onChange={handleChange}
+                                                    onChange={handleToggleChange}
                                                     style={{ width: '2.5em', height: '1.25em', cursor: 'pointer' }}
                                                 />
                                             </div>
@@ -300,7 +336,7 @@ const Settings = () => {
                                                         id="peerNotifSwitch"
                                                         name="peer_learning_app_notification"
                                                         checked={formData.peer_learning_app_notification === 1}
-                                                        onChange={handleChange}
+                                                        onChange={handleToggleChange}
                                                         style={{ width: '2.5em', height: '1.25em', cursor: 'pointer' }}
                                                     />
                                                 </div>

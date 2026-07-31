@@ -110,6 +110,14 @@ class CourseController {
             return;
         }
 
+        if ($method === 'GET' && $action === 'all') {
+            $db = \Config\Database::getInstance()->getConnection();
+            $stmt = $db->prepare("SELECT courseUnitID, courseUnitName, academicYear FROM course_units");
+            $stmt->execute();
+            echo json_encode(['status' => 'success', 'data' => $stmt->fetchAll(\PDO::FETCH_ASSOC)]);
+            return;
+        }
+
         echo json_encode(['success' => true, 'data' => []]);
     }
 }
