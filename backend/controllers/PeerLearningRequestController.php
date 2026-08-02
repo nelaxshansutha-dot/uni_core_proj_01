@@ -26,31 +26,30 @@ class PeerLearningRequestController {
     }
 
     /**
-     * Find the repID for a given course code and batch year.
-     * Rep enrollment format: UWU/CST/YY/NNN → rep_id_string = rep_uwu/cst/YY/NNN
-     * Match by same course code and same batch year (YY part).
+     * Find the repID for a given student based on exact courseID and batch year match.
      */
     private function findRepForStudent(string $enrollmentNo): ?int {
-        $batchYear  = $this->getBatchYear($enrollmentNo);
-        $courseCode = $this->getCourseCode($enrollmentNo);
-        if (!$batchYear || !$courseCode) return null;
+        $studentBatchYear = \Models\Student::extractBatchYear($enrollmentNo);
+        if (!$studentBatchYear) return null;
 
         $db = \Config\Database::getInstance()->getConnection();
+        
+        $stmt = $db->prepare("SELECT courseID FROM student WHERE enrollmentNo = :enr LIMIT 1");
+        $stmt->execute([':enr' => $enrollmentNo]);
+        $studentCourseID = $stmt->fetchColumn();
+        if (!$studentCourseID) return null;
 
-        // Find a rep whose enrollment number has the same course code and batch year
-        $pattern = '%/' . strtolower($courseCode) . '/' . $batchYear . '/%';
-        $stmt = $db->prepare(
-            "SELECT repID FROM course_representative 
-             WHERE (LOWER(enrollmentNo) LIKE :pat OR LOWER(rep_id_string) LIKE :pat2)
-             AND (is_active = 1 OR is_active IS NULL)
-             ORDER BY repID DESC LIMIT 1"
-        );
-        $stmt->execute([
-            ':pat'  => $pattern,
-            ':pat2' => '%rep_uwu/' . strtolower($courseCode) . '/' . $batchYear . '/%'
-        ]);
-        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
-        return $row ? (int)$row['repID'] : null;
+        $stmt = $db->prepare("SELECT repID, enrollmentNo FROM course_representative WHERE courseID = :cid AND (is_active = 1 OR is_active IS NULL)");
+        $stmt->execute([':cid' => $studentCourseID]);
+        
+        while ($rep = $stmt->fetch(\PDO::FETCH_ASSOC)) {
+            $repBatchYear = \Models\Student::extractBatchYear($rep['enrollmentNo']);
+            if ($repBatchYear === $studentBatchYear) {
+                return (int)$rep['repID'];
+            }
+        }
+        
+        return null;
     }
 
     public function handleRequest($method, $id = null, $action = null) {
@@ -141,6 +140,10 @@ class PeerLearningRequestController {
 
             // Auto-detect the rep for this student's batch + course
             $repID = $this->findRepForStudent($enrollmentNo);
+            if (!$repID) {
+                echo json_encode(['status' => 'error', 'message' => 'No Course Representative assigned for your batch']);
+                return;
+            }
 
             // Auto-detect student's academic year from enrollment number
             \Controllers\CourseController::getAcademicYearFromEnrollment($enrollmentNo);
@@ -196,10 +199,7 @@ class PeerLearningRequestController {
             ]);
 
             if ($ok) {
-                $repInfo = $repID
-                    ? "Your request was sent to your course representative."
-                    : "Request saved. No representative is currently assigned to your batch.";
-                echo json_encode(['status' => 'success', 'message' => $repInfo]);
+                echo json_encode(['status' => 'success', 'message' => 'Your request was sent to your course representative.']);
             } else {
                 echo json_encode(['status' => 'error', 'message' => 'Failed to submit request.']);
             }

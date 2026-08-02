@@ -140,7 +140,12 @@ abstract class User {
     }
 
     public function forgotPassword() {
-        
+        if (!$this->userID || !$this->email) {
+            return false;
+        }
+        $otpModel = new OtpVerification();
+        $otp = $otpModel->generate($this->userID);
+        return \Utils\MailService::sendOTP($this->email, $otp);
     }
 
     public function verifyOTP($otpCode) {
