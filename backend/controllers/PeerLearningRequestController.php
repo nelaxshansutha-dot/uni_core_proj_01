@@ -272,8 +272,12 @@ class PeerLearningRequestController {
         $message = "Your peer learning request for \"{$unitName}\" has been approved by your Course Representative!";
 
         $students = $db->prepare(
-            "SELECT enrollmentNo FROM peer_learning_request 
-             WHERE repID = :rid AND courseUnitID = :cuid AND status = 'approved'"
+            "SELECT plr.enrollmentNo 
+             FROM peer_learning_request plr
+             JOIN student s ON plr.enrollmentNo = s.enrollmentNo
+             JOIN users u ON s.userID = u.userID
+             WHERE plr.repID = :rid AND plr.courseUnitID = :cuid AND plr.status = 'approved'
+             AND u.peer_learning_app_notification = 1"
         );
         $students->execute([':rid' => $repID, ':cuid' => $courseUnitID]);
 
@@ -309,7 +313,11 @@ class PeerLearningRequestController {
         // Find all students in this course with batch year <= rep's batch year
         $pattern = '%/' . strtolower($courseCode) . '/%';
         $students = $db->prepare(
-            "SELECT enrollmentNo FROM student WHERE LOWER(enrollmentNo) LIKE :pat"
+            "SELECT s.enrollmentNo 
+             FROM student s
+             JOIN users u ON s.userID = u.userID
+             WHERE LOWER(s.enrollmentNo) LIKE :pat
+             AND u.peer_learning_app_notification = 1"
         );
         $students->execute([':pat' => $pattern]);
 

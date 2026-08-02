@@ -19,7 +19,7 @@ class Notes {
         $this->conn = Database::getInstance()->getConnection();
     }
 
-    // Getters and Setters
+   
     public function getNoteID() 
     { return $this->noteID; }
     public function setNoteID($val) 
@@ -82,7 +82,7 @@ class Notes {
             if ($res) $courseID = $res['courseID'];
         }
         
-        // Fallback: If courseUnitID was custom (e.g. cst204) and not in DB, get courseID from student table
+     
         if (!$courseID && !empty($data['enrollmentNo'])) {
             $stmt = $this->conn->prepare("SELECT courseID FROM student WHERE enrollmentNo = :enr");
             $stmt->execute([':enr' => $data['enrollmentNo']]);
@@ -90,14 +90,13 @@ class Notes {
             if ($res) $courseID = $res['courseID'];
         }
 
-        // Final fallback: If still null, try extracting from enrollmentNo manually
+       
         if (!$courseID && !empty($data['enrollmentNo'])) {
             $enrParts = explode('/', strtoupper(trim($data['enrollmentNo'])));
             $courseCode = $enrParts[1] ?? '';
             if ($courseCode === 'CST') $courseID = 1;
         }
         
-        // Fuzzy match courseUnitID
         $providedCuid = $data['courseUnitID'] ?? '';
         $normalizedInput = strtoupper(str_replace([' ', '-'], '', $providedCuid));
         

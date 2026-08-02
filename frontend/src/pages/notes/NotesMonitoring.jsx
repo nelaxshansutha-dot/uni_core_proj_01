@@ -7,6 +7,7 @@ const NotesMonitoring = () => {
     const { user } = useContext(AuthContext);
     const [notes, setNotes] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [deleteNoteID, setDeleteNoteID] = useState(null);
 
     const fetchNotes = async () => {
         setLoading(true);
@@ -31,12 +32,13 @@ const NotesMonitoring = () => {
         fetchNotes();
     }, []);
 
-    const handleDeleteNote = async (noteID) => {
-        if (!window.confirm("Are you sure you want to delete this note? This action cannot be undone.")) return;
+    const handleDeleteNote = async () => {
+        if (!deleteNoteID) return;
         try {
-            const res = await api.delete(`/notes/${noteID}`);
+            const res = await api.delete(`/notes/${deleteNoteID}`);
             if (res.data.success) {
                 fetchNotes();
+                setDeleteNoteID(null);
             } else {
                 alert(res.data.message || 'Failed to delete note');
             }
@@ -122,7 +124,7 @@ const NotesMonitoring = () => {
                                                     </button>
                                                     <button 
                                                         className="btn btn-sm btn-outline-danger"
-                                                        onClick={() => handleDeleteNote(note.noteID)}
+                                                        onClick={() => setDeleteNoteID(note.noteID)}
                                                         title="Delete Note"
                                                     >
                                                         <Trash2 size={14} />
@@ -133,6 +135,27 @@ const NotesMonitoring = () => {
                                     ))}
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {deleteNoteID && (
+                <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                    <div className="modal-dialog modal-dialog-centered">
+                        <div className="modal-content border-0 shadow">
+                            <div className="modal-header border-0 pb-0">
+                                <h5 className="fw-bold text-danger">Delete Note</h5>
+                                <button type="button" className="btn-close" onClick={() => setDeleteNoteID(null)}></button>
+                            </div>
+                            <div className="modal-body p-4">
+                                <p>Are you sure you want to delete this note? This action cannot be undone.</p>
+                                <div className="d-flex gap-2 justify-content-end mt-4">
+                                    <button type="button" className="btn btn-light rounded-pill px-4" onClick={() => setDeleteNoteID(null)}>Cancel</button>
+                                    <button type="button" className="btn btn-danger rounded-pill px-4" onClick={handleDeleteNote}>Delete</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

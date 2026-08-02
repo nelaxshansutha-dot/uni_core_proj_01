@@ -125,7 +125,7 @@ const PeerLearning = () => {
                 fetchRequests();
                 const msg = status === 'broadcast_help' 
                     ? 'Help request broadcasted to your batch and seniors.' 
-                    : `Requests ${status === 'approved' ? 'approved' : 'rejected'} and students notified.`;
+                    : `Requests updated.`;
                 showToast(msg, 'success');
             } else {
                 showToast('Failed to update status.', 'danger');
@@ -138,7 +138,6 @@ const PeerLearning = () => {
     const getStatusBadge = (status) => {
         const map = {
             pending:  { cls: 'bg-warning text-dark', label: 'Pending' },
-            approved: { cls: 'bg-success text-white', label: 'Approved' },
             rejected: { cls: 'bg-danger text-white',  label: 'Rejected' },
             completed:{ cls: 'bg-primary text-white', label: 'Completed' },
         };
@@ -192,15 +191,7 @@ const PeerLearning = () => {
                 <>
                     <div className="card border-0 shadow-sm mx-auto mb-4" style={{ maxWidth: 500 }}>
                         <div className="card-body p-4">
-                            <h5 className="fw-bold mb-1">Select Semester</h5>
-                            <p className="text-muted small mb-1">
-                                Your course and academic year are automatically detected from your enrollment number.
-                            </p>
-                            {user?.enrollment_no && (
-                                <p className="text-muted small mb-4">
-                                    Enrollment: <strong>{user.enrollment_no}</strong>
-                                </p>
-                            )}
+                            <h5 className="fw-bold mb-4">Select Semester</h5>
                             <form onSubmit={fetchModules}>
                                 <div className="mb-4">
                                     <label className="form-label text-muted small fw-bold">SEMESTER</label>
@@ -246,13 +237,7 @@ const PeerLearning = () => {
             ) : user?.role === 'student' && modules.length > 0 ? (
                 /* ── STUDENT MODULE GRID ── */
                 <>
-                    {detectedYear && (
-                        <div className="alert alert-info d-flex align-items-center py-2 mb-4 border-0 rounded-3">
-                            <AlertCircle size={18} className="me-2" />
-                            You are in <strong className="mx-1">Year {detectedYear}</strong>, Semester {selectedSemester}
-                            — detected automatically from your enrollment number.
-                        </div>
-                    )}
+
 
                     <h5 className="mb-3 fw-bold">Select a Module to Request Peer Learning</h5>
                     <div className="row g-3 mb-5">
@@ -270,28 +255,26 @@ const PeerLearning = () => {
                                                 {mod.courseUnitID}
                                             </span>
                                             {alreadyRequested ? (
-                                                <span className="badge bg-success py-2">
+                                                <span className="badge bg-success py-2 mb-2 w-100">
                                                     <CheckCircle size={14} className="me-1" /> Request Sent
                                                 </span>
                                             ) : (
-                                                <>
-                                                    <button
-                                                        className="btn btn-sm btn-primary mt-auto rounded-pill mb-2"
-                                                        onClick={() => handleRequestUnit(mod)}
-                                                    >
-                                                        Request Unit
-                                                    </button>
-                                                    <button
-                                                        className="btn btn-link text-decoration-none small text-muted p-0"
-                                                        onClick={() => {
-                                                            setFormData({ ...formData, courseUnitID: mod.courseUnitID, courseUnitName: mod.courseUnitName });
-                                                            setShowModal(true);
-                                                        }}
-                                                    >
-                                                        Ask specific question
-                                                    </button>
-                                                </>
+                                                <button
+                                                    className="btn btn-sm btn-primary mt-auto w-100 rounded-pill mb-2"
+                                                    onClick={() => handleRequestUnit(mod)}
+                                                >
+                                                    Request Unit
+                                                </button>
                                             )}
+                                            <button
+                                                className="btn btn-link text-decoration-none small text-muted p-0"
+                                                onClick={() => {
+                                                    setFormData({ ...formData, courseUnitID: mod.courseUnitID, courseUnitName: mod.courseUnitName });
+                                                    setShowModal(true);
+                                                }}
+                                            >
+                                                Ask specific question
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -339,11 +322,6 @@ const PeerLearning = () => {
                         </div>
                     ) : (
                         <>
-                            <div className="alert alert-primary d-flex align-items-center py-2 mb-4 border-0 rounded-3">
-                                <Users size={18} className="me-2" />
-                                Showing requests from students in your batch — grouped by module.
-                            </div>
-                            
                             {/* Group requests by semester */}
                             {Object.entries(requests.reduce((acc, req) => {
                                 const sem = req.semester || 'Other';
@@ -408,8 +386,6 @@ const PeerLearning = () => {
                                                                 </button>
                                                             </div>
                                                         )}
-
-                                                        {/* Broadcast Help button for pending */}
                                                         {req.status === 'pending' && (
                                                             <div className="d-flex mt-3">
                                                                 <button
@@ -418,10 +394,11 @@ const PeerLearning = () => {
                                                                         handleStatusUpdate(req.courseUnitID, req.courseUnitName, 'broadcast_help');
                                                                     }}
                                                                 >
-                                                                    <CheckCircle size={14} className="me-1" /> Ask for Help (Notify Seniors)
+                                                                    <CheckCircle size={14} className="me-1" /> Send Notification
                                                                 </button>
                                                             </div>
                                                         )}
+
                                                     </div>
                                                 </div>
                                             </div>
@@ -502,10 +479,6 @@ const PeerLearning = () => {
                                 <button type="button" className="btn-close" onClick={() => setSelectedRepModule(null)} />
                             </div>
                             <div className="modal-body p-4">
-                                <div className="alert alert-info d-flex align-items-center py-2 mb-4 border-0 rounded-3 small">
-                                    <Users size={16} className="me-2 flex-shrink-0" />
-                                    <div>These requests are completely anonymous to protect student privacy.</div>
-                                </div>
                                 
                                 {selectedRepModule.descriptions_list && selectedRepModule.descriptions_list.filter(d => d !== 'General unit request').length > 0 ? (
                                     <div className="d-flex flex-column gap-3">
