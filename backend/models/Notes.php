@@ -139,11 +139,11 @@ class Notes {
 
     public function view($noteID = null, $filters = []) {
         if ($noteID) {
-            $stmt = $this->conn->prepare("SELECT n.*, cu.courseUnitName AS courseUniName FROM notes n LEFT JOIN course_units cu ON n.courseUnitID = cu.courseUnitID WHERE n.noteID = :nid");
+            $stmt = $this->conn->prepare("SELECT n.*, cu.courseUnitName AS courseUniName, cu.academicYear, cu.semester FROM notes n LEFT JOIN course_units cu ON n.courseUnitID = cu.courseUnitID WHERE n.noteID = :nid");
             $stmt->execute([':nid' => $noteID]);
             return $stmt->fetch();
         } else {
-            $query = "SELECT n.*, cu.courseUnitName AS courseUniName FROM notes n LEFT JOIN course_units cu ON n.courseUnitID = cu.courseUnitID WHERE 1=1";
+            $query = "SELECT n.*, cu.courseUnitName AS courseUniName, cu.academicYear, cu.semester FROM notes n LEFT JOIN course_units cu ON n.courseUnitID = cu.courseUnitID WHERE 1=1";
             $params = [];
             
         

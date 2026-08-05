@@ -235,7 +235,8 @@ class PeerLearningRequestController {
                 $ok = $stmt->execute([':rid' => $repID, ':cuid' => $courseUnitID]);
 
                 if ($ok) {
-                    $this->dispatchBroadcastNotifications($repID, $courseUnitID, $db);
+                    $customMsg = $data['message'] ?? '';
+                    $this->dispatchBroadcastNotifications($repID, $courseUnitID, $db, $customMsg);
                 }
 
                 echo json_encode(['status' => $ok ? 'success' : 'error']);
@@ -290,7 +291,7 @@ class PeerLearningRequestController {
     /**
      * Notify all seniors and batch mates for help.
      */
-    private function dispatchBroadcastNotifications(int $repID, string $courseUnitID, $db): void {
+    private function dispatchBroadcastNotifications(int $repID, string $courseUnitID, $db, string $customMsg = ''): void {
         // Get courseUnitName
         $cu = $db->prepare("SELECT courseUnitName FROM course_units WHERE courseUnitID = :id");
         $cu->execute([':id' => $courseUnitID]);
@@ -308,7 +309,9 @@ class PeerLearningRequestController {
         $courseCode = $parts[1]; // CST
         $batchYear = (int)$parts[2]; // 23
 
-        $message = "Students in Batch {$batchYear} have requested Peer Learning for \"{$unitName}\". If you can help, please reach out to the Course Rep!";
+        $message = !empty($customMsg) 
+            ? $customMsg 
+            : "Students in Batch {$batchYear} have requested Peer Learning for \"{$unitName}\". If you can help, please reach out to the Course Rep!";
 
         // Find all students in this course with batch year <= rep's batch year
         $students = $db->prepare(

@@ -12,6 +12,8 @@ const PeerLearning = () => {
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [selectedRepModule, setSelectedRepModule] = useState(null);
+    const [showNotifModal, setShowNotifModal] = useState(false);
+    const [notifDetails, setNotifDetails] = useState({ courseUnitID: '', courseUnitName: '', message: '' });
     const [selectedSemester, setSelectedSemester] = useState(localStorage.getItem('peerLearningSemester') || '1');
     const [detectedYear, setDetectedYear] = useState(null);
 
@@ -128,9 +130,9 @@ const PeerLearning = () => {
         }
     };
 
-    const handleStatusUpdate = async (courseUnitID, courseUnitName, status) => {
+    const handleStatusUpdate = async (courseUnitID, courseUnitName, status, message = '') => {
         try {
-            const res = await api.put('/peer-learning-requests', { courseUnitID, courseUnitName, status });
+            const res = await api.put('/peer-learning-requests', { courseUnitID, courseUnitName, status, message });
             if (res.data.status === 'success') {
                 fetchRequests();
                 const msg = status === 'broadcast_help' 
@@ -143,6 +145,12 @@ const PeerLearning = () => {
         } catch (err) {
             console.error(err);
         }
+    };
+
+    const handleSendCustomNotification = (e) => {
+        e.preventDefault();
+        handleStatusUpdate(notifDetails.courseUnitID, notifDetails.courseUnitName, 'broadcast_help', notifDetails.message);
+        setShowNotifModal(false);
     };
 
     const getStatusBadge = (status) => {
@@ -401,7 +409,12 @@ const PeerLearning = () => {
                                                                 <button
                                                                     className="btn btn-success btn-sm rounded-pill w-100"
                                                                     onClick={() => {
-                                                                        handleStatusUpdate(req.courseUnitID, req.courseUnitName, 'broadcast_help');
+                                                                        setNotifDetails({
+                                                                            courseUnitID: req.courseUnitID,
+                                                                            courseUnitName: req.courseUnitName,
+                                                                            message: `Students in your batch/course have requested Peer Learning help for the unit "${req.courseUnitName}" (${req.courseUnitID}). If you can help, please contact the Course Rep!`
+                                                                        });
+                                                                        setShowNotifModal(true);
                                                                     }}
                                                                 >
                                                                     <CheckCircle size={14} className="me-1" /> Send Notification
@@ -509,6 +522,51 @@ const PeerLearning = () => {
                                 <button type="button" className="btn btn-light rounded-pill px-4 w-100" onClick={() => setSelectedRepModule(null)}>
                                     Close
                                 </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+            
+            {/* Custom Send Notification Modal */}
+            {showNotifModal && (
+                <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1055 }}>
+                    <div className="modal-dialog modal-dialog-centered">
+                        <div className="modal-content border-0 shadow">
+                            <div className="modal-header border-0 pb-0">
+                                <h5 className="fw-bold">Send Class/Senior Notification</h5>
+                                <button type="button" className="btn-close" onClick={() => setShowNotifModal(false)} />
+                            </div>
+                            <div className="modal-body p-4">
+                                <form onSubmit={handleSendCustomNotification}>
+                                    <div className="mb-3">
+                                        <label className="form-label text-muted small fw-bold">MODULE NAME</label>
+                                        <input type="text" className="form-control bg-light" value={notifDetails.courseUnitName} readOnly />
+                                    </div>
+                                    <div className="mb-3">
+                                        <label className="form-label text-muted small fw-bold">COURSE UNIT CODE</label>
+                                        <input type="text" className="form-control bg-light" value={notifDetails.courseUnitID} readOnly />
+                                    </div>
+                                    <div className="mb-4">
+                                        <label className="form-label text-muted small fw-bold">NOTIFICATION MESSAGE</label>
+                                        <textarea
+                                            className="form-control"
+                                            rows="4"
+                                            placeholder="Type custom notification message..."
+                                            value={notifDetails.message}
+                                            onChange={e => setNotifDetails({ ...notifDetails, message: e.target.value })}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="d-flex gap-2 justify-content-end">
+                                        <button type="button" className="btn btn-light rounded-pill px-4" onClick={() => setShowNotifModal(false)}>
+                                            Cancel
+                                        </button>
+                                        <button type="submit" className="btn btn-primary rounded-pill px-4">
+                                            Send Broadcast
+                                        </button>
+                                    </div>
+                                </form>
                             </div>
                         </div>
                     </div>
