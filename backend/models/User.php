@@ -10,20 +10,20 @@ abstract class User {
     protected $conn;
 
    
-    protected $userID;
-    protected $fname;
-    protected $lname;
-    protected $phoneNum;
-    protected $email;
-    protected $hash_password;
-    protected $role;
-    protected $is_active;
-    protected $is_verified;
-    protected $last_login;
-    protected $created_at;
-    protected $peer_learning_app_notification;
-    protected $lost_item_sms_notification;
-    protected $has_seen_lost_item_popup;
+    private $userID;
+    private $fname;
+    private $lname;
+    private $phoneNum;
+    private $email;
+    private $hash_password;
+    private $role;
+    private $is_active;
+    private $is_verified;
+    private $last_login;
+    private $created_at;
+    private $peer_learning_app_notification;
+    private $lost_item_sms_notification;
+    private $has_seen_lost_item_popup;
 
     public function __construct(array $data = []) {
         $this->conn = Database::getInstance()->getConnection();
@@ -114,6 +114,17 @@ abstract class User {
     }
 
     public function logout($jti, $expires_at) {
+        // Purge expired revoked tokens to keep the table clean
+        try {
+            $cleanupQuery = "DELETE FROM revoked_tokens WHERE expires_at < :now";
+            $cleanupStmt = $this->conn->prepare($cleanupQuery);
+            $now = time();
+            $cleanupStmt->bindParam(':now', $now, PDO::PARAM_INT);
+            $cleanupStmt->execute();
+        } catch (\Exception $e) {
+            // Log error or ignore to avoid blocking the user's logout process
+        }
+
         $query = "INSERT INTO revoked_tokens (jti, expires_at) VALUES (:jti, :exp)";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':jti', $jti);
@@ -140,7 +151,12 @@ abstract class User {
     }
 
     public function forgotPassword() {
-        
+        if (!$this->userID || !$this->email) {
+            return false;
+        }
+        $otpModel = new OtpVerification();
+        $otp = $otpModel->generate($this->userID);
+        return \Utils\MailService::sendOTP($this->email, $otp);
     }
 
     public function verifyOTP($otpCode) {

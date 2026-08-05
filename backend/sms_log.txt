@@ -1,0 +1,22 @@
+[2026-08-05 15:23:40] TO: 94759818246 | HTTP: 0 | RESP:  | MSG: UniCore Alert: New lost item reported: kmllkkmklm. Check the portal!
+[2026-08-05 15:23:41] TO: 94759818246 | HTTP: 0 | RESP:  | MSG: UniCore Alert: New lost item reported: kmllkkmklm. Check the portal!
+[2026-08-05 15:23:42] TO: 94759818246 | HTTP: 0 | RESP:  | MSG: UniCore Alert: New lost item reported: kmllkkmklm. Check the portal!
+[2026-08-05 15:23:42] TO: 94759818246 | HTTP: 0 | RESP:  | MSG: UniCore Alert: New lost item reported: kmllkkmklm. Check the portal!
+[2026-08-05 15:23:42] TO: 94759818246 | HTTP: 0 | RESP:  | MSG: UniCore Alert: New lost item reported: kmllkkmklm. Check the portal!
+[2026-08-05 15:24:01] TO: 94759818246 | HTTP: 0 | RESP:  | MSG: UniCore Alert: New lost item reported: kmllkkmklm. Check the portal!
+[2026-08-05 15:24:01] TO: 94759818246 | HTTP: 0 | RESP:  | MSG: UniCore Alert: New lost item reported: kmllkkmklm. Check the portal!
+[2026-08-05 15:24:02] TO: 94759818246 | HTTP: 0 | RESP:  | MSG: UniCore Alert: New lost item reported: kmllkkmklm. Check the portal!
+[2026-08-05 15:24:02] TO: 94759818246 | HTTP: 0 | RESP:  | MSG: UniCore Alert: New lost item reported: kmllkkmklm. Check the portal!
+[2026-08-05 15:24:20] TO: 1234567890 | HTTP: 0 | RESP:  | MSG: UniCore Alert: New lost item reported: kmllkkmklm. Check the portal!
+[2026-08-05 15:24:21] TO: 1234567890 | HTTP: 0 | RESP:  | MSG: UniCore Alert: New lost item reported: kmllkkmklm. Check the portal!
+[2026-08-05 15:24:21] TO: 1234567890 | HTTP: 0 | RESP:  | MSG: UniCore Alert: New lost item reported: kmllkkmklm. Check the portal!
+[2026-08-05 15:24:21] TO: 1234567890 | HTTP: 0 | RESP:  | MSG: UniCore Alert: New lost item reported: kmllkkmklm. Check the portal!
+[2026-08-05 15:24:40] TO: 1234567890 | HTTP: 0 | RESP:  | MSG: UniCore Alert: New lost item reported: kmllkkmklm. Check the portal!
+[2026-08-05 15:24:40] TO: 1234567890 | HTTP: 0 | RESP:  | MSG: UniCore Alert: New lost item reported: kmllkkmklm. Check the portal!
+[2026-08-05 15:24:40] TO: 1234567890 | HTTP: 0 | RESP:  | MSG: UniCore Alert: New lost item reported: kmllkkmklm. Check the portal!
+[2026-08-05 15:24:40] TO: 1234567890 | HTTP: 0 | RESP:  | MSG: UniCore Alert: New lost item reported: kmllkkmklm. Check the portal!
+[2026-08-05 15:35:07] TO: 94759818246 | HTTP: 200 | RESP: {"status":"success","message":"Your message was successfully delivered","data":{"uid":"6a733c097b5e7","to":"94759818246","from":"TextLKDemo","message":"UniCore Alert: New lost item reported: Sdfnmg. Check the portal!","status":"Delivered","cost":"1","sms_count":1}} | MSG: UniCore Alert: New lost item reported: Sdfnmg. Check the portal!
+[2026-08-05 15:35:10] TO: 94759818246 | HTTP: 200 | RESP: {"status":"success","message":"Your message was successfully delivered","data":{"uid":"6a733c0bce186","to":"94759818246","from":"TextLKDemo","message":"UniCore Alert: New lost item reported: Sdfnmg. Check the portal!","status":"Delivered","cost":"1","sms_count":1}} | MSG: UniCore Alert: New lost item reported: Sdfnmg. Check the portal!
+[2026-08-05 15:35:10] TO: 1234567890 | HTTP: 403 | RESP: {"status":"error","message":"1234567890 is a invalid phone number"} | MSG: UniCore Alert: New lost item reported: Sdfnmg. Check the portal!
+[2026-08-05 15:35:11] TO: 1234567890 | HTTP: 403 | RESP: {"status":"error","message":"1234567890 is a invalid phone number"} | MSG: UniCore Alert: New lost item reported: Sdfnmg. Check the portal!
+[2026-08-05 15:35:12] TO: 94767844066 | HTTP: 200 | RESP: {"status":"success","message":"Your message was successfully delivered","data":{"uid":"6a733c0ee122a","to":"94767844066","from":"TextLKDemo","message":"UniCore Alert: New lost item reported: Sdfnmg. Check the portal!","status":"Delivered","cost":"1","sms_count":1}} | MSG: UniCore Alert: New lost item reported: Sdfnmg. Check the portal!

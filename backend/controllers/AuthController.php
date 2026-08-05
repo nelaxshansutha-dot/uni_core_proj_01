@@ -411,8 +411,8 @@ class AuthController {
         $lname = $data['last_name'] ?? '';
         $phoneNum = $data['phone_number'] ?? '';
         
-        if (!empty($phoneNum) && !preg_match('/^0[0-9]{9}$/', $phoneNum)) {
-            echo json_encode(['status' => 'error', 'message' => 'Phone number must start with 0 and be exactly 10 digits.']);
+        if (!preg_match('/^[0-9]{10}$/', $phoneNum)) {
+            echo json_encode(['status' => 'error', 'message' => 'Phone number must be exactly 10 digits and contain only numbers.']);
             return;
         }
         

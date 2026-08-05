@@ -12,7 +12,7 @@ const PeerLearning = () => {
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [selectedRepModule, setSelectedRepModule] = useState(null);
-    const [selectedSemester, setSelectedSemester] = useState('1');
+    const [selectedSemester, setSelectedSemester] = useState(localStorage.getItem('peerLearningSemester') || '1');
     const [detectedYear, setDetectedYear] = useState(null);
 
     const [modules, setModules] = useState([]);
@@ -34,8 +34,13 @@ const PeerLearning = () => {
     useEffect(() => {
         if (!user) return;
         if (user.role === 'student') {
-            setShowSemPopup(true);
-            setLoading(false);
+            const savedSem = localStorage.getItem('peerLearningSemester');
+            if (savedSem) {
+                fetchModules(null, savedSem);
+            } else {
+                setShowSemPopup(true);
+                setLoading(false);
+            }
         } else {
             // Rep or other role — load requests directly
             fetchRequests();
@@ -56,12 +61,17 @@ const PeerLearning = () => {
         }
     };
 
-    const fetchModules = async (e) => {
+    const fetchModules = async (e, sem = selectedSemester) => {
         e?.preventDefault();
         try {
             setLoading(true);
+            
+            // Persist the choice
+            localStorage.setItem('peerLearningSemester', sem);
+            setSelectedSemester(sem);
+
             // Year is auto-detected from enrollment number on the backend
-            const res = await api.get(`/course-units/my-modules?semester=${selectedSemester}`);
+            const res = await api.get(`/course-units/my-modules?semester=${sem}`);
             if (res.data.status === 'success') {
                 setModules(res.data.data);
                 setDetectedYear(res.data.std_year);

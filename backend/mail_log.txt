@@ -1,0 +1,4 @@
+[2026-08-05 15:59:33] TO: nelanelaxshan@gmail.com | SUBJECT: Your UniCore OTP Verification Code
+BODY:
+Your UniCore OTP is: 123456. It expires in 15 minutes.
+--------------------------------------------------

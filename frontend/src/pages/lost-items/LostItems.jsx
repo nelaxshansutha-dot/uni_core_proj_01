@@ -14,6 +14,7 @@ const LostItems = () => {
     const [showPrefModal, setShowPrefModal] = useState(false);
     const [isUpdating, setIsUpdating] = useState(false);
     const [updateItemId, setUpdateItemId] = useState(null);
+    const [submitError, setSubmitError] = useState('');
 
     const [formData, setFormData] = useState({
         lostItemName: '',
@@ -156,6 +157,7 @@ const handleDelete = async () => {
                 setShowModal(false);
                 setIsUpdating(false);
                 setUpdateItemId(null);
+                setSubmitError('');
 
                 setFormData({
                     lostItemName: '',
@@ -168,9 +170,12 @@ const handleDelete = async () => {
                 });
 
                 fetchItems();
+            } else {
+                setSubmitError(res.data.message || 'Submission failed. Please try again.');
             }
         } catch (err) {
             console.error(err);
+            setSubmitError(err.response?.data?.message || 'Network error. Please check your connection and try again.');
         }
     };
 
@@ -344,13 +349,17 @@ const handleDelete = async () => {
                                 <h5>{isUpdating ? "Update Lost Item" : "Report Lost Item"}</h5>
                                 <button
                                     className="btn-close"
-                                    onClick={() => setShowModal(false)}
+                                    onClick={() => { setShowModal(false); setSubmitError(''); }}
                                 />
                             </div>
 
                             <div className="modal-body">
                                 <form onSubmit={handleSubmit}>
-
+                                    {submitError && (
+                                        <div className="alert alert-danger py-2 mb-3" role="alert">
+                                            {submitError}
+                                        </div>
+                                    )}
                                     <input
                                         className="form-control mb-2"
                                         placeholder="Item Name"

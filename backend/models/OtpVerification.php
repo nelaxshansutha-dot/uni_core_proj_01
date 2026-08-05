@@ -16,7 +16,7 @@ class OtpVerification {
         $this->conn = Database::getInstance()->getConnection();
     }
 
-    // Getters and Setters
+   
     public function getOtpID() { return $this->otpID; }
     public function setOtpID($val) { $this->otpID = $val; }
 
