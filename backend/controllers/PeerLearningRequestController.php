@@ -311,15 +311,14 @@ class PeerLearningRequestController {
         $message = "Students in Batch {$batchYear} have requested Peer Learning for \"{$unitName}\". If you can help, please reach out to the Course Rep!";
 
         // Find all students in this course with batch year <= rep's batch year
-        $pattern = '%/' . strtolower($courseCode) . '/%';
         $students = $db->prepare(
             "SELECT s.enrollmentNo 
              FROM student s
              JOIN users u ON s.userID = u.userID
-             WHERE LOWER(s.enrollmentNo) LIKE :pat
+             WHERE s.courseID = (SELECT courseID FROM course_representative WHERE repID = :rid LIMIT 1)
              AND u.peer_learning_app_notification = 1"
         );
-        $students->execute([':pat' => $pattern]);
+        $students->execute([':rid' => $repID]);
 
         $ins = $db->prepare("INSERT INTO app_notification (repID, enrollmentNo, message) VALUES (:rid, :enr, :msg)");
         while ($row = $students->fetch(\PDO::FETCH_ASSOC)) {

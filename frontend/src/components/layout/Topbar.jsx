@@ -107,7 +107,7 @@ const Topbar = ({ toggleSidebar }) => {
                                         {notifications.length > 0 ? (
                                             notifications.map((notif) => (
                                                 <div key={notif.id} className="p-3 border-bottom d-flex justify-content-between align-items-start gap-2" style={{ fontSize: '0.85rem' }}>
-                                                    <Link to="/lost-items" className="text-decoration-none flex-grow-1" onClick={() => setNotificationsOpen(false)}>
+                                                    <Link to={notif.type === 'peer_learning' ? '/peer-learning' : '/lost-items'} className="text-decoration-none flex-grow-1" onClick={() => setNotificationsOpen(false)}>
                                                         <div className="text-dark fw-medium mb-1">{notif.message}</div>
                                                         <div className="text-muted small">{new Date(notif.created_at).toLocaleString()}</div>
                                                     </Link>

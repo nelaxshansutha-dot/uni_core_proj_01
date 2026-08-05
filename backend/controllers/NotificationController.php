@@ -16,15 +16,18 @@ class NotificationController {
 
         try {
             $stmt = $db->prepare(
-                "SELECT sn.smsID AS id, sn.message, sn.created_at,
-                        li.lostItemName
-                 FROM sms_notification sn
-                 LEFT JOIN lost_items li ON sn.lostID = li.lostID
-                 WHERE sn.userID = :uid
-                 ORDER BY sn.created_at DESC
+                "(SELECT sn.smsID AS id, sn.message, sn.created_at, 'lost_item' AS type
+                  FROM sms_notification sn
+                  WHERE sn.userID = :uid)
+                 UNION ALL
+                 (SELECT an.appID AS id, an.message, an.created_at, 'peer_learning' AS type
+                  FROM app_notification an
+                  JOIN student s ON an.enrollmentNo = s.enrollmentNo
+                  WHERE s.userID = :uid2)
+                 ORDER BY created_at DESC
                  LIMIT 20"
             );
-            $stmt->execute([':uid' => $userID]);
+            $stmt->execute([':uid' => $userID, ':uid2' => $userID]);
             $notifications = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
             echo json_encode([
@@ -80,15 +83,24 @@ class NotificationController {
     }
 
     /**
-     * DELETE /notifications/{id}  — dismiss a lost-item notification from the bell
+     * DELETE /notifications/{id}  — dismiss a notification from the bell
      */
     public function dismiss($id) {
         $decoded = AuthMiddleware::authenticate();
         $userID  = $decoded->userID;
         $db      = Database::getInstance()->getConnection();
 
+        // Dismiss from sms_notification
         $stmt = $db->prepare("DELETE FROM sms_notification WHERE smsID = :id AND userID = :uid");
         $stmt->execute([':id' => $id, ':uid' => $userID]);
+
+        // Dismiss from app_notification
+        $enrollmentNo = $decoded->enrollmentNo ?? null;
+        if ($enrollmentNo) {
+            $stmt2 = $db->prepare("DELETE FROM app_notification WHERE appID = :id AND enrollmentNo = :enr");
+            $stmt2->execute([':id' => $id, ':enr' => $enrollmentNo]);
+        }
+
         echo json_encode(['status' => 'success']);
     }
 }
