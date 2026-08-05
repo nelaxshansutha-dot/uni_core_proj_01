@@ -110,10 +110,7 @@ class NotesController {
                 $repData = $stmt->fetch(\PDO::FETCH_ASSOC);
                 
                 if ($repData && $repData['courseID'] == $note['courseID']) {
-                    // Assuming academicYear in notes table represents the year (1, 2, 3, 4)
-                    if ($note['academicYear'] == $repData['std_year']) {
-                        $canDelete = true;
-                    }
+                    $canDelete = true;
                 }
             } elseif ($decoded->role === 'admin') {
                 $canDelete = true;
