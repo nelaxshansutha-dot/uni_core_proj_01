@@ -97,10 +97,13 @@ try {
 
         case 'notifications':
             $controller = new Controllers\NotificationController();
-            if ($action === 'app' && method_exists($controller, 'handleApp')) {
+            if ($action === 'app') {
                 $controller->handleApp($method, $id);
             } elseif ($action === 'sms' && method_exists($controller, 'handleSms')) {
                 $controller->handleSms($method, $id);
+            } elseif ($method === 'DELETE' && is_numeric($action)) {
+                // DELETE /notifications/{id} — dismiss a lost-item bell notification
+                $controller->dismiss($action);
             } else {
                 $controller->getNotifications();
             }

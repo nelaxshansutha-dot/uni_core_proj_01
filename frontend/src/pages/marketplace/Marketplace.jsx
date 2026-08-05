@@ -253,15 +253,11 @@ const Marketplace = () => {
                                         )}
 
                                         <div className="card-body p-4">
-                                            {/* Condition badge */}
-                                            <div className="d-flex align-items-center gap-2 mb-2">
-                                                <span className={`badge rounded-pill px-2 ${item.condition_type === 'new' ? 'bg-success' : 'bg-warning text-dark'}`}>
-                                                    {item.condition_type === 'new' ? 'New' : 'Used'}
-                                                </span>
-                                                <span className={`badge rounded-pill px-2 ${item.status === 'available' ? 'bg-info text-dark' : 'bg-secondary'}`}>
-                                                    {item.status === 'available' ? 'Available' : 'Sold'}
-                                                </span>
-                                            </div>
+                                            {item.status !== 'available' && (
+                                                <div className="mb-2">
+                                                    <span className="badge rounded-pill bg-danger">Not Available</span>
+                                                </div>
+                                            )}
 
                                             {/* Name & Price */}
                                             <div className="d-flex justify-content-between align-items-start mb-1">
@@ -565,14 +561,11 @@ const Marketplace = () => {
                                 <div className="row g-0">
                                     {/* Left side: Photo Gallery */}
                                     <div className="col-md-6 bg-light d-flex flex-column justify-content-between p-3" style={{ minHeight: '380px' }}>
-                                        <div className="d-flex justify-content-between align-items-center mb-2">
-                                            <span className={`badge rounded-pill px-2 ${selectedItem.condition_type === 'new' ? 'bg-success' : 'bg-warning text-dark'}`}>
-                                                {selectedItem.condition_type === 'new' ? 'New' : 'Used'}
-                                            </span>
-                                            <span className={`badge rounded-pill px-2 ${selectedItem.status === 'available' ? 'bg-info text-dark' : 'bg-secondary'}`}>
-                                                {selectedItem.status === 'available' ? 'Available' : 'Sold'}
-                                            </span>
-                                        </div>
+                                        {selectedItem.status !== 'available' && (
+                                            <div className="d-flex justify-content-between align-items-center mb-2">
+                                                <span className="badge rounded-pill bg-danger">Not Available</span>
+                                            </div>
+                                        )}
 
                                         <div className="flex-grow-1 d-flex align-items-center justify-content-center position-relative mb-3">
                                             {detailImages.length > 0 ? (

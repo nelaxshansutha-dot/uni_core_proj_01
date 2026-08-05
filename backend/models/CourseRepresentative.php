@@ -66,7 +66,7 @@ class CourseRepresentative extends Student
             $query = "INSERT INTO course_representative (userID, enrollmentNo, courseID, rep_id_string) 
                       VALUES (:uid, :enr, :cid, :repStr)";
             $stmt = $this->conn->prepare($query);
-            $stmt->bindParam(':uid', $this->userID);
+            $stmt->bindParam(':uid', $this->getUserID());
             $stmt->bindParam(':enr', $this->enrollmentNo);
             if (empty($this->courseID)) {
                 $stmt->bindValue(':cid', null, PDO::PARAM_NULL);
@@ -80,7 +80,7 @@ class CourseRepresentative extends Student
             if ($ownsTransaction) {
                 $this->conn->commit();
             }
-            return $this->userID;
+            return $this->getUserID();
         } catch (\Exception $e) {
             if ($ownsTransaction) {
                 $this->conn->rollBack();

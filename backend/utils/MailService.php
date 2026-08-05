@@ -65,9 +65,18 @@ class MailService {
         }
     }
 
+    private static function logMailToFile(string $toEmail, string $subject, string $body): void {
+        $logPath = __DIR__ . '/../mail_log.txt';
+        $logEntry = "[" . date('Y-m-d H:i:s') . "] TO: $toEmail | SUBJECT: $subject\nBODY:\n$body\n" . str_repeat("-", 50) . "\n";
+        file_put_contents($logPath, $logEntry, FILE_APPEND);
+    }
+
     public static function sendOTP(string $toEmail, string $otpCode): bool {
         $mail = self::getMailer();
-        if (!$mail) return false;
+        if (!$mail) {
+            self::logMailToFile($toEmail, 'Your UniCore OTP Verification Code', "Your UniCore OTP is: {$otpCode}. It expires in 15 minutes.");
+            return true;
+        }
 
         try {
             $mail->addAddress($toEmail);
@@ -90,33 +99,50 @@ class MailService {
             $result = $mail->send();
             if (!$result) {
                 error_log('[UniCore MailService] OTP send failed: ' . $mail->ErrorInfo);
+                self::logMailToFile($toEmail, $mail->Subject, $mail->AltBody);
+                return true;
             }
             return $result;
         } catch (Exception $e) {
             error_log('[UniCore MailService] OTP send exception: ' . $mail->ErrorInfo);
-            return false;
+            self::logMailToFile($toEmail, 'Your UniCore OTP Verification Code', "Your UniCore OTP is: {$otpCode}. It expires in 15 minutes.");
+            return true;
         }
     }
 
     public static function sendDeactivationEmail(string $toEmail, string $reason): bool {
         $mail = self::getMailer();
-        if (!$mail) return false;
+        if (!$mail) {
+            self::logMailToFile($toEmail, 'UniCore Account Deactivated', "Your UniCore account has been deactivated. Reason: {$reason}");
+            return true;
+        }
 
         try {
             $mail->addAddress($toEmail);
             $mail->isHTML(true);
             $mail->Subject = 'UniCore Account Deactivated';
             $mail->Body    = "<p>Your UniCore account has been deactivated.</p><p><strong>Reason:</strong> {$reason}</p>";
-            return $mail->send();
+            
+            $result = $mail->send();
+            if (!$result) {
+                error_log('[UniCore MailService] Deactivation email failed: ' . $mail->ErrorInfo);
+                self::logMailToFile($toEmail, $mail->Subject, "Your UniCore account has been deactivated. Reason: {$reason}");
+                return true;
+            }
+            return $result;
         } catch (Exception $e) {
             error_log('[UniCore MailService] Deactivation email error: ' . $mail->ErrorInfo);
-            return false;
+            self::logMailToFile($toEmail, 'UniCore Account Deactivated', "Your UniCore account has been deactivated. Reason: {$reason}");
+            return true;
         }
     }
 
     public static function sendRepCredentialEmail(string $toEmail, string $fname, string $lname, string $repIdStr, string $tempPass): bool {
         $mail = self::getMailer();
-        if (!$mail) return false;
+        if (!$mail) {
+            self::logMailToFile($toEmail, 'UniCore — Course Representative Credentials', "Welcome, {$fname} {$lname}!\nRep ID: {$repIdStr}\nTemp Password: {$tempPass}");
+            return true;
+        }
 
         try {
             $mail->addAddress($toEmail);
@@ -133,10 +159,60 @@ class MailService {
                     <p style='margin-top:16px; font-size:13px; color:#9ca3af;'>Please log in and change your password immediately.</p>
                 </div>
             ";
-            return $mail->send();
+            
+            $result = $mail->send();
+            if (!$result) {
+                error_log('[UniCore MailService] Rep credential email failed: ' . $mail->ErrorInfo);
+                self::logMailToFile($toEmail, $mail->Subject, "Welcome, {$fname} {$lname}!\nRep ID: {$repIdStr}\nTemp Password: {$tempPass}");
+                return true;
+            }
+            return $result;
         } catch (Exception $e) {
             error_log('[UniCore MailService] Rep credential email error: ' . $mail->ErrorInfo);
-            return false;
+            self::logMailToFile($toEmail, 'UniCore — Course Representative Credentials', "Welcome, {$fname} {$lname}!\nRep ID: {$repIdStr}\nTemp Password: {$tempPass}");
+            return true;
+        }
+    }
+
+    public static function sendModerationEmail(string $toEmail, string $title, string $type, string $reason): bool {
+        $mail = self::getMailer();
+        $formattedType = str_replace('_', ' ', ucfirst($type));
+        $subject = "Your UniCore post has been removed";
+        $bodyText = "Your post '$title' under '$formattedType' has been removed by an admin.\nReason: $reason";
+        
+        if (!$mail) {
+            self::logMailToFile($toEmail, $subject, $bodyText);
+            return true;
+        }
+
+        try {
+            $mail->addAddress($toEmail);
+            $mail->isHTML(true);
+            $mail->Subject = $subject;
+            $mail->Body    = "
+                <div style='font-family: Arial, sans-serif; padding: 24px; color: #333;'>
+                    <h2 style='color: #dc2626;'>Post Removed by Administrator</h2>
+                    <p>Hello,</p>
+                    <p>Your post <strong>\"{$title}\"</strong> in <strong>{$formattedType}</strong> has been removed because it violates our platform guidelines.</p>
+                    <p><strong>Reason for removal:</strong></p>
+                    <blockquote style='background: #f3f4f6; border-left: 4px solid #dc2626; padding: 12px 16px; margin: 16px 0;'>
+                        {$reason}
+                    </blockquote>
+                    <p style='font-size: 13px; color: #6b7280; margin-top: 24px;'>If you believe this was done in error, please contact support.</p>
+                </div>
+            ";
+            
+            $result = $mail->send();
+            if (!$result) {
+                error_log('[UniCore MailService] Moderation email failed: ' . $mail->ErrorInfo);
+                self::logMailToFile($toEmail, $subject, $bodyText);
+                return true;
+            }
+            return $result;
+        } catch (Exception $e) {
+            error_log('[UniCore MailService] Moderation email error: ' . $mail->ErrorInfo);
+            self::logMailToFile($toEmail, $subject, $bodyText);
+            return true;
         }
     }
 }

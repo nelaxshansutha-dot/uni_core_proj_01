@@ -28,20 +28,21 @@ class DashboardController {
                 ];
             }
             
-            // Also fetch recent notes
-            $stmtNotes = $db->prepare("SELECT title, courseUnitID, created_at FROM notes ORDER BY created_at DESC LIMIT 5");
-            $stmtNotes->execute();
-            $recentNotes = $stmtNotes->fetchAll();
-            
-            foreach ($recentNotes as $n) {
-                $activities[] = [
-                    'id' => uniqid(),
-                    'type' => 'note',
-                    'title' => 'New Note Uploaded',
-                    'description' => ($n['title'] ?: 'Course Material') . ' for ' . $n['courseUnitID'],
-                    'timestamp' => $n['created_at'],
-                    'link' => '/notes'
-                ];
+            if ($decoded->role !== 'staff') {
+                $stmtNotes = $db->prepare("SELECT title, courseUnitID, created_at FROM notes ORDER BY created_at DESC LIMIT 5");
+                $stmtNotes->execute();
+                $recentNotes = $stmtNotes->fetchAll();
+                
+                foreach ($recentNotes as $n) {
+                    $activities[] = [
+                        'id' => uniqid(),
+                        'type' => 'note',
+                        'title' => 'New Note Uploaded',
+                        'description' => ($n['title'] ?: 'Course Material') . ' for ' . $n['courseUnitID'],
+                        'timestamp' => $n['created_at'],
+                        'link' => '/notes'
+                    ];
+                }
             }
 
             // Sort mixed activities by timestamp descending

@@ -44,8 +44,9 @@ class LostItemController {
                     $url = \Services\CloudinaryUploader::upload($_FILES['item_image']['tmp_name'], 'image');
                     $data['item_image'] = $url;
                 } catch (\Exception $e) {
-                    echo json_encode(['success' => false, 'message' => 'Cloudinary Upload Failed: ' . $e->getMessage()]);
-                    return;
+                    // Log the error but continue saving without the image
+                    error_log('[UniCore] Cloudinary upload failed: ' . $e->getMessage());
+                    $data['item_image'] = null;
                 }
             }
             
@@ -58,19 +59,35 @@ class LostItemController {
                 $model = new LostItem($data);
                 $lostID = $model->create();
                 
-                // Trigger SMS Broadcast if requested
+                $db = \Config\Database::getInstance()->getConnection();
+                $itemName = $data['lostItemName'] ?? 'An item';
+
+                // ---- IN-APP NOTIFICATION for ALL active users ----
+                try {
+                    $notifMessage = "A new lost item was reported: \"$itemName\". Check Lost-Items for details.";
+                    // Fetch all active users except the one who posted
+                    $stmtUsers = $db->prepare("SELECT userID FROM users WHERE is_active = 1 AND userID != :uid");
+                    $stmtUsers->execute([':uid' => $decoded->userID]);
+                    $allUsers = $stmtUsers->fetchAll(PDO::FETCH_COLUMN);
+
+                    $stmtNotif = $db->prepare("INSERT INTO sms_notification (lostID, userID, message) VALUES (:lid, :uid, :msg)");
+                    foreach ($allUsers as $uid) {
+                        $stmtNotif->execute([':lid' => $lostID, ':uid' => $uid, ':msg' => $notifMessage]);
+                    }
+                } catch (\Exception $e) {
+                    error_log("[UniCore] In-app notification insert failed: " . $e->getMessage());
+                }
+
+                // ---- SMS Broadcast for opted-in users ----
                 if (isset($data['send_sms_alert']) && ($data['send_sms_alert'] === 'true' || $data['send_sms_alert'] === true || $data['send_sms_alert'] === '1')) {
                     try {
-                        $db = \Config\Database::getInstance()->getConnection();
-                        // Query users who have opted in (assuming lost_item_sms_notification = 1) and have a valid contactNumber
-                        $stmt = $db->query("SELECT contactNumber FROM users WHERE contactNumber IS NOT NULL AND contactNumber != '' AND lost_item_sms_notification = 1");
-                        $users = $stmt->fetchAll(PDO::FETCH_COLUMN);
+                        // FIX: column is `phoneNum`, not `contactNumber`
+                        $stmt = $db->query("SELECT phoneNum FROM users WHERE phoneNum IS NOT NULL AND phoneNum != '' AND lost_item_sms_notification = 1");
+                        $phones = $stmt->fetchAll(PDO::FETCH_COLUMN);
                         
-                        $itemName = $data['lostItemName'] ?? 'An item';
-                        $message = "A new lost item was just reported: $itemName. Check the UniCore portal for details!";
-                        
-                        foreach ($users as $phone) {
-                            \Utils\SMSService::sendSMS($phone, $message);
+                        $smsMessage = "UniCore Alert: New lost item reported: $itemName. Check the portal!";
+                        foreach ($phones as $phone) {
+                            \Utils\SMSService::sendSMS($phone, $smsMessage);
                         }
                     } catch (\Exception $e) {
                         error_log("[UniCore SMS] Broadcast failed: " . $e->getMessage());
@@ -84,11 +101,10 @@ class LostItemController {
             $data = json_decode(file_get_contents("php://input"), true);
             if (!$data) $data = $_POST; // Fallback
             
-            // Handle User SMS Preference update
+           
             if (isset($data['update_preference'])) {
                 $db = \Config\Database::getInstance()->getConnection();
                 
-                // Ensure columns exist (creates them if they don't, to prevent DB errors during demo)
                 try {
                     $db->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS lost_item_sms_notification TINYINT(1) DEFAULT 0");
                     $db->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS has_seen_lost_item_popup TINYINT(1) DEFAULT 0");

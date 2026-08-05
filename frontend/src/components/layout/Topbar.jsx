@@ -14,7 +14,7 @@ const Topbar = ({ toggleSidebar }) => {
     const [notifications, setNotifications] = useState([]);
 
     useEffect(() => {
-        if (user && (user.role === 'student' || user.role === 'course_representative' || user.role === 'rep')) {
+        if (user) {
             const fetchNotifications = async () => {
                 try {
                     const res = await api.get('/notifications');
@@ -32,6 +32,15 @@ const Topbar = ({ toggleSidebar }) => {
     const handleLogout = () => {
         logout();
         navigate('/login');
+    };
+
+    const dismissNotification = async (notifId) => {
+        try {
+            await api.delete(`/notifications/${notifId}`);
+            setNotifications(prev => prev.filter(n => n.id !== notifId));
+        } catch (e) {
+            console.error("Failed to dismiss notification");
+        }
     };
 
     const getInitials = () => {
@@ -62,8 +71,8 @@ const Topbar = ({ toggleSidebar }) => {
             
             <div className="d-flex align-items-center gap-3">
 
-                {/* Notifications Bell */}
-                {(user?.role === 'student' || user?.role === 'course_representative' || user?.role === 'rep') && (
+                {/* Notifications Bell — visible for all logged-in users */}
+                {user && (
                     <div className="dropdown position-relative">
                         <button 
                             className="btn btn-light d-flex align-items-center justify-content-center rounded-circle border shadow-sm position-relative"
@@ -88,7 +97,7 @@ const Topbar = ({ toggleSidebar }) => {
                                 ></div>
                                 <div 
                                     className="dropdown-menu show dropdown-menu-end shadow-lg border-0 mt-2 p-0 rounded-3 z-2 position-absolute" 
-                                    style={{ right: 0, width: '300px', overflow: 'hidden' }}
+                                    style={{ right: 0, width: '320px', overflow: 'hidden' }}
                                 >
                                     <div className="p-3 border-bottom bg-light d-flex justify-content-between align-items-center">
                                         <h6 className="m-0 fw-bold">Notifications</h6>
@@ -96,10 +105,18 @@ const Topbar = ({ toggleSidebar }) => {
                                     </div>
                                     <div style={{ maxHeight: '350px', overflowY: 'auto' }}>
                                         {notifications.length > 0 ? (
-                                            notifications.map((notif, index) => (
-                                                <div key={index} className="p-3 border-bottom text-wrap" style={{ fontSize: '0.85rem' }}>
-                                                    <div className="text-dark fw-medium mb-1">{notif.message}</div>
-                                                    <div className="text-muted small">{new Date(notif.created_at).toLocaleString()}</div>
+                                            notifications.map((notif) => (
+                                                <div key={notif.id} className="p-3 border-bottom d-flex justify-content-between align-items-start gap-2" style={{ fontSize: '0.85rem' }}>
+                                                    <Link to="/lost-items" className="text-decoration-none flex-grow-1" onClick={() => setNotificationsOpen(false)}>
+                                                        <div className="text-dark fw-medium mb-1">{notif.message}</div>
+                                                        <div className="text-muted small">{new Date(notif.created_at).toLocaleString()}</div>
+                                                    </Link>
+                                                    <button
+                                                        className="btn btn-sm btn-link text-muted p-0 ms-1"
+                                                        title="Dismiss"
+                                                        onClick={() => dismissNotification(notif.id)}
+                                                        style={{ fontSize: '1rem', lineHeight: 1 }}
+                                                    >×</button>
                                                 </div>
                                             ))
                                         ) : (

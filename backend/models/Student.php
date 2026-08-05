@@ -65,7 +65,7 @@ class Student extends User {
             $query = "INSERT INTO student (enrollmentNo, userID, courseID, std_year) VALUES (:enr, :uid, :cid, :year)";
             $stmt = $this->conn->prepare($query);
             $stmt->bindParam(':enr', $this->enrollmentNo);
-            $stmt->bindParam(':uid', $this->userID, PDO::PARAM_INT);
+            $stmt->bindParam(':uid', $this->getUserID(), PDO::PARAM_INT);
             
             if (empty($this->courseID)) {
                 $stmt->bindValue(':cid', null, PDO::PARAM_NULL);
@@ -83,7 +83,7 @@ class Student extends User {
             if ($ownsTransaction) {
                 $this->conn->commit();
             }
-            return $this->userID;
+            return $this->getUserID();
         } catch (Exception $e) {
             if ($ownsTransaction) {
                 $this->conn->rollBack();
@@ -92,11 +92,11 @@ class Student extends User {
         }
     }
 
-    // --- Lost Item Methods ---
+
     public function postLostItem(array $data) {
         try {
             $lostItem = new LostItem($data);
-            $lostItem->setUserID($this->userID);
+            $lostItem->setUserID($this->getUserID());
             return $lostItem->create();
         } catch (Exception $e) {
             throw new Exception("Failed to post lost item: " . $e->getMessage());
@@ -106,7 +106,7 @@ class Student extends User {
     public function updateLostItem($lostID, array $data): bool {
         try {
             $lostItem = new LostItem($data);
-            $lostItem->setUserID($this->userID); // Ownership check via SQL in LostItem model
+            $lostItem->setUserID($this->getUserID()); // Ownership check via SQL in LostItem model
             return $lostItem->update($lostID);
         } catch (Exception $e) {
             throw new Exception("Failed to update lost item: " . $e->getMessage());
@@ -117,7 +117,7 @@ class Student extends User {
         try {
             $lostItem = new LostItem();
             // Ownership check via SQL in LostItem model
-            return $lostItem->delete($lostID, $this->userID);
+            return $lostItem->delete($lostID, $this->getUserID());
         } catch (Exception $e) {
             throw new Exception("Failed to delete lost item: " . $e->getMessage());
         }
@@ -132,11 +132,11 @@ class Student extends User {
         }
     }
     
-    // --- Market Item Methods ---
+ 
     public function postMarketItem(array $data) {
         try {
             $marketItem = new Marketplace($data);
-            $marketItem->setUserID($this->userID);
+            $marketItem->setUserID($this->getUserID());
             return $marketItem->create($data);
         } catch (Exception $e) {
             throw new Exception("Failed to post market item: " . $e->getMessage());
@@ -146,9 +146,9 @@ class Student extends User {
     public function updateMarketItem($productID, array $data): bool {
         try {
             $marketItem = new Marketplace($data);
-            $marketItem->setUserID($this->userID);
+            $marketItem->setUserID($this->getUserID());
             // Ownership check via SQL in Marketplace model
-            return $marketItem->update($productID, $this->userID, $data);
+            return $marketItem->update($productID, $this->getUserID(), $data);
         } catch (Exception $e) {
             throw new Exception("Failed to update market item: " . $e->getMessage());
         }
@@ -158,7 +158,7 @@ class Student extends User {
         try {
             $marketItem = new Marketplace();
             // Ownership check via SQL in Marketplace model
-            return $marketItem->delete($productID, $this->userID);
+            return $marketItem->delete($productID, $this->getUserID());
         } catch (Exception $e) {
             throw new Exception("Failed to delete market item: " . $e->getMessage());
         }
@@ -178,7 +178,7 @@ class Student extends User {
         try {
             $notes = new Notes();
             $data['enrollmentNo'] = $this->enrollmentNo;
-            $data['userID'] = $this->userID;
+            $data['userID'] = $this->getUserID();
             return $notes->upload($data);
         } catch (Exception $e) {
             throw new Exception("Failed to upload notes: " . $e->getMessage());
