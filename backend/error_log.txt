@@ -31,3 +31,4 @@
 [2026-08-05 15:24:01] UploadController Cloudinary Error: cURL Error during Cloudinary upload: Operation timed out after 30002 milliseconds with 0 out of 0 bytes received
 [2026-08-05 15:29:52] Notes Cloudinary Upload Error: cURL Error during Cloudinary upload: Operation timed out after 30002 milliseconds with 0 out of 0 bytes received
 [2026-08-05 15:30:00] Notes Cloudinary Upload Error: cURL Error during Cloudinary upload: Operation timed out after 30001 milliseconds with 0 out of 0 bytes received
+[2026-08-06 08:39:47] Notes Cloudinary Upload Error: cURL Error during Cloudinary upload: Could not resolve host: api.cloudinary.com

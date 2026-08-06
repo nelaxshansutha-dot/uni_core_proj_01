@@ -114,7 +114,7 @@ abstract class User {
     }
 
     public function logout($jti, $expires_at) {
-        // Purge expired revoked tokens to keep the table clean
+       
         try {
             $cleanupQuery = "DELETE FROM revoked_tokens WHERE expires_at < :now";
             $cleanupStmt = $this->conn->prepare($cleanupQuery);
@@ -122,7 +122,7 @@ abstract class User {
             $cleanupStmt->bindParam(':now', $now, PDO::PARAM_INT);
             $cleanupStmt->execute();
         } catch (\Exception $e) {
-            // Log error or ignore to avoid blocking the user's logout process
+         
         }
 
         $query = "INSERT INTO revoked_tokens (jti, expires_at) VALUES (:jti, :exp)";

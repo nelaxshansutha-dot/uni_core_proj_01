@@ -41,14 +41,16 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     const login = (token, userData) => {
-        localStorage.setItem('token', token);
+        if (token) {
+            localStorage.setItem('token', token);
+            
+            // Also store as cookie per user request (7 days expiry)
+            const d = new Date();
+            d.setTime(d.getTime() + (7*24*60*60*1000));
+            document.cookie = `token=${token}; expires=${d.toUTCString()}; path=/`;
+        }
         localStorage.setItem('user', JSON.stringify(userData));
         
-        // Also store as cookie per user request (7 days expiry)
-        const d = new Date();
-        d.setTime(d.getTime() + (7*24*60*60*1000));
-        document.cookie = `token=${token}; expires=${d.toUTCString()}; path=/`;
-
         setUser(userData);
     };
 

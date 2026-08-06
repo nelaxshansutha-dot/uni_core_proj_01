@@ -9,9 +9,7 @@ class Staff extends User {
     
     protected $staffID;
 
-    /**
-     * Delegates creation to the LostItem model and attaches the staff's userID.
-     */
+   
     public function postLostItem(array $data) {
         try {
             $lostItem = new LostItem($data);
@@ -32,9 +30,7 @@ class Staff extends User {
         }
     }
 
-    /**
-     * Delegates delete to the LostItem model and attaches the staff's userID for ownership check.
-     */
+    
     public function deleteLostItem($lostID): bool {
         try {
             $lostItem = new LostItem();
@@ -44,9 +40,7 @@ class Staff extends User {
         }
     }
 
-    /**
-     * Delegates view to the LostItem model.
-     */
+   
     public function viewLostItem($lostID = null) {
         try {
             $lostItem = new LostItem();
@@ -56,9 +50,7 @@ class Staff extends User {
         }
     }
 
-    /**
-     * Delegates marketplace item creation to Marketplace model and attaches staff's userID.
-     */
+    
     public function postMarketItem(array $data) {
         try {
             $marketItem = new Marketplace($data);
@@ -100,7 +92,7 @@ class Staff extends User {
             $query = "INSERT INTO staff (staffID, userID) VALUES (:sid, :uid)";
             $stmt = $this->conn->prepare($query);
             $stmt->bindParam(':sid', $this->staffID);
-            $stmt->bindParam(':uid', $this->getUserID());
+            $stmt->bindValue(':uid', $this->getUserID(), PDO::PARAM_INT);
             $stmt->execute();
             if ($ownsTransaction) {
                 $this->conn->commit();
