@@ -192,9 +192,7 @@ class CourseRepresentative extends Student
         }
     }
 
-    /**
-     * Send bulk notification to a list of students via AppNotification
-     */
+    
     public function sendNotification(array $studentIDs, string $message): int
     {
         if (empty($studentIDs)) return 0;
