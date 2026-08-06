@@ -66,7 +66,7 @@ class CourseRepresentative extends Student
             $query = "INSERT INTO course_representative (userID, enrollmentNo, courseID, rep_id_string) 
                       VALUES (:uid, :enr, :cid, :repStr)";
             $stmt = $this->conn->prepare($query);
-            $stmt->bindParam(':uid', $this->getUserID());
+            $stmt->bindValue(':uid', $this->getUserID(), PDO::PARAM_INT);
             $stmt->bindParam(':enr', $this->enrollmentNo);
             if (empty($this->courseID)) {
                 $stmt->bindValue(':cid', null, PDO::PARAM_NULL);
@@ -106,9 +106,7 @@ class CourseRepresentative extends Student
         return $notes->update($noteID, $data);
     }
 
-    /**
-     * Delete any note matching the Rep's courseID
-     */
+  
     public function deleteNotes($noteID): bool
     {
         $notes = new Notes();
@@ -194,9 +192,7 @@ class CourseRepresentative extends Student
         }
     }
 
-    /**
-     * Send bulk notification to a list of students via AppNotification
-     */
+    
     public function sendNotification(array $studentIDs, string $message): int
     {
         if (empty($studentIDs)) return 0;

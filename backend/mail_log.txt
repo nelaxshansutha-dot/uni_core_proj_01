@@ -2,3 +2,7 @@
 BODY:
 Your UniCore OTP is: 123456. It expires in 15 minutes.
 --------------------------------------------------
+[2026-08-06 08:23:29] TO: cst23079@std.uwu.ac.lk | SUBJECT: Your UniCore OTP Verification Code
+BODY:
+Your UniCore OTP is: 609157. It expires in 15 minutes.
+--------------------------------------------------

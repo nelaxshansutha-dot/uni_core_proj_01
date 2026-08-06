@@ -65,7 +65,7 @@ class Student extends User {
             $query = "INSERT INTO student (enrollmentNo, userID, courseID, std_year) VALUES (:enr, :uid, :cid, :year)";
             $stmt = $this->conn->prepare($query);
             $stmt->bindParam(':enr', $this->enrollmentNo);
-            $stmt->bindParam(':uid', $this->getUserID(), PDO::PARAM_INT);
+            $stmt->bindValue(':uid', $this->getUserID(), PDO::PARAM_INT);
             
             if (empty($this->courseID)) {
                 $stmt->bindValue(':cid', null, PDO::PARAM_NULL);
@@ -173,7 +173,7 @@ class Student extends User {
         }
     }
     
-    // --- Notes Methods ---
+   
     public function uploadNotes(array $data) {
         try {
             $notes = new Notes();
@@ -188,7 +188,7 @@ class Student extends User {
     public function updateNotes($noteID, array $data): bool {
         try {
             $notes = new Notes();
-            // Verify ownership first (Notes doesn't implicitly check userID in its own UPDATE SQL)
+          
             $note = $notes->view($noteID);
             if (!$note || strtolower($note['enrollmentNo']) !== strtolower($this->enrollmentNo)) {
                 throw new Exception("Unauthorized: You do not own this note.");
@@ -202,7 +202,7 @@ class Student extends User {
     public function deleteNotes($noteID): bool {
         try {
             $notes = new Notes();
-            // Verify ownership first (Notes doesn't implicitly check userID in its own DELETE SQL)
+            
             $note = $notes->view($noteID);
             if (!$note || strtolower($note['enrollmentNo']) !== strtolower($this->enrollmentNo)) {
                 throw new Exception("Unauthorized: You do not own this note.");
@@ -229,14 +229,14 @@ class Student extends User {
             if (!$fileUrl) {
                 throw new Exception("Note not found or no file available.");
             }
-            // Return the file path/data needed for the controller to stream/serve the file
+         
             return $fileUrl;
         } catch (Exception $e) {
             throw new Exception("Failed to download notes: " . $e->getMessage());
         }
     }
     
-    // --- Peer Learning Methods ---
+
     public function requestPeerLearningSession(array $data) {
         try {
             $request = new PeerLearningRequest($data);

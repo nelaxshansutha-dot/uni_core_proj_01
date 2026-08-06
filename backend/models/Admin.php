@@ -19,7 +19,7 @@ class Admin extends User {
             }
             $query = "INSERT INTO admin (userID) VALUES (:uid)";
             $stmt = $this->conn->prepare($query);
-            $stmt->bindParam(':uid', $this->getUserID());
+            $stmt->bindValue(':uid', $this->getUserID(), PDO::PARAM_INT);
             $stmt->execute();
             $this->conn->commit();
             return $this->getUserID();

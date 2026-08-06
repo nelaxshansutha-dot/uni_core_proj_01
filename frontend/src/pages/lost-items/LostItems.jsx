@@ -56,7 +56,7 @@ const LostItems = () => {
             if (res.data.success) {
                 setShowPrefModal(false);
                 if (user) {
-                    login(null, { 
+                    login(localStorage.getItem('token'), { 
                         ...user, 
                         lost_item_sms_notification: val, 
                         has_seen_lost_item_popup: 1 
