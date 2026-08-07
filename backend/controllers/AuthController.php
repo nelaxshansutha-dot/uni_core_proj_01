@@ -24,13 +24,9 @@ class AuthController {
         $role = $data['role'] ?? 'student';
         $data['hash_password'] = password_hash($data['password'], PASSWORD_BCRYPT);
         
-        switch ($role) {
-            case 'admin': $user = new \Models\Admin($data); break;
-            case 'staff': $user = new \Models\Staff($data); break;
-            case 'course_representative': $user = new \Models\CourseRepresentative($data); break;
-            case 'student':
-            default: $user = new \Models\Student($data); break;
-        }
+        $user = \Models\User::createInstanceFromRole($role);
+        $user->hydrateFromRequest($data);
+        $user->setRole($role);
         try {
             $userID = $user->register();
             if ($userID) {
@@ -199,13 +195,7 @@ class AuthController {
             return;
         }
 
-        switch ($userData['role']) {
-            case 'admin': $user = new \Models\Admin($userData); break;
-            case 'staff': $user = new \Models\Staff($userData); break;
-            case 'course_representative': $user = new \Models\CourseRepresentative($userData); break;
-            case 'student':
-            default: $user = new \Models\Student($userData); break;
-        }
+        $user = \Models\User::createInstanceFromRole($userData['role'], $userData);
 
         if ($user->verifyOTP($otp)) {
             echo json_encode(['success' => true, 'message' => 'Account verified.']);
@@ -294,21 +284,7 @@ class AuthController {
             return;
         }
 
-        switch ($userData['role']) {
-            case 'admin':
-                 $user = new \Models\Admin($userData);
-                  break;
-            case 'staff':
-                 $user = new \Models\Staff($userData);
-                  break;
-            case 'course_representative':
-                 $user = new \Models\CourseRepresentative($userData); 
-                 break;
-            case 'student':
-            default:
-             $user = new \Models\Student($userData);
-              break;
-        }
+        $user = \Models\User::createInstanceFromRole($userData['role'], $userData);
 
         if ($user->verifyOTP($otp)) {
             // Generate a temporary reset token (for demo purposes, a simple hash)
@@ -431,15 +407,14 @@ class AuthController {
         $smsPref = $data['lost_item_sms_notification'] ?? 0;
         $peerPref = $data['peer_learning_app_notification'] ?? 1;
 
-        $query = "UPDATE users SET fname = :fname, lname = :lname, phoneNum = :phoneNum, lost_item_sms_notification = :smsPref, peer_learning_app_notification = :peerPref";
-        $params = [
-            ':fname' => $fname,
-            ':lname' => $lname,
-            ':phoneNum' => $phoneNum,
-            ':smsPref' => $smsPref,
-            ':peerPref' => $peerPref,
-            ':uid' => $decoded->userID
-        ];
+        $user = \Models\User::createInstanceFromRole($decoded->role);
+        $user
+            ->setUserID($decoded->userID)
+            ->setFname($fname)
+            ->setLname($lname)
+            ->setPhoneNum($phoneNum)
+            ->setLostItemSmsNotification($smsPref)
+            ->setPeerLearningAppNotification($peerPref);
 
         if (!empty($data['new_password'])) {
             // Verify old password
@@ -452,15 +427,11 @@ class AuthController {
                 return;
             }
 
-            $query .= ", hash_password = :hash";
-            $params[':hash'] = password_hash($data['new_password'], PASSWORD_BCRYPT);
+            $user->setHashPassword(password_hash($data['new_password'], PASSWORD_BCRYPT));
         }
-
-        $query .= " WHERE userID = :uid";
         
         try {
-            $stmt = $db->prepare($query);
-            $success = $stmt->execute($params);
+            $success = $user->updateProfile();
 
             if ($success) {
                 // Fetch updated user to return

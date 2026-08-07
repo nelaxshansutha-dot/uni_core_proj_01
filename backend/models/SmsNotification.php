@@ -12,15 +12,34 @@ class SmsNotification {
     private $message;
     private $created_at;
 
-    public function __construct(array $data = []) {
+    public function __construct() {
         $this->conn = Database::getInstance()->getConnection();
-        if (!empty($data)) {
-            $this->smsID = $data['smsID'] ?? null;
-            $this->lostID = $data['lostID'] ?? null;
-            $this->userID = $data['userID'] ?? null;
-            $this->message = $data['message'] ?? null;
-            $this->created_at = $data['created_at'] ?? null;
+    }
+
+    public function hydrate(array $data = []): static {
+        if (array_key_exists('smsID', $data)) {
+            $this->setSmsID($data['smsID']);
         }
+        if (array_key_exists('lostID', $data)) {
+            $this->setLostID($data['lostID']);
+        }
+        if (array_key_exists('userID', $data)) {
+            $this->setUserID($data['userID']);
+        }
+        if (array_key_exists('message', $data)) {
+            $this->setMessage($data['message']);
+        }
+        if (array_key_exists('created_at', $data)) {
+            $this->setCreatedAt($data['created_at']);
+        }
+        return $this;
+    }
+
+    public function hydrateFromRequest(array $data = []): static {
+        if (array_key_exists('message', $data)) {
+            $this->setMessage($data['message']);
+        }
+        return $this;
     }
 
     public function getSmsID() { return $this->smsID; }

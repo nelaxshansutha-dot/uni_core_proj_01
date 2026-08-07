@@ -15,89 +15,164 @@ class Notes {
     private $created_at;
     private $conn;
 
+    private $userID;
+    private $academicYear;
+    private $noteType;
+
     public function __construct() {
         $this->conn = Database::getInstance()->getConnection();
+    }
+
+    public function hydrate(array $data = []): static {
+        if (array_key_exists('noteID', $data)) {
+            $this->setNoteID($data['noteID']);
+        }
+        if (array_key_exists('enrollmentNo', $data)) {
+            $this->setEnrollmentNo($data['enrollmentNo']);
+        }
+        if (array_key_exists('courseID', $data)) {
+            $this->setCourseID($data['courseID']);
+        }
+        if (array_key_exists('courseUnitID', $data)) {
+            $this->setCourseUnitID($data['courseUnitID']);
+        }
+        if (array_key_exists('title', $data)) {
+            $this->setTitle($data['title']);
+        }
+        if (array_key_exists('file_url', $data)) {
+            $this->setFileUrl($data['file_url']);
+        }
+        if (array_key_exists('description', $data)) {
+            $this->setDescription($data['description']);
+        }
+        if (array_key_exists('status', $data)) {
+            $this->setStatus($data['status']);
+        }
+        if (array_key_exists('created_at', $data)) {
+            $this->setCreatedAt($data['created_at']);
+        }
+        if (array_key_exists('userID', $data)) {
+            $this->setUserID($data['userID']);
+        }
+        if (array_key_exists('academicYear', $data)) {
+            $this->setAcademicYear($data['academicYear']);
+        }
+        if (array_key_exists('noteType', $data)) {
+            $this->setNoteType($data['noteType']);
+        }
+        return $this;
+    }
+
+    public function hydrateFromRequest(array $data = []): static {
+        if (array_key_exists('courseUnitID', $data)) {
+            $this->setCourseUnitID($data['courseUnitID']);
+        }
+        if (array_key_exists('title', $data)) {
+            $this->setTitle($data['title']);
+        }
+        if (array_key_exists('file_url', $data)) {
+            $this->setFileUrl($data['file_url']);
+        }
+        if (array_key_exists('description', $data)) {
+            $this->setDescription($data['description']);
+        }
+        if (array_key_exists('academicYear', $data)) {
+            $this->setAcademicYear($data['academicYear']);
+        }
+        if (array_key_exists('noteType', $data)) {
+            $this->setNoteType($data['noteType']);
+        }
+        return $this;
     }
 
    
     public function getNoteID() 
     { return $this->noteID; }
     public function setNoteID($val) 
-    { $this->noteID = $val; }
+    { $this->noteID = $val; return $this; }
 
     public function getEnrollmentNo() 
     { return $this->enrollmentNo; }
     public function setEnrollmentNo($val) 
-    { $this->enrollmentNo = $val; }
+    { $this->enrollmentNo = $val; return $this; }
 
     public function getCourseID() 
     { return $this->courseID; }
     public function setCourseID($val) 
-    { $this->courseID = $val; }
+    { $this->courseID = $val; return $this; }
 
     public function getCourseUnitID() 
     { return $this->courseUnitID; }
     public function setCourseUnitID($val) 
-    { $this->courseUnitID = $val; }
+    { $this->courseUnitID = $val; return $this; }
 
     public function getTitle() 
     { return $this->title; }
     public function setTitle($val) 
-    { $this->title = $val; }
+    { $this->title = $val; return $this; }
 
     public function getFileUrl() 
     { return $this->file_url; }
     public function setFileUrl($val) 
-    { $this->file_url = $val; }
+    { $this->file_url = $val; return $this; }
 
     public function getDescription() 
     { return $this->description; }
     public function setDescription($val) 
-    { $this->description = $val; }
+    { $this->description = $val; return $this; }
 
     public function getStatus() 
     { return $this->status; }
     public function setStatus($val) 
-    { $this->status = $val; }
+    { $this->status = $val; return $this; }
 
     public function getCreatedAt() 
     { return $this->created_at; }
     public function setCreatedAt($val) 
-    { $this->created_at = $val; }
+    { $this->created_at = $val; return $this; }
 
-    public function upload($data) {
-        if (empty($data['enrollmentNo']) && !empty($data['userID'])) {
+    public function getUserID() { return $this->userID; }
+    public function setUserID($val) { $this->userID = $val; return $this; }
+
+    public function getAcademicYear() { return $this->academicYear; }
+    public function setAcademicYear($val) { $this->academicYear = $val; return $this; }
+
+    public function getNoteType() { return $this->noteType; }
+    public function setNoteType($val) { $this->noteType = $val; return $this; }
+
+    public function upload() {
+        if (empty($this->enrollmentNo) && !empty($this->userID)) {
             $stmt = $this->conn->prepare("SELECT enrollmentNo FROM student WHERE userID = :uid UNION SELECT enrollmentNo FROM course_representative WHERE userID = :uid LIMIT 1");
-            $stmt->execute([':uid' => $data['userID']]);
+            $stmt->execute([':uid' => $this->userID]);
             $res = $stmt->fetch();
             if ($res && !empty($res['enrollmentNo'])) {
-                $data['enrollmentNo'] = $res['enrollmentNo'];
+                $this->enrollmentNo = $res['enrollmentNo'];
             }
         }
-        $courseID = $data['courseID'] ?? null;
-        if (!$courseID && !empty($data['courseUnitID'])) {
+        $courseID = $this->courseID ?? null;
+        if (!$courseID && !empty($this->courseUnitID)) {
             $stmt = $this->conn->prepare("SELECT courseID FROM course_units WHERE courseUnitID = :cuid");
-            $stmt->execute([':cuid' => $data['courseUnitID']]);
+            $stmt->execute([':cuid' => $this->courseUnitID]);
             $res = $stmt->fetch();
             if ($res) $courseID = $res['courseID'];
         }
         
      
-        if (!$courseID && !empty($data['enrollmentNo'])) {
+        if (!$courseID && !empty($this->enrollmentNo)) {
             $stmt = $this->conn->prepare("SELECT courseID FROM student WHERE enrollmentNo = :enr");
-            $stmt->execute([':enr' => $data['enrollmentNo']]);
+            $stmt->execute([':enr' => $this->enrollmentNo]);
             $res = $stmt->fetch();
             if ($res) $courseID = $res['courseID'];
         }
 
        
-        if (!$courseID && !empty($data['enrollmentNo'])) {
-            $enrParts = explode('/', strtoupper(trim($data['enrollmentNo'])));
+        if (!$courseID && !empty($this->enrollmentNo)) {
+            $enrParts = explode('/', strtoupper(trim($this->enrollmentNo)));
             $courseCode = $enrParts[1] ?? '';
             if ($courseCode === 'CST') $courseID = 1;
         }
         
-        $providedCuid = $data['courseUnitID'] ?? '';
+        $providedCuid = $this->courseUnitID ?? '';
         $normalizedInput = strtoupper(str_replace([' ', '-'], '', $providedCuid));
         
         $stmtUnit = $this->conn->prepare("SELECT courseUnitID FROM course_units");
@@ -107,7 +182,7 @@ class Notes {
         foreach ($allUnits as $unit) {
             $dbUnit = strtoupper(str_replace([' ', '-'], '', $unit['courseUnitID']));
             if ($dbUnit === $normalizedInput || strpos($dbUnit, $normalizedInput) === 0) {
-                $data['courseUnitID'] = $unit['courseUnitID'];
+                $this->courseUnitID = $unit['courseUnitID'];
                 break;
             }
         }
@@ -117,16 +192,17 @@ class Notes {
                       VALUES (:enr, :cid, :cuid, :title, :file, :desc, :ayear, :ntype)";
             $stmt = $this->conn->prepare($query);
             $stmt->execute([
-                ':enr' => $data['enrollmentNo'],
+                ':enr' => $this->enrollmentNo,
                 ':cid' => $courseID,
-                ':cuid' => $data['courseUnitID'],
-                ':title' => $data['title'],
-                ':file' => $data['file_url'],
-                ':desc' => $data['description'] ?? null,
-                ':ayear' => $data['academicYear'] ?? null,
-                ':ntype' => $data['noteType'] ?? 'notes'
+                ':cuid' => $this->courseUnitID,
+                ':title' => $this->title,
+                ':file' => $this->file_url,
+                ':desc' => $this->description ?? null,
+                ':ayear' => $this->academicYear ?? null,
+                ':ntype' => $this->noteType ?? 'notes'
             ]);
-            return $this->conn->lastInsertId();
+            $this->noteID = $this->conn->lastInsertId();
+            return $this->noteID;
         } catch (\Exception $e) {
             $msg = $e->getMessage();
             if (strpos($msg, 'foreign key constraint fails') !== false && strpos($msg, 'courseUnitID') !== false) {
@@ -193,13 +269,13 @@ class Notes {
         return $note ? $note['file_url'] : null;
     }
 
-    public function update($noteID, $data) {
+    public function update() {
         $query = "UPDATE notes SET title = :title, description = :desc WHERE noteID = :nid";
         $stmt = $this->conn->prepare($query);
         return $stmt->execute([
-            ':title' => $data['title'],
-            ':desc' => $data['description'],
-            ':nid' => $noteID
+            ':title' => $this->title,
+            ':desc' => $this->description,
+            ':nid' => $this->noteID
         ]);
     }
 

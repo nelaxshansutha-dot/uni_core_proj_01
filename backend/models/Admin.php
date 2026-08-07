@@ -7,8 +7,13 @@ use Exception;
 
 class Admin extends User {
     
-    public function __construct(array $data = []) {
-        parent::__construct($data);
+    public function __construct() {
+        parent::__construct();
+    }
+
+    public function hydrate(array $data = []): self {
+        parent::hydrate($data);
+        return $this;
     }
 
     public function register() {
@@ -188,7 +193,7 @@ class Admin extends User {
             'notes' => []
         ];
         
-        // Fetch Lost Items
+     
         $stmtLost = $this->conn->query("SELECT l.lostID as lost_id, l.lostItemName, l.contact_number as contact_no, l.last_seen_datetime, l.item_image, u.email, l.created_at, l.status 
                             FROM lost_items l 
                             JOIN users u ON l.userID = u.userID 

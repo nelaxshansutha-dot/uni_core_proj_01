@@ -17,17 +17,20 @@ class MarketplaceController {
             }
             
             $data = json_decode(file_get_contents("php://input"), true);
-            $data['userID'] = $decoded->userID;
-            
-            $model = new Marketplace($data);
-            $pid = $model->create($data);
+            $model = new Marketplace();
+            $model->hydrateFromRequest($data);
+            $model->setUserID($decoded->userID);
+            $pid = $model->create();
             echo json_encode(['success' => true, 'productID' => $pid]);
             
         } elseif ($method === 'PUT') {
             $data = json_decode(file_get_contents("php://input"), true);
             if (!$data) $data = $_POST; // Fallback
-            $model = new Marketplace($data);
-            $success = $model->update($id, $decoded->userID, $data);
+            $model = new Marketplace();
+            $model->hydrateFromRequest($data);
+            $model->setProductID($id);
+            $model->setUserID($decoded->userID);
+            $success = $model->update();
             echo json_encode(['success' => $success]);
             
         } elseif ($method === 'DELETE') {
