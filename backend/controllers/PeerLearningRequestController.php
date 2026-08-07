@@ -183,20 +183,17 @@ class PeerLearningRequestController {
                 return;
             }
 
-            $stmt = $db->prepare(
-                "INSERT INTO peer_learning_request 
-                 (courseUnitID, enrollmentNo, repID, std_year, courseUnitName, semester, description)
-                 VALUES (:cuid, :enr, :repid, :year, :name, :sem, :desc)"
-            );
-            $ok = $stmt->execute([
-                ':cuid'  => $courseUnitID,
-                ':enr'   => $enrollmentNo,
-                ':repid' => $repID,
-                ':year'  => $stdYear,
-                ':name'  => $courseUnitName,
-                ':sem'   => $semester,
-                ':desc'  => $description
+            $model = new PeerLearningRequest();
+            $model->hydrateFromRequest([
+                'courseUnitID' => $courseUnitID,
+                'courseUnitName' => $courseUnitName,
+                'semester' => $semester,
+                'description' => $description,
+                'std_year' => $stdYear
             ]);
+            $model->setEnrollmentNo($enrollmentNo);
+            $model->setRepID($repID);
+            $ok = $model->submit();
 
             if ($ok) {
                 echo json_encode(['status' => 'success', 'message' => 'Your request was sent to your course representative.']);
@@ -282,9 +279,13 @@ class PeerLearningRequestController {
         );
         $students->execute([':rid' => $repID, ':cuid' => $courseUnitID]);
 
-        $ins = $db->prepare("INSERT INTO app_notification (repID, enrollmentNo, message) VALUES (:rid, :enr, :msg)");
         while ($row = $students->fetch(\PDO::FETCH_ASSOC)) {
-            $ins->execute([':rid' => $repID, ':enr' => $row['enrollmentNo'], ':msg' => $message]);
+            $appNotification = new \Models\AppNotification();
+            $appNotification
+                ->setRepID($repID)
+                ->setEnrollmentNo($row['enrollmentNo'])
+                ->setMessage($message);
+            $appNotification->send();
         }
     }
 
@@ -323,12 +324,15 @@ class PeerLearningRequestController {
         );
         $students->execute([':rid' => $repID]);
 
-        $ins = $db->prepare("INSERT INTO app_notification (repID, enrollmentNo, message) VALUES (:rid, :enr, :msg)");
         while ($row = $students->fetch(\PDO::FETCH_ASSOC)) {
             $studentBatch = $this->getBatchYear($row['enrollmentNo']);
             if ($studentBatch !== null && $studentBatch <= $batchYear) {
-                // Insert notification
-                $ins->execute([':rid' => $repID, ':enr' => $row['enrollmentNo'], ':msg' => $message]);
+                $appNotification = new \Models\AppNotification();
+                $appNotification
+                    ->setRepID($repID)
+                    ->setEnrollmentNo($row['enrollmentNo'])
+                    ->setMessage($message);
+                $appNotification->send();
             }
         }
     }

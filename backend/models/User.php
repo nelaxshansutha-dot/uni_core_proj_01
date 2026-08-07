@@ -25,24 +25,97 @@ abstract class User {
     private $lost_item_sms_notification;
     private $has_seen_lost_item_popup;
 
-    public function __construct(array $data = []) {
+    public function __construct() {
         $this->conn = Database::getInstance()->getConnection();
-        if (!empty($data)) {
-            $this->userID = $data['userID'] ?? $this->userID;
-            $this->fname = $data['fname'] ?? $this->fname;
-            $this->lname = $data['lname'] ?? $this->lname;
-            $this->phoneNum = $data['phoneNum'] ?? $this->phoneNum;
-            $this->email = $data['email'] ?? $this->email;
-            $this->hash_password = $data['hash_password'] ?? $this->hash_password;
-            $this->role = $data['role'] ?? $this->role;
-            $this->is_active = $data['is_active'] ?? $this->is_active;
-            $this->is_verified = $data['is_verified'] ?? $this->is_verified;
-            $this->last_login = $data['last_login'] ?? $this->last_login;
-            $this->created_at = $data['created_at'] ?? $this->created_at;
-            $this->peer_learning_app_notification = $data['peer_learning_app_notification'] ?? $this->peer_learning_app_notification;
-            $this->lost_item_sms_notification = $data['lost_item_sms_notification'] ?? $this->lost_item_sms_notification;
-            $this->has_seen_lost_item_popup = $data['has_seen_lost_item_popup'] ?? $this->has_seen_lost_item_popup;
+    }
+
+    public function hydrate(array $data = []): static {
+        if (array_key_exists('userID', $data)) {
+            $this->setUserID($data['userID']);
         }
+        if (array_key_exists('fname', $data)) {
+            $this->setFname($data['fname']);
+        }
+        if (array_key_exists('lname', $data)) {
+            $this->setLname($data['lname']);
+        }
+        if (array_key_exists('phoneNum', $data)) {
+            $this->setPhoneNum($data['phoneNum']);
+        }
+        if (array_key_exists('email', $data)) {
+            $this->setEmail($data['email']);
+        }
+        if (array_key_exists('hash_password', $data)) {
+            $this->setHashPassword($data['hash_password']);
+        }
+        if (array_key_exists('role', $data)) {
+            $this->setRole($data['role']);
+        }
+        if (array_key_exists('is_active', $data)) {
+            $this->setIsActive($data['is_active']);
+        }
+        if (array_key_exists('is_verified', $data)) {
+            $this->setIsVerified($data['is_verified']);
+        }
+        if (array_key_exists('last_login', $data)) {
+            $this->setLastLogin($data['last_login']);
+        }
+        if (array_key_exists('created_at', $data)) {
+            $this->setCreatedAt($data['created_at']);
+        }
+        if (array_key_exists('peer_learning_app_notification', $data)) {
+            $this->setPeerLearningAppNotification($data['peer_learning_app_notification']);
+        }
+        if (array_key_exists('lost_item_sms_notification', $data)) {
+            $this->setLostItemSmsNotification($data['lost_item_sms_notification']);
+        }
+        if (array_key_exists('has_seen_lost_item_popup', $data)) {
+            $this->setHasSeenLostItemPopup($data['has_seen_lost_item_popup']);
+        }
+        
+        return $this;
+    }
+
+    public function hydrateFromRequest(array $data = []): static {
+        if (array_key_exists('fname', $data)) {
+            $this->setFname($data['fname']);
+        } elseif (array_key_exists('first_name', $data)) {
+            $this->setFname($data['first_name']);
+        }
+
+        if (array_key_exists('lname', $data)) {
+            $this->setLname($data['lname']);
+        } elseif (array_key_exists('last_name', $data)) {
+            $this->setLname($data['last_name']);
+        }
+
+        if (array_key_exists('phoneNum', $data)) {
+            $this->setPhoneNum($data['phoneNum']);
+        } elseif (array_key_exists('phone_number', $data)) {
+            $this->setPhoneNum($data['phone_number']);
+        }
+
+        if (array_key_exists('email', $data)) {
+            $this->setEmail($data['email']);
+        }
+
+        if (array_key_exists('hash_password', $data)) {
+            $this->setHashPassword($data['hash_password']);
+        } elseif (array_key_exists('password', $data)) {
+            $this->setHashPassword($data['password']);
+        }
+
+        if (array_key_exists('peer_learning_app_notification', $data)) {
+            $this->setPeerLearningAppNotification($data['peer_learning_app_notification']);
+        }
+        if (array_key_exists('lost_item_sms_notification', $data)) {
+            $this->setLostItemSmsNotification($data['lost_item_sms_notification']);
+        }
+        if (array_key_exists('has_seen_lost_item_popup', $data)) {
+            $this->setHasSeenLostItemPopup($data['has_seen_lost_item_popup']);
+        }
+
+        return $this;
     }
 
     
@@ -73,8 +146,43 @@ abstract class User {
     public function getIsVerified() { return $this->is_verified; }
     public function setIsVerified($val) { $this->is_verified = $val; return $this; }
 
-    
+    public function getLastLogin() { return $this->last_login; }
+    public function setLastLogin($val) { $this->last_login = $val; return $this; }
 
+    public function getCreatedAt() { return $this->created_at; }
+    public function setCreatedAt($val) { $this->created_at = $val; return $this; }
+
+    public function getPeerLearningAppNotification() { return $this->peer_learning_app_notification; }
+    public function setPeerLearningAppNotification($val) { $this->peer_learning_app_notification = $val; return $this; }
+
+    public function getLostItemSmsNotification() { return $this->lost_item_sms_notification; }
+    public function setLostItemSmsNotification($val) { $this->lost_item_sms_notification = $val; return $this; }
+
+    public function getHasSeenLostItemPopup() { return $this->has_seen_lost_item_popup; }
+    public function setHasSeenLostItemPopup($val) { $this->has_seen_lost_item_popup = $val; return $this; }
+
+    public static function createInstanceFromRole(string $role, array $data = []) {
+        switch ($role) {
+            case 'admin':
+                $user = new Admin();
+                break;
+            case 'staff':
+                $user = new Staff();
+                break;
+            case 'course_representative':
+                $user = new CourseRepresentative();
+                if (isset($data['rep_hash_password']) && !empty($data['rep_hash_password'])) {
+                    $data['hash_password'] = $data['rep_hash_password'];
+                }
+                break;
+            case 'student':
+            default:
+                $user = new Student();
+                break;
+        }
+        $user->hydrate($data);
+        return $user;
+    }
 
     public function register() {
         $query = "INSERT INTO users (fname, lname, email, phoneNum, hash_password, role) 
@@ -133,11 +241,21 @@ abstract class User {
     }
 
     public function updateProfile() {
-        $query = "UPDATE users SET fname = :fname, lname = :lname, phoneNum = :phoneNum WHERE userID = :uid";
+        $query = "UPDATE users SET fname = :fname, lname = :lname, phoneNum = :phoneNum, lost_item_sms_notification = :smsPref, peer_learning_app_notification = :peerPref";
+        if ($this->hash_password) {
+            $query .= ", hash_password = :hash";
+        }
+        $query .= " WHERE userID = :uid";
+        
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':fname', $this->fname);
         $stmt->bindParam(':lname', $this->lname);
         $stmt->bindParam(':phoneNum', $this->phoneNum);
+        $stmt->bindParam(':smsPref', $this->lost_item_sms_notification);
+        $stmt->bindParam(':peerPref', $this->peer_learning_app_notification);
+        if ($this->hash_password) {
+            $stmt->bindParam(':hash', $this->hash_password);
+        }
         $stmt->bindParam(':uid', $this->userID);
         return $stmt->execute();
     }
@@ -215,17 +333,7 @@ abstract class User {
 
         if ($fullData) {
             $fullData['role'] = $role;
-            switch ($role) {
-                case 'admin': return new Admin($fullData);
-                case 'staff': return new Staff($fullData);
-                case 'course_representative':
-                    if (isset($fullData['rep_hash_password']) && !empty($fullData['rep_hash_password'])) {
-                        $fullData['hash_password'] = $fullData['rep_hash_password'];
-                    }
-                    return new CourseRepresentative($fullData);
-                case 'student':
-                default: return new Student($fullData);
-            }
+            return self::createInstanceFromRole($role, $fullData);
         }
         return null;
     }
@@ -241,13 +349,7 @@ abstract class User {
 
         if ($userData) {
             $role = $userData['role'];
-            switch ($role) {
-                case 'admin': return new Admin($userData);
-                case 'staff': return new Staff($userData);
-                case 'course_representative': return new CourseRepresentative($userData);
-                case 'student':
-                default: return new Student($userData);
-            }
+            return self::createInstanceFromRole($role, $userData);
         }
         return null;
     }

@@ -34,22 +34,70 @@ class Student extends User {
     public function setStdYear($val)
     { $this->std_year = $val; return $this; }
 
-    public function __construct(array $data = []) {
-        parent::__construct($data);
-        if (!empty($data)) {
-            $this->enrollmentNo = $data['enrollmentNo'] ?? $this->enrollmentNo;
-            $this->courseID = $data['courseID'] ?? $this->courseID;
-            $this->std_year = $data['std_year'] ?? $this->std_year;
-            
-            if (!empty($this->enrollmentNo) && strpos(strtoupper($this->enrollmentNo), 'UWU/CST') !== false) {
-                if (empty($this->courseID)) {
-                    $this->courseID = 1; 
-                }
-                if (empty($this->std_year)) {
-                    $this->std_year = 1;
-                }
+    public function __construct() {
+        parent::__construct();
+    }
+
+    public function hydrate(array $data = []): static {
+        parent::hydrate($data);
+        if (array_key_exists('enrollmentNo', $data)) {
+            $this->setEnrollmentNo($data['enrollmentNo']);
+        } elseif (array_key_exists('enrollment_no', $data)) {
+            $this->setEnrollmentNo($data['enrollment_no']);
+        }
+
+        if (array_key_exists('courseID', $data)) {
+            $this->setCourseID($data['courseID']);
+        } elseif (array_key_exists('course', $data)) {
+            $this->setCourseID($data['course']);
+        }
+
+        if (array_key_exists('std_year', $data)) {
+            $this->setStdYear($data['std_year']);
+        } elseif (array_key_exists('year', $data)) {
+            $this->setStdYear($data['year']);
+        }
+
+        if (!empty($this->enrollmentNo) && strpos(strtoupper($this->enrollmentNo), 'UWU/CST') !== false) {
+            if (empty($this->courseID)) {
+                $this->setCourseID(1);
+            }
+            if (empty($this->std_year)) {
+                $this->setStdYear(1);
             }
         }
+        return $this;
+    }
+
+    public function hydrateFromRequest(array $data = []): static {
+        parent::hydrateFromRequest($data);
+        if (array_key_exists('enrollmentNo', $data)) {
+            $this->setEnrollmentNo($data['enrollmentNo']);
+        } elseif (array_key_exists('enrollment_no', $data)) {
+            $this->setEnrollmentNo($data['enrollment_no']);
+        }
+
+        if (array_key_exists('courseID', $data)) {
+            $this->setCourseID($data['courseID']);
+        } elseif (array_key_exists('course', $data)) {
+            $this->setCourseID($data['course']);
+        }
+
+        if (array_key_exists('std_year', $data)) {
+            $this->setStdYear($data['std_year']);
+        } elseif (array_key_exists('year', $data)) {
+            $this->setStdYear($data['year']);
+        }
+
+        if (!empty($this->enrollmentNo) && strpos(strtoupper($this->enrollmentNo), 'UWU/CST') !== false) {
+            if (empty($this->courseID)) {
+                $this->setCourseID(1);
+            }
+            if (empty($this->std_year)) {
+                $this->setStdYear(1);
+            }
+        }
+        return $this;
     }
 
     public function register() {
@@ -93,9 +141,8 @@ class Student extends User {
     }
 
 
-    public function postLostItem(array $data) {
+    public function postLostItem(LostItem $lostItem) {
         try {
-            $lostItem = new LostItem($data);
             $lostItem->setUserID($this->getUserID());
             return $lostItem->create();
         } catch (Exception $e) {
@@ -103,11 +150,10 @@ class Student extends User {
         }
     }
 
-    public function updateLostItem($lostID, array $data): bool {
+    public function updateLostItem(LostItem $lostItem): bool {
         try {
-            $lostItem = new LostItem($data);
             $lostItem->setUserID($this->getUserID()); // Ownership check via SQL in LostItem model
-            return $lostItem->update($lostID);
+            return $lostItem->update($lostItem->getLostID());
         } catch (Exception $e) {
             throw new Exception("Failed to update lost item: " . $e->getMessage());
         }
@@ -133,22 +179,20 @@ class Student extends User {
     }
     
  
-    public function postMarketItem(array $data) {
+    public function postMarketItem(Marketplace $marketItem) {
         try {
-            $marketItem = new Marketplace($data);
             $marketItem->setUserID($this->getUserID());
-            return $marketItem->create($data);
+            return $marketItem->create();
         } catch (Exception $e) {
             throw new Exception("Failed to post market item: " . $e->getMessage());
         }
     }
 
-    public function updateMarketItem($productID, array $data): bool {
+    public function updateMarketItem(Marketplace $marketItem): bool {
         try {
-            $marketItem = new Marketplace($data);
             $marketItem->setUserID($this->getUserID());
             // Ownership check via SQL in Marketplace model
-            return $marketItem->update($productID, $this->getUserID(), $data);
+            return $marketItem->update();
         } catch (Exception $e) {
             throw new Exception("Failed to update market item: " . $e->getMessage());
         }
@@ -174,26 +218,23 @@ class Student extends User {
     }
     
    
-    public function uploadNotes(array $data) {
+    public function uploadNotes(Notes $notes) {
         try {
-            $notes = new Notes();
-            $data['enrollmentNo'] = $this->enrollmentNo;
-            $data['userID'] = $this->getUserID();
-            return $notes->upload($data);
+            $notes->setEnrollmentNo($this->enrollmentNo);
+            $notes->setUserID($this->getUserID());
+            return $notes->upload();
         } catch (Exception $e) {
             throw new Exception("Failed to upload notes: " . $e->getMessage());
         }
     }
 
-    public function updateNotes($noteID, array $data): bool {
+    public function updateNotes(Notes $notes): bool {
         try {
-            $notes = new Notes();
-          
-            $note = $notes->view($noteID);
+            $note = $notes->view($notes->getNoteID());
             if (!$note || strtolower($note['enrollmentNo']) !== strtolower($this->enrollmentNo)) {
                 throw new Exception("Unauthorized: You do not own this note.");
             }
-            return $notes->update($noteID, $data);
+            return $notes->update();
         } catch (Exception $e) {
             throw new Exception("Failed to update notes: " . $e->getMessage());
         }
@@ -237,11 +278,10 @@ class Student extends User {
     }
     
 
-    public function requestPeerLearningSession(array $data) {
+    public function requestPeerLearningSession(PeerLearningRequest $request) {
         try {
-            $request = new PeerLearningRequest($data);
             $request->setEnrollmentNo($this->enrollmentNo);
-            return $request->submit($data);
+            return $request->submit();
         } catch (Exception $e) {
             throw new Exception("Failed to request peer learning session: " . $e->getMessage());
         }

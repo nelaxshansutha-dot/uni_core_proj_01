@@ -24,13 +24,9 @@ class AuthController {
         $role = $data['role'] ?? 'student';
         $data['hash_password'] = password_hash($data['password'], PASSWORD_BCRYPT);
         
-        switch ($role) {
-            case 'admin': $user = new \Models\Admin($data); break;
-            case 'staff': $user = new \Models\Staff($data); break;
-            case 'course_representative': $user = new \Models\CourseRepresentative($data); break;
-            case 'student':
-            default: $user = new \Models\Student($data); break;
-        }
+        $user = \Models\User::createInstanceFromRole($role);
+        $user->hydrateFromRequest($data);
+        $user->setRole($role);
         try {
             $userID = $user->register();
             if ($userID) {
@@ -108,7 +104,6 @@ class AuthController {
                     $userObj['enrollment_no'] = $user->getEnrollmentNo();
                 }
 
-                // For course reps, include is_first_login so frontend can force password reset
                 $isFirstLogin = false;
                 if ($user->getRole() === 'course_representative') {
                     $repStmt = $db->prepare("SELECT is_first_login FROM course_representative WHERE userID = :uid LIMIT 1");
@@ -134,20 +129,25 @@ class AuthController {
     public function logout() {
         $decoded = AuthMiddleware::authenticate();
         switch ($decoded->role) {
-            case 'admin': $user = new \Models\Admin(); break;
-            case 'staff': $user = new \Models\Staff(); break;
-            case 'course_representative': $user = new \Models\CourseRepresentative(); break;
+            case 'admin':
+                 $user = new \Models\Admin(); 
+                 break;
+            case 'staff':
+                 $user = new \Models\Staff(); 
+                 break;
+            case 'course_representative': 
+                $user = new \Models\CourseRepresentative();
+                 break;
             case 'student':
-            default: $user = new \Models\Student(); break;
+            default:
+             $user = new \Models\Student();
+              break;
         }
         $user->logout($decoded->jti, $decoded->exp);
         echo json_encode(['success' => true, 'message' => 'Logged out successfully']);
     }
 
-    /**
-     * Called when a rep logs in for the first time and must set a new password.
-     * Updates hash_password in course_representative table, sets is_first_login = 0.
-     */
+   
     public function forceChangeRepPassword() {
         $data     = json_decode(file_get_contents("php://input"), true);
         $userID   = $data['user_id'] ?? null;
@@ -184,7 +184,7 @@ class AuthController {
             return;
         }
 
-        // Load user by ID directly
+   
         $db = \Config\Database::getInstance()->getConnection();
         $stmt = $db->prepare("SELECT * FROM users WHERE userID = :uid");
         $stmt->execute([':uid' => $userID]);
@@ -195,13 +195,7 @@ class AuthController {
             return;
         }
 
-        switch ($userData['role']) {
-            case 'admin': $user = new \Models\Admin($userData); break;
-            case 'staff': $user = new \Models\Staff($userData); break;
-            case 'course_representative': $user = new \Models\CourseRepresentative($userData); break;
-            case 'student':
-            default: $user = new \Models\Student($userData); break;
-        }
+        $user = \Models\User::createInstanceFromRole($userData['role'], $userData);
 
         if ($user->verifyOTP($otp)) {
             echo json_encode(['success' => true, 'message' => 'Account verified.']);
@@ -290,13 +284,7 @@ class AuthController {
             return;
         }
 
-        switch ($userData['role']) {
-            case 'admin': $user = new \Models\Admin($userData); break;
-            case 'staff': $user = new \Models\Staff($userData); break;
-            case 'course_representative': $user = new \Models\CourseRepresentative($userData); break;
-            case 'student':
-            default: $user = new \Models\Student($userData); break;
-        }
+        $user = \Models\User::createInstanceFromRole($userData['role'], $userData);
 
         if ($user->verifyOTP($otp)) {
             // Generate a temporary reset token (for demo purposes, a simple hash)
@@ -419,15 +407,14 @@ class AuthController {
         $smsPref = $data['lost_item_sms_notification'] ?? 0;
         $peerPref = $data['peer_learning_app_notification'] ?? 1;
 
-        $query = "UPDATE users SET fname = :fname, lname = :lname, phoneNum = :phoneNum, lost_item_sms_notification = :smsPref, peer_learning_app_notification = :peerPref";
-        $params = [
-            ':fname' => $fname,
-            ':lname' => $lname,
-            ':phoneNum' => $phoneNum,
-            ':smsPref' => $smsPref,
-            ':peerPref' => $peerPref,
-            ':uid' => $decoded->userID
-        ];
+        $user = \Models\User::createInstanceFromRole($decoded->role);
+        $user
+            ->setUserID($decoded->userID)
+            ->setFname($fname)
+            ->setLname($lname)
+            ->setPhoneNum($phoneNum)
+            ->setLostItemSmsNotification($smsPref)
+            ->setPeerLearningAppNotification($peerPref);
 
         if (!empty($data['new_password'])) {
             // Verify old password
@@ -440,15 +427,11 @@ class AuthController {
                 return;
             }
 
-            $query .= ", hash_password = :hash";
-            $params[':hash'] = password_hash($data['new_password'], PASSWORD_BCRYPT);
+            $user->setHashPassword(password_hash($data['new_password'], PASSWORD_BCRYPT));
         }
-
-        $query .= " WHERE userID = :uid";
         
         try {
-            $stmt = $db->prepare($query);
-            $success = $stmt->execute($params);
+            $success = $user->updateProfile();
 
             if ($success) {
                 // Fetch updated user to return

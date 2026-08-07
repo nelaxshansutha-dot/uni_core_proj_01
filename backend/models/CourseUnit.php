@@ -13,16 +13,35 @@ class CourseUnit {
     private $conn;
 
  
-    public function __construct(array $data = []) {
+    public function __construct() {
         $this->conn = Database::getInstance()->getConnection();
-        
-        if (!empty($data)) {
-            $this->courseUnitID = $data['courseUnitID'] ?? $this->courseUnitID;
-            $this->courseID = $data['courseID'] ?? $this->courseID;
-            $this->courseUniName = $data['courseUniName'] ?? $data['name'] ?? $this->courseUniName;
-            $this->academicYear = $data['academicYear'] ?? $data['year'] ?? $this->academicYear;
-            $this->semester = $data['semester'] ?? $this->semester;
+    }
+
+    public function hydrate(array $data = []): static {
+        if (array_key_exists('courseUnitID', $data)) {
+            $this->setCourseUnitID($data['courseUnitID']);
         }
+        if (array_key_exists('courseID', $data)) {
+            $this->setCourseID($data['courseID']);
+        }
+        if (array_key_exists('courseUniName', $data)) {
+            $this->setCourseUniName($data['courseUniName']);
+        } elseif (array_key_exists('name', $data)) {
+            $this->setCourseUniName($data['name']);
+        }
+        if (array_key_exists('academicYear', $data)) {
+            $this->setAcademicYear($data['academicYear']);
+        } elseif (array_key_exists('year', $data)) {
+            $this->setAcademicYear($data['year']);
+        }
+        if (array_key_exists('semester', $data)) {
+            $this->setSemester($data['semester']);
+        }
+        return $this;
+    }
+
+    public function hydrateFromRequest(array $data = []): static {
+        return $this->hydrate($data);
     }
 
     public function getCourseUnitID() { return $this->courseUnitID; }

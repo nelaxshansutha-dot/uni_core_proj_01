@@ -52,11 +52,16 @@ class LostItemController {
             
             
             if (isset($data['update_id'])) {
-                $model = new LostItem($data);
-                $success = $model->update($data['update_id']);
+                $model = new LostItem();
+                $model->hydrateFromRequest($data);
+                $model->setLostID($data['update_id']);
+                $model->setUserID($decoded->userID);
+                $success = $model->update();
                 echo json_encode(['success' => $success]);
             } else {
-                $model = new LostItem($data);
+                $model = new LostItem();
+                $model->hydrateFromRequest($data);
+                $model->setUserID($decoded->userID);
                 $lostID = $model->create();
                 
                 $db = \Config\Database::getInstance()->getConnection();
@@ -120,8 +125,11 @@ class LostItemController {
                 return;
             }
             
-            $model = new LostItem($data);
-            $success = $model->update($id);
+            $model = new LostItem();
+            $model->hydrateFromRequest($data);
+            $model->setLostID($id);
+            $model->setUserID($decoded->userID);
+            $success = $model->update();
             echo json_encode(['success' => $success]);
             
         } elseif ($method === 'DELETE') {

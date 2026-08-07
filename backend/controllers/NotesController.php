@@ -80,16 +80,21 @@ class NotesController {
                 }
             }
 
-            if (!$data['file_url']) {
+            if (!isset($data['file_url']) || !$data['file_url']) {
                 echo json_encode(['success' => false, 'message' => 'File upload failed.']);
                 return;
             }
 
-            $nid = $model->upload($data);
+            $model->hydrateFromRequest($data);
+            $model->setEnrollmentNo($data['enrollmentNo']);
+            $model->setUserID($data['userID']);
+            $nid = $model->upload();
             echo json_encode(['success' => true, 'noteID' => $nid]);
         } elseif ($method === 'PUT') {
             $data = json_decode(file_get_contents("php://input"), true);
-            echo json_encode(['success' => $model->update($id, $data)]);
+            $model->hydrateFromRequest($data);
+            $model->setNoteID($id);
+            echo json_encode(['success' => $model->update()]);
         } elseif ($method === 'DELETE') {
             $note = $model->view($id);
             if (!$note) {

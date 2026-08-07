@@ -41,14 +41,32 @@ class CourseRepresentative extends Student
         return $this;
     }
 
-    public function __construct(array $data = [])
+    public function __construct()
     {
-        parent::__construct($data);
-        if (!empty($data)) {
-            $this->repID = $data['repID'] ?? $this->repID;
-            $this->rep_id_string = $data['rep_id_string'] ?? $this->rep_id_string;
-            $this->is_first_login = $data['is_first_login'] ?? $this->is_first_login;
+        parent::__construct();
+    }
+
+    public function hydrate(array $data = []): static
+    {
+        parent::hydrate($data);
+        if (array_key_exists('repID', $data)) {
+            $this->setRepID($data['repID']);
         }
+        if (array_key_exists('rep_id_string', $data)) {
+            $this->setRepIdString($data['rep_id_string']);
+        } elseif (array_key_exists('rep_id', $data)) {
+            $this->setRepIdString($data['rep_id']);
+        }
+        if (array_key_exists('is_first_login', $data)) {
+            $this->setIsFirstLogin($data['is_first_login']);
+        }
+        return $this;
+    }
+
+    public function hydrateFromRequest(array $data = []): static
+    {
+        parent::hydrateFromRequest($data);
+        return $this;
     }
 
     public function register()
@@ -90,10 +108,9 @@ class CourseRepresentative extends Student
     }
 
     
-    public function updateNotes($noteID, array $data): bool
+    public function updateNotes(Notes $notes): bool
     {
-        $notes = new Notes();
-        $note = $notes->view($noteID);
+        $note = $notes->view($notes->getNoteID());
 
         if (!$note) {
             throw new \Exception("Note not found.");
@@ -103,7 +120,7 @@ class CourseRepresentative extends Student
             throw new \Exception("Unauthorized: Course Representative can only edit notes belonging to their course.");
         }
 
-        return $notes->update($noteID, $data);
+        return $notes->update();
     }
 
   

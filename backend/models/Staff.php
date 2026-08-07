@@ -10,9 +10,8 @@ class Staff extends User {
     protected $staffID;
 
    
-    public function postLostItem(array $data) {
+    public function postLostItem(LostItem $lostItem) {
         try {
-            $lostItem = new LostItem($data);
             $lostItem->setUserID($this->getUserID()); // Prevent spoofing by using the logged-in user's ID
             return $lostItem->create();
         } catch (Exception $e) {
@@ -20,11 +19,10 @@ class Staff extends User {
         }
     }
 
-    public function updateLostItem($lostID, array $data): bool {
+    public function updateLostItem(LostItem $lostItem): bool {
         try {
-            $lostItem = new LostItem($data);
             $lostItem->setUserID($this->getUserID()); // Ownership check
-            return $lostItem->update($lostID);
+            return $lostItem->update($lostItem->getLostID());
         } catch (Exception $e) {
             throw new Exception("Failed to update lost item: " . $e->getMessage());
         }
@@ -51,23 +49,41 @@ class Staff extends User {
     }
 
     
-    public function postMarketItem(array $data) {
+    public function postMarketItem(Marketplace $marketItem) {
         try {
-            $marketItem = new Marketplace($data);
             $marketItem->setUserID($this->getUserID()); // Prevent spoofing
-            return $marketItem->create($data); // Marketplace requires $data passed to create()
+            return $marketItem->create(); // parameterless create
         } catch (Exception $e) {
             throw new Exception("Failed to post market item: " . $e->getMessage());
         }
     }
 
-    public function __construct(array $data = []) {
-        parent::__construct($data);
-        if (isset($data['enrollmentNo'])) {
-            $this->staffID = $data['enrollmentNo'];
-        } elseif (isset($data['staffID'])) {
-            $this->staffID = $data['staffID'];
+    public function __construct() {
+        parent::__construct();
+    }
+
+    public function hydrate(array $data = []): static {
+        parent::hydrate($data);
+        if (array_key_exists('enrollmentNo', $data)) {
+            $this->setStaffID($data['enrollmentNo']);
+        } elseif (array_key_exists('staffID', $data)) {
+            $this->setStaffID($data['staffID']);
+        } elseif (array_key_exists('staff_id', $data)) {
+            $this->setStaffID($data['staff_id']);
         }
+        return $this;
+    }
+
+    public function hydrateFromRequest(array $data = []): static {
+        parent::hydrateFromRequest($data);
+        if (array_key_exists('enrollmentNo', $data)) {
+            $this->setStaffID($data['enrollmentNo']);
+        } elseif (array_key_exists('staffID', $data)) {
+            $this->setStaffID($data['staffID']);
+        } elseif (array_key_exists('staff_id', $data)) {
+            $this->setStaffID($data['staff_id']);
+        }
+        return $this;
     }
 
     public function getStaffID() {

@@ -46,12 +46,14 @@ class AdminController {
         
         try {
             switch ($role) {
-                case 'admin': $user = new \Models\Admin($data); break;
-                case 'staff': $user = new \Models\Staff($data); break;
-                case 'course_representative': $user = new \Models\CourseRepresentative($data); break;
+                case 'admin': $user = new \Models\Admin(); break;
+                case 'staff': $user = new \Models\Staff(); break;
+                case 'course_representative': $user = new \Models\CourseRepresentative(); break;
                 case 'student':
-                default: $user = new \Models\Student($data); break;
+                default: $user = new \Models\Student(); break;
             }
+            $user->hydrateFromRequest($data);
+            $user->setRole($role);
             $userID = $user->register();
             
             // Auto verify admin created users

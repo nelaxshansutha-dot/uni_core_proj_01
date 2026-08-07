@@ -18,19 +18,38 @@ class OtpVerification {
 
    
     public function getOtpID() { return $this->otpID; }
-    public function setOtpID($val) { $this->otpID = $val; }
+    public function setOtpID($val) { $this->otpID = $val; return $this; }
 
     public function getOtpCode() { return $this->otpCode; }
-    public function setOtpCode($val) { $this->otpCode = $val; }
+    public function setOtpCode($val) { $this->otpCode = $val; return $this; }
 
     public function getCreatedAt() { return $this->created_at; }
-    public function setCreatedAt($val) { $this->created_at = $val; }
+    public function setCreatedAt($val) { $this->created_at = $val; return $this; }
 
     public function getExpiredAt() { return $this->expired_at; }
-    public function setExpiredAt($val) { $this->expired_at = $val; }
+    public function setExpiredAt($val) { $this->expired_at = $val; return $this; }
 
     public function getVerifiedAt() { return $this->verified_at; }
-    public function setVerifiedAt($val) { $this->verified_at = $val; }
+    public function setVerifiedAt($val) { $this->verified_at = $val; return $this; }
+
+    public function hydrate(array $data = []): static {
+        if (array_key_exists('otpID', $data)) {
+            $this->setOtpID($data['otpID']);
+        }
+        if (array_key_exists('otpCode', $data)) {
+            $this->setOtpCode($data['otpCode']);
+        }
+        if (array_key_exists('created_at', $data)) {
+            $this->setCreatedAt($data['created_at']);
+        }
+        if (array_key_exists('expired_at', $data)) {
+            $this->setExpiredAt($data['expired_at']);
+        }
+        if (array_key_exists('verified_at', $data)) {
+            $this->setVerifiedAt($data['verified_at']);
+        }
+        return $this;
+    }
 
     public function generate($userID) {
         // Hydrate requested properties
