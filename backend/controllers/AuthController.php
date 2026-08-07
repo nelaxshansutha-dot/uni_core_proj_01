@@ -108,7 +108,6 @@ class AuthController {
                     $userObj['enrollment_no'] = $user->getEnrollmentNo();
                 }
 
-                // For course reps, include is_first_login so frontend can force password reset
                 $isFirstLogin = false;
                 if ($user->getRole() === 'course_representative') {
                     $repStmt = $db->prepare("SELECT is_first_login FROM course_representative WHERE userID = :uid LIMIT 1");
@@ -134,20 +133,25 @@ class AuthController {
     public function logout() {
         $decoded = AuthMiddleware::authenticate();
         switch ($decoded->role) {
-            case 'admin': $user = new \Models\Admin(); break;
-            case 'staff': $user = new \Models\Staff(); break;
-            case 'course_representative': $user = new \Models\CourseRepresentative(); break;
+            case 'admin':
+                 $user = new \Models\Admin(); 
+                 break;
+            case 'staff':
+                 $user = new \Models\Staff(); 
+                 break;
+            case 'course_representative': 
+                $user = new \Models\CourseRepresentative();
+                 break;
             case 'student':
-            default: $user = new \Models\Student(); break;
+            default:
+             $user = new \Models\Student();
+              break;
         }
         $user->logout($decoded->jti, $decoded->exp);
         echo json_encode(['success' => true, 'message' => 'Logged out successfully']);
     }
 
-    /**
-     * Called when a rep logs in for the first time and must set a new password.
-     * Updates hash_password in course_representative table, sets is_first_login = 0.
-     */
+   
     public function forceChangeRepPassword() {
         $data     = json_decode(file_get_contents("php://input"), true);
         $userID   = $data['user_id'] ?? null;
@@ -184,7 +188,7 @@ class AuthController {
             return;
         }
 
-        // Load user by ID directly
+   
         $db = \Config\Database::getInstance()->getConnection();
         $stmt = $db->prepare("SELECT * FROM users WHERE userID = :uid");
         $stmt->execute([':uid' => $userID]);
@@ -291,11 +295,19 @@ class AuthController {
         }
 
         switch ($userData['role']) {
-            case 'admin': $user = new \Models\Admin($userData); break;
-            case 'staff': $user = new \Models\Staff($userData); break;
-            case 'course_representative': $user = new \Models\CourseRepresentative($userData); break;
+            case 'admin':
+                 $user = new \Models\Admin($userData);
+                  break;
+            case 'staff':
+                 $user = new \Models\Staff($userData);
+                  break;
+            case 'course_representative':
+                 $user = new \Models\CourseRepresentative($userData); 
+                 break;
             case 'student':
-            default: $user = new \Models\Student($userData); break;
+            default:
+             $user = new \Models\Student($userData);
+              break;
         }
 
         if ($user->verifyOTP($otp)) {

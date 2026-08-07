@@ -253,7 +253,7 @@ const PeerLearning = () => {
                 </>
 
             ) : user?.role === 'student' && modules.length > 0 ? (
-                /* ── STUDENT MODULE GRID ── */
+                
                 <>
 
 
