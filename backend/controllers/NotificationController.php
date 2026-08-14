@@ -7,7 +7,7 @@ class NotificationController {
 
     /**
      * GET /notifications  — used by the Topbar bell for ALL roles
-     * Reads from sms_notification (keyed by userID) which stores lost-item alerts.
+     * Only returns peer_learning (app_notification) rows — lost-item alerts are NOT shown here.
      */
     public function getNotifications() {
         $decoded = AuthMiddleware::authenticate();
@@ -16,18 +16,14 @@ class NotificationController {
 
         try {
             $stmt = $db->prepare(
-                "(SELECT sn.smsID AS id, sn.message, sn.created_at, 'lost_item' AS type
-                  FROM sms_notification sn
-                  WHERE sn.userID = :uid)
-                 UNION ALL
-                 (SELECT an.appID AS id, an.message, an.created_at, 'peer_learning' AS type
-                  FROM app_notification an
-                  JOIN student s ON an.enrollmentNo = s.enrollmentNo
-                  WHERE s.userID = :uid2)
-                 ORDER BY created_at DESC
+                "SELECT an.appID AS id, an.message, an.created_at, 'peer_learning' AS type
+                 FROM app_notification an
+                 JOIN student s ON an.enrollmentNo = s.enrollmentNo
+                 WHERE s.userID = :uid
+                 ORDER BY an.created_at DESC
                  LIMIT 20"
             );
-            $stmt->execute([':uid' => $userID, ':uid2' => $userID]);
+            $stmt->execute([':uid' => $userID]);
             $notifications = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
             echo json_encode([
@@ -83,22 +79,17 @@ class NotificationController {
     }
 
     /**
-     * DELETE /notifications/{id}  — dismiss a notification from the bell
+     * DELETE /notifications/{id}  — dismiss a peer-learning bell notification
      */
     public function dismiss($id) {
-        $decoded = AuthMiddleware::authenticate();
-        $userID  = $decoded->userID;
-        $db      = Database::getInstance()->getConnection();
-
-        // Dismiss from sms_notification
-        $stmt = $db->prepare("DELETE FROM sms_notification WHERE smsID = :id AND userID = :uid");
-        $stmt->execute([':id' => $id, ':uid' => $userID]);
-
-        // Dismiss from app_notification
+        $decoded      = AuthMiddleware::authenticate();
         $enrollmentNo = $decoded->enrollmentNo ?? null;
+        $db           = Database::getInstance()->getConnection();
+
+        // Only dismiss from app_notification (peer_learning); lost-item SMS rows are unaffected
         if ($enrollmentNo) {
-            $stmt2 = $db->prepare("DELETE FROM app_notification WHERE appID = :id AND enrollmentNo = :enr");
-            $stmt2->execute([':id' => $id, ':enr' => $enrollmentNo]);
+            $stmt = $db->prepare("DELETE FROM app_notification WHERE appID = :id AND enrollmentNo = :enr");
+            $stmt->execute([':id' => $id, ':enr' => $enrollmentNo]);
         }
 
         echo json_encode(['status' => 'success']);

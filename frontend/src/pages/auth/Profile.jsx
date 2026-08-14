@@ -159,6 +159,7 @@ const Profile = () => {
                                             className="form-control bg-light"
                                             value={
                                                 profile.role === 'admin' ? (profile.admin_id || '') :
+                                                profile.role === 'staff' ? (profile.staff_id || '') :
                                                 profile.role === 'course_representative' ? (profile.rep_id || '') :
                                                 (profile.enrollment_no || '')
                                             }

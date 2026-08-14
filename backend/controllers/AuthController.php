@@ -103,6 +103,12 @@ class AuthController {
                 if (method_exists($user, 'getEnrollmentNo')) {
                     $userObj['enrollment_no'] = $user->getEnrollmentNo();
                 }
+                if (method_exists($user, 'getAdminID')) {
+                    $userObj['admin_id'] = $user->getAdminID();
+                }
+                if (method_exists($user, 'getStaffID')) {
+                    $userObj['staff_id'] = $user->getStaffID();
+                }
 
                 $isFirstLogin = false;
                 if ($user->getRole() === 'course_representative') {
@@ -349,7 +355,26 @@ class AuthController {
                 'peer_learning_app_notification' => $userRow['peer_learning_app_notification'],
                 'has_seen_lost_item_popup' => $userRow['has_seen_lost_item_popup']
             ];
-            if (isset($userRow['staffID'])) $userData['staff_id'] = $userRow['staffID'];
+
+            // Fetch staffID for staff role
+            if ($decoded->role === 'staff') {
+                $staffStmt = $db->prepare("SELECT staffID FROM staff WHERE userID = :uid LIMIT 1");
+                $staffStmt->execute([':uid' => $decoded->userID]);
+                $staffRow = $staffStmt->fetch(\PDO::FETCH_ASSOC);
+                if ($staffRow) {
+                    $userData['staff_id'] = $staffRow['staffID'];
+                }
+            }
+
+            // Fetch adminID for admin role
+            if ($decoded->role === 'admin') {
+                $adminStmt = $db->prepare("SELECT adminID FROM admin WHERE userID = :uid LIMIT 1");
+                $adminStmt->execute([':uid' => $decoded->userID]);
+                $adminRow = $adminStmt->fetch(\PDO::FETCH_ASSOC);
+                if ($adminRow) {
+                    $userData['admin_id'] = $adminRow['adminID'];
+                }
+            }
 
             // Fetch enrollmentNo for students and course representatives
             if ($decoded->role === 'student' || $decoded->role === 'course_representative') {
@@ -370,7 +395,7 @@ class AuthController {
                     $userData['rep_id'] = $repRow['rep_id_string'];
                 }
             }
-            
+
             echo json_encode(['success' => true, 'data' => $userData]);
         } else {
             echo json_encode(['success' => false, 'message' => 'User not found']);
@@ -462,6 +487,7 @@ class AuthController {
                 }
 
                 if (isset($updatedUser['staffID'])) $userData['staff_id'] = $updatedUser['staffID'];
+                if (isset($updatedUser['adminID'])) $userData['admin_id'] = $updatedUser['adminID'];
                 
                 // Generate a fresh token matching login structure
                 $payload = [

@@ -11,7 +11,7 @@ class Admin extends User {
         parent::__construct();
     }
 
-    public function hydrate(array $data = []): self {
+    public function hydrate(array $data = []): static {
         parent::hydrate($data);
         return $this;
     }
@@ -66,6 +66,7 @@ class Admin extends User {
         $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         foreach ($users as &$u) {
+            $u['is_active'] = (int)$u['is_active'];
             if ($u['role'] === 'course_representative') {
                 $u['role'] = 'rep';
             }

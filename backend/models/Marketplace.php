@@ -108,9 +108,9 @@ class Marketplace {
         }
 
         if (array_key_exists('condition_type', $data)) {
-            $this->setConditionType((bool)$data['condition_type']);
+            $this->setConditionType($data['condition_type']);
         } elseif (array_key_exists('conditionType', $data)) {
-            $this->setConditionType((bool)$data['conditionType']);
+            $this->setConditionType($data['conditionType']);
         }
 
         if (array_key_exists('image_url', $data)) {
@@ -162,7 +162,7 @@ class Marketplace {
     public function setDescription($val) { $this->description = $val; return $this; }
 
     public function getConditionType() { return $this->conditionType; }
-    public function setConditionType($val) { $this->conditionType = (bool)$val; return $this; }
+    public function setConditionType($val) { $this->conditionType = $val; return $this; }
 
     public function getItemImage() { return $this->itemImage; }
     public function setItemImage($val) { $this->itemImage = $val; return $this; }
@@ -209,15 +209,30 @@ class Marketplace {
     }
 
     public function update() {
-        $query = "UPDATE marketplace SET productName = :pname, price = :price, status = :status WHERE productID = :pid AND userID = :uid";
-        $stmt = $this->conn->prepare($query);
-        return $stmt->execute([
-            ':pname' => $this->itemName,
-            ':price' => $this->price,
-            ':status' => $this->status,
+        $sets  = [];
+        $params = [
             ':pid' => $this->productID ?? $this->sellerID,
             ':uid' => $this->userID
-        ]);
+        ];
+
+        if ($this->itemName      !== null) { $sets[] = 'productName = :pname';       $params[':pname']  = $this->itemName; }
+        if ($this->price         !== null) { $sets[] = 'price = :price';              $params[':price']  = $this->price; }
+        if ($this->conditionType !== null) { $sets[] = 'condition_type = :cond';      $params[':cond']   = $this->conditionType; }
+        if ($this->location      !== null) { $sets[] = 'location = :loc';             $params[':loc']    = $this->location; }
+        if ($this->phoneNumber   !== null) { $sets[] = 'phone_number = :phone';       $params[':phone']  = $this->phoneNumber; }
+        if ($this->description   !== null) { $sets[] = 'description = :desc';         $params[':desc']   = $this->description; }
+        if ($this->usageDuration !== null) { $sets[] = 'usage_duration = :usage';     $params[':usage']  = $this->usageDuration; }
+        if ($this->itemImage     !== null) { $sets[] = 'image_url = :img1';           $params[':img1']   = $this->itemImage; }
+        if ($this->itemImage2    !== null) { $sets[] = 'image_url2 = :img2';          $params[':img2']   = $this->itemImage2; }
+        if ($this->itemImage3    !== null) { $sets[] = 'image_url3 = :img3';          $params[':img3']   = $this->itemImage3; }
+        if ($this->itemImage4    !== null) { $sets[] = 'image_url4 = :img4';          $params[':img4']   = $this->itemImage4; }
+        if ($this->status        !== null) { $sets[] = 'status = :status';            $params[':status'] = $this->status; }
+
+        if (empty($sets)) return false;
+
+        $query = 'UPDATE marketplace SET ' . implode(', ', $sets) . ' WHERE productID = :pid AND userID = :uid';
+        $stmt  = $this->conn->prepare($query);
+        return $stmt->execute($params);
     }
 
     public function delete($productID, $userID) {
@@ -227,12 +242,22 @@ class Marketplace {
 
     public function view($productID = null) {
         if ($productID) {
-            $stmt = $this->conn->prepare("SELECT * FROM marketplace WHERE productID = :pid");
+            $stmt = $this->conn->prepare(
+                "SELECT m.*, CONCAT(u.fname, ' ', u.lname) AS seller_name
+                 FROM marketplace m
+                 LEFT JOIN users u ON m.userID = u.userID
+                 WHERE m.productID = :pid"
+            );
             $stmt->execute([':pid' => $productID]);
-            return $stmt->fetch();
+            return $stmt->fetch(PDO::FETCH_ASSOC);
         } else {
-            $stmt = $this->conn->query("SELECT * FROM marketplace ORDER BY created_at DESC");
-            return $stmt->fetchAll();
+            $stmt = $this->conn->query(
+                "SELECT m.*, CONCAT(u.fname, ' ', u.lname) AS seller_name
+                 FROM marketplace m
+                 LEFT JOIN users u ON m.userID = u.userID
+                 ORDER BY m.created_at DESC"
+            );
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
     }
 
