@@ -211,7 +211,12 @@ const Settings = () => {
                                 <input
                                     type="text"
                                     className="form-control bg-light text-muted"
-                                    value={user?.role === 'admin' ? (user?.admin_id || '') : (user?.enrollment_no || '')}
+                                    value={
+                                        user?.role === 'admin' ? (user?.admin_id || '') :
+                                        user?.role === 'staff' ? (user?.staff_id || '') :
+                                        (user?.role === 'rep' || user?.role === 'course_representative') ? (user?.rep_id || '') :
+                                        (user?.enrollment_no || '')
+                                    }
                                     readOnly
                                     disabled
                                 />
@@ -285,63 +290,67 @@ const Settings = () => {
 
                                     {/* Staff Fields Removed */}
 
-                                    <hr className="my-4 border-light" />
-                                    
-                                    <h5 className="text-dark fw-bold mb-3 d-flex align-items-center gap-2">
-                                        <Bell size={18} className="text-primary" />
-                                        <span>Notification Preferences</span>
-                                    </h5>
+                                    {user?.role !== 'admin' && (
+                                        <>
+                                            <hr className="my-4 border-light" />
+                                            
+                                            <h5 className="text-dark fw-bold mb-3 d-flex align-items-center gap-2">
+                                                <Bell size={18} className="text-primary" />
+                                                <span>Notification Preferences</span>
+                                            </h5>
 
-                                    {user?.role !== 'rep' && user?.role !== 'course_representative' && (
-                                        <div className="col-md-6">
-                                        <div className="card bg-light border-0 p-3 h-100">
-                                            <div className="form-check form-switch d-flex align-items-center justify-content-between p-0">
-                                                <div>
-                                                    <label className="form-check-label fw-bold text-dark" htmlFor="smsNotifSwitch">
-                                                        SMS Notifications
-                                                    </label>
-                                                    <div className="text-muted small">
-                                                        Receive text message alerts when new lost items are reported.
+                                            {user?.role !== 'rep' && user?.role !== 'course_representative' && (
+                                                <div className="col-md-6">
+                                                <div className="card bg-light border-0 p-3 h-100">
+                                                    <div className="form-check form-switch d-flex align-items-center justify-content-between p-0">
+                                                        <div>
+                                                            <label className="form-check-label fw-bold text-dark" htmlFor="smsNotifSwitch">
+                                                                SMS Notifications
+                                                            </label>
+                                                            <div className="text-muted small">
+                                                                Receive text message alerts when new lost items are reported.
+                                                            </div>
+                                                        </div>
+                                                        <input
+                                                            className="form-check-input ms-0"
+                                                            type="checkbox"
+                                                            id="smsNotifSwitch"
+                                                            name="lost_item_sms_notification"
+                                                            checked={formData.lost_item_sms_notification === 1}
+                                                            onChange={handleToggleChange}
+                                                            style={{ width: '2.5em', height: '1.25em', cursor: 'pointer' }}
+                                                        />
                                                     </div>
                                                 </div>
-                                                <input
-                                                    className="form-check-input ms-0"
-                                                    type="checkbox"
-                                                    id="smsNotifSwitch"
-                                                    name="lost_item_sms_notification"
-                                                    checked={formData.lost_item_sms_notification === 1}
-                                                    onChange={handleToggleChange}
-                                                    style={{ width: '2.5em', height: '1.25em', cursor: 'pointer' }}
-                                                />
                                             </div>
-                                        </div>
-                                    </div>
-                                    )}
+                                            )}
 
-                                    {user?.role !== 'staff' && (
-                                        <div className="col-md-6">
-                                            <div className="card bg-light border-0 p-3 h-100">
-                                                <div className="form-check form-switch d-flex align-items-center justify-content-between p-0">
-                                                    <div>
-                                                        <label className="form-check-label fw-bold text-dark" htmlFor="peerNotifSwitch">
-                                                            Peer Learning Notifications
-                                                        </label>
-                                                        <div className="text-muted small">
-                                                            Receive app notifications when peer learning requests are submitted/updated.
+                                            {user?.role !== 'staff' && (
+                                                <div className="col-md-6">
+                                                    <div className="card bg-light border-0 p-3 h-100">
+                                                        <div className="form-check form-switch d-flex align-items-center justify-content-between p-0">
+                                                            <div>
+                                                                <label className="form-check-label fw-bold text-dark" htmlFor="peerNotifSwitch">
+                                                                    Peer Learning Notifications
+                                                                </label>
+                                                                <div className="text-muted small">
+                                                                    Receive app notifications when peer learning requests are submitted/updated.
+                                                                </div>
+                                                            </div>
+                                                            <input
+                                                                className="form-check-input ms-0"
+                                                                type="checkbox"
+                                                                id="peerNotifSwitch"
+                                                                name="peer_learning_app_notification"
+                                                                checked={formData.peer_learning_app_notification === 1}
+                                                                onChange={handleToggleChange}
+                                                                style={{ width: '2.5em', height: '1.25em', cursor: 'pointer' }}
+                                                            />
                                                         </div>
                                                     </div>
-                                                    <input
-                                                        className="form-check-input ms-0"
-                                                        type="checkbox"
-                                                        id="peerNotifSwitch"
-                                                        name="peer_learning_app_notification"
-                                                        checked={formData.peer_learning_app_notification === 1}
-                                                        onChange={handleToggleChange}
-                                                        style={{ width: '2.5em', height: '1.25em', cursor: 'pointer' }}
-                                                    />
                                                 </div>
-                                            </div>
-                                        </div>
+                                            )}
+                                        </>
                                     )}
                                 </>
                             )}

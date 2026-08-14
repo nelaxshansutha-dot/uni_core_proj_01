@@ -71,8 +71,8 @@ const Topbar = ({ toggleSidebar }) => {
             
             <div className="d-flex align-items-center gap-3">
 
-                {/* Notifications Bell — visible for all logged-in users */}
-                {user && (
+                {/* Notifications Bell — hidden for staff and admin (no app notifications) */}
+                {user && user.role !== 'staff' && user.role !== 'admin' && (
                     <div className="dropdown position-relative">
                         <button 
                             className="btn btn-light d-flex align-items-center justify-content-center rounded-circle border shadow-sm position-relative"
@@ -107,7 +107,7 @@ const Topbar = ({ toggleSidebar }) => {
                                         {notifications.length > 0 ? (
                                             notifications.map((notif) => (
                                                 <div key={notif.id} className="p-3 border-bottom d-flex justify-content-between align-items-start gap-2" style={{ fontSize: '0.85rem' }}>
-                                                    <Link to={notif.type === 'peer_learning' ? '/peer-learning' : '/lost-items'} className="text-decoration-none flex-grow-1" onClick={() => setNotificationsOpen(false)}>
+                                                    <Link to="/peer-learning" className="text-decoration-none flex-grow-1" onClick={() => setNotificationsOpen(false)}>
                                                         <div className="text-dark fw-medium mb-1">{notif.message}</div>
                                                         <div className="text-muted small">{new Date(notif.created_at).toLocaleString()}</div>
                                                     </Link>

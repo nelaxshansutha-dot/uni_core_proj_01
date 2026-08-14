@@ -360,103 +360,123 @@ const handleDelete = async () => {
                                             {submitError}
                                         </div>
                                     )}
-                                    <input
-                                        className="form-control mb-2"
-                                        placeholder="Item Name"
-                                        value={formData.lostItemName}
-                                        onChange={(e) =>
-                                            setFormData({
-                                                ...formData,
-                                                lostItemName: e.target.value
-                                            })
-                                        }
-                                        required
-                                    />
-
-                                    <textarea
-                                        className="form-control mb-2"
-                                        placeholder="Description"
-                                        value={formData.description}
-                                        onChange={(e) =>
-                                            setFormData({
-                                                ...formData,
-                                                description: e.target.value
-                                            })
-                                        }
-                                        required
-                                    />
-
-                                    <input
-                                        type="datetime-local"
-                                        className="form-control mb-2"
-                                        value={formData.last_seen_datetime}
-                                        max={new Date().toISOString().slice(0, 16)}
-                                        onChange={(e) =>
-                                            setFormData({
-                                                ...formData,
-                                                last_seen_datetime: e.target.value
-                                            })
-                                        }
-                                        required
-                                    />
-
-                                    <input
-                                        className="form-control mb-2"
-                                        placeholder="Last Seen Place"
-                                        value={formData.last_seen_place}
-                                        onChange={(e) =>
-                                            setFormData({
-                                                ...formData,
-                                                last_seen_place: e.target.value
-                                            })
-                                        }
-                                        required
-                                    />
-
-                                    <input
-                                        type="tel"
-                                        className="form-control mb-2"
-                                        placeholder="Contact Number (e.g. 0771234567)"
-                                        maxLength="10"
-                                        pattern="^0[0-9]{9}$"
-                                        title="Phone number must start with 0 and be exactly 10 digits."
-                                        value={formData.contact_number}
-                                        onChange={(e) => {
-                                            const val = e.target.value;
-                                            if (val === '' || /^[0-9]{0,10}$/.test(val)) {
+                                    <div className="mb-3">
+                                        <label className="form-label fw-semibold text-dark small mb-1">Item Name <span className="text-danger">*</span></label>
+                                        <input
+                                            className="form-control"
+                                            placeholder="e.g. Black Wallet, Student ID Card…"
+                                            value={formData.lostItemName}
+                                            onChange={(e) =>
                                                 setFormData({
                                                     ...formData,
-                                                    contact_number: val
-                                                });
+                                                    lostItemName: e.target.value
+                                                })
                                             }
-                                        }}
-                                        required
-                                    />
-
-                                    <input
-                                        type="file"
-                                        className="form-control mb-3"
-                                        accept="image/*"
-                                        onChange={(e) =>
-                                            setFormData({
-                                                ...formData,
-                                                item_image: e.target.files[0]
-                                            })
-                                        }
-                                    />
-
-                                    <div className="form-check mb-4">
-                                        <input
-                                            className="form-check-input"
-                                            type="checkbox"
-                                            id="sendSmsAlert"
-                                            checked={formData.send_sms_alert}
-                                            onChange={(e) => setFormData({ ...formData, send_sms_alert: e.target.checked })}
+                                            required
                                         />
-                                        <label className="form-check-label text-muted small" htmlFor="sendSmsAlert">
-                                            Send SMS notification to subscribed users
-                                        </label>
                                     </div>
+
+                                    <div className="mb-3">
+                                        <label className="form-label fw-semibold text-dark small mb-1">Description <span className="text-danger">*</span></label>
+                                        <textarea
+                                            className="form-control"
+                                            placeholder="Describe the item — colour, size, markings…"
+                                            value={formData.description}
+                                            onChange={(e) =>
+                                                setFormData({
+                                                    ...formData,
+                                                    description: e.target.value
+                                                })
+                                            }
+                                            required
+                                        />
+                                    </div>
+
+                                    <div className="mb-3">
+                                        <label className="form-label fw-semibold text-dark small mb-1">Last Seen Date & Time <span className="text-danger">*</span></label>
+                                        <input
+                                            type="datetime-local"
+                                            className="form-control"
+                                            value={formData.last_seen_datetime}
+                                            max={new Date().toISOString().slice(0, 16)}
+                                            onChange={(e) =>
+                                                setFormData({
+                                                    ...formData,
+                                                    last_seen_datetime: e.target.value
+                                                })
+                                            }
+                                            required
+                                        />
+                                    </div>
+
+                                    <div className="mb-3">
+                                        <label className="form-label fw-semibold text-dark small mb-1">Last Seen Place <span className="text-danger">*</span></label>
+                                        <input
+                                            className="form-control"
+                                            placeholder="e.g. Library, Canteen, Block A…"
+                                            value={formData.last_seen_place}
+                                            onChange={(e) =>
+                                                setFormData({
+                                                    ...formData,
+                                                    last_seen_place: e.target.value
+                                                })
+                                            }
+                                            required
+                                        />
+                                    </div>
+
+                                    <div className="mb-3">
+                                        <label className="form-label fw-semibold text-dark small mb-1">Contact Number <span className="text-danger">*</span></label>
+                                        <input
+                                            type="tel"
+                                            className="form-control"
+                                            placeholder="e.g. 0771234567"
+                                            maxLength="10"
+                                            pattern="^0[0-9]{9}$"
+                                            title="Phone number must start with 0 and be exactly 10 digits."
+                                            value={formData.contact_number}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                if (val === '' || /^[0-9]{0,10}$/.test(val)) {
+                                                    setFormData({
+                                                        ...formData,
+                                                        contact_number: val
+                                                    });
+                                                }
+                                            }}
+                                            required
+                                        />
+                                    </div>
+
+                                    <div className="mb-3">
+                                        <label className="form-label fw-semibold text-dark small mb-1">Item Image <span className="text-muted fw-normal">(optional)</span></label>
+                                        <input
+                                            type="file"
+                                            className="form-control"
+                                            accept="image/*"
+                                            onChange={(e) =>
+                                                setFormData({
+                                                    ...formData,
+                                                    item_image: e.target.files[0]
+                                                })
+                                            }
+                                        />
+                                    </div>
+
+                                    {!isUpdating && (
+                                        <div className="form-check mb-4">
+                                            <input
+                                                className="form-check-input"
+                                                type="checkbox"
+                                                id="sendSmsAlert"
+                                                checked={formData.send_sms_alert}
+                                                onChange={(e) => setFormData({ ...formData, send_sms_alert: e.target.checked })}
+                                            />
+                                            <label className="form-check-label text-muted small" htmlFor="sendSmsAlert">
+                                                Send SMS notification to subscribed users
+                                            </label>
+                                        </div>
+                                    )}
 
                                     {/* ✅ BUTTON FIXED HERE */}
                                     <div className="d-flex justify-content-end gap-2">

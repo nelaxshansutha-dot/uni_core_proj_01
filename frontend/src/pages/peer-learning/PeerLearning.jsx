@@ -49,6 +49,15 @@ const PeerLearning = () => {
         }
     }, [user]);
 
+    // Auto-show semester popup if student finishes loading but has no modules.
+    // This handles returning users whose savedSem API call failed or returned empty,
+    // so they go straight to Interface 2 instead of the dead-end fallback screen.
+    useEffect(() => {
+        if (!loading && !showSemPopup && user?.role === 'student' && modules.length === 0) {
+            setShowSemPopup(true);
+        }
+    }, [loading, showSemPopup, modules, user]);
+
     const fetchRequests = async () => {
         try {
             setLoading(true);
@@ -434,13 +443,10 @@ const PeerLearning = () => {
                 </>
 
             ) : (
-                /* Fallback: student with no modules loaded yet */
+                /* Fallback: auto-popup will trigger via useEffect — show brief spinner */
                 <div className="text-center mt-5">
-                    <BookOpen size={56} className="text-muted mb-3 opacity-50" />
-                    <h5 className="text-muted">No modules loaded</h5>
-                    <button className="btn btn-primary rounded-pill mt-2" onClick={() => setShowSemPopup(true)}>
-                        Select Semester
-                    </button>
+                    <div className="spinner-border text-primary" />
+                    <p className="text-muted mt-3 small">Loading your modules...</p>
                 </div>
             )}
 

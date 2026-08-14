@@ -371,9 +371,7 @@ const AdminPanel = () => {
                     </h2>
                     <p className="text-white-50 m-0 fs-6">Platform Overview, Content Moderation, and User Roles</p>
                 </div>
-                <button className="btn btn-light btn-sm d-flex align-items-center gap-2 px-3 py-2 fw-semibold" style={{ position: 'relative', zIndex: 1 }} onClick={fetchTabData}>
-                    <RefreshCw size={16} className={loading ? 'spin-animation' : ''} /> Refresh Data
-                </button>
+
             </div>
 
             {/* Notification message */}

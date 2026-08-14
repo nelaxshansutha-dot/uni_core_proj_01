@@ -33,7 +33,7 @@ $parts = explode('/', trim($uri, '/'));
 
 $resource = $parts[0] ?? '';
 $action = $parts[1] ?? null;
-$id = $parts[2] ?? null;
+$id = $parts[2] ?? $_GET['id'] ?? null;
 
 $method = $_SERVER['REQUEST_METHOD'];
 

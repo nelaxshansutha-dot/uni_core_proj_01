@@ -267,7 +267,9 @@ const Marketplace = () => {
 
                                             {/* Description */}
                                             <p className="text-muted small mb-2" style={{ lineHeight: '1.4' }}>
-                                                {item.description.length > 100 ? item.description.slice(0, 100) + '…' : item.description}
+                                                {(item.description || '').length > 100
+                                                    ? (item.description || '').slice(0, 100) + '…'
+                                                    : (item.description || '')}
                                             </p>
 
                                             {/* Usage Duration (used items) */}
@@ -682,12 +684,12 @@ const Marketplace = () => {
                                             )}
 
                                             {!isMine && selectedItem.status === 'available' && (
-                                                <a
-                                                    href={`tel:${selectedItem.phone_number}`}
-                                                    className="btn btn-primary rounded-pill d-flex align-items-center justify-content-center gap-2 py-2"
-                                                >
-                                                    <Phone size={16} /> Call Seller ({selectedItem.phone_number})
-                                                </a>
+                                                <p className="text-muted small mb-0 mt-1" style={{ lineHeight: '1.6', border: '1px solid #e0d4de', borderRadius: '10px', padding: '10px 14px', backgroundColor: '#fdf8fc' }}>
+                                                    If you want this product, please contact us at{' '}
+                                                    <strong style={{ letterSpacing: '0.08em', color: '#5c2d53', fontSize: '0.95rem' }}>
+                                                        {selectedItem.phone_number.toUpperCase()}
+                                                    </strong>.
+                                                </p>
                                             )}
                                         </div>
                                     </div>

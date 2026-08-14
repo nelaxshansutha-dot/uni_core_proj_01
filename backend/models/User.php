@@ -313,21 +313,30 @@ abstract class User {
         } elseif ($role === 'course_representative') {
             // Rep can login using their rep_id_string (e.g. rep_uwu/cst/23/088)
             // The users table role may still be 'student' — dual-login is supported
+            // Note: PDO does not support the same named param twice — use :identifier1 and :identifier2
             $sql = "SELECT u.*, s.enrollmentNo, s.courseID, s.std_year, c.repID, c.rep_id_string, c.is_first_login, c.hash_password as rep_hash_password
                     FROM course_representative c
                     JOIN users u ON u.userID = c.userID
                     LEFT JOIN student s ON s.userID = c.userID
-                    WHERE c.rep_id_string = :identifier OR s.enrollmentNo = :identifier";
+                    WHERE c.rep_id_string = :identifier1 OR s.enrollmentNo = :identifier2";
         } elseif ($role === 'staff') {
-            $sql = "SELECT u.*, st.staffID FROM users u JOIN staff st ON u.userID = st.userID WHERE st.staffID = :identifier OR u.email = :identifier";
+            // Note: PDO does not support the same named param twice — use :identifier1 and :identifier2
+            $sql = "SELECT u.*, st.staffID FROM users u JOIN staff st ON u.userID = st.userID WHERE st.staffID = :identifier1 OR u.email = :identifier2";
         } elseif ($role === 'admin') {
-            $sql = "SELECT u.*, a.adminID FROM users u JOIN admin a ON u.userID = a.userID WHERE a.adminID = :identifier OR u.email = :identifier";
+            // Note: PDO does not support the same named param twice — use :identifier1 and :identifier2
+            $sql = "SELECT u.*, a.adminID FROM users u JOIN admin a ON u.userID = a.userID WHERE a.adminID = :identifier1 OR u.email = :identifier2";
         } else {
             return null;
         }
 
         $stmt = $db->prepare($sql);
-        $stmt->bindParam(':identifier', $identifier);
+        if (in_array($role, ['course_representative', 'staff', 'admin'])) {
+            // These queries use :identifier twice — PDO requires separate named params
+            $stmt->bindParam(':identifier1', $identifier);
+            $stmt->bindParam(':identifier2', $identifier);
+        } else {
+            $stmt->bindParam(':identifier', $identifier);
+        }
         $stmt->execute();
         $fullData = $stmt->fetch(PDO::FETCH_ASSOC);
 
