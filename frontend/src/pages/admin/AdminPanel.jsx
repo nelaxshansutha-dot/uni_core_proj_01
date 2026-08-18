@@ -454,32 +454,7 @@ const AdminPanel = () => {
                         </div>
                     </div>
 
-                    {/* Recent Activities Log */}
-                    <div className="card border-0 shadow-sm">
-                        <div className="card-header bg-white border-bottom p-4">
-                            <h5 className="fw-bold m-0">Recent Admin Action Logs</h5>
-                        </div>
-                        <div className="card-body p-4">
-                            {stats.recent_logs.length > 0 ? (
-                                <ul className="list-group list-group-flush">
-                                    {stats.recent_logs.map(log => (
-                                        <li key={log.id} className="list-group-item px-0 py-3 d-flex justify-content-between align-items-start">
-                                            <div>
-                                                <div className="fw-semibold text-dark">{log.action}</div>
-                                                <small className="text-muted">Target: {log.target_type} (ID: {log.target_id}) {log.details && `| Details: ${log.details}`}</small>
-                                            </div>
-                                            <div className="text-end">
-                                                <span className="badge bg-light text-dark">{log.admin_name}</span>
-                                                <div className="text-muted small mt-1">{new Date(log.created_at).toLocaleString()}</div>
-                                            </div>
-                                        </li>
-                                    ))}
-                                </ul>
-                            ) : (
-                                <div className="text-center text-muted py-5">No logs available. Actions you perform will appear here.</div>
-                            )}
-                        </div>
-                    </div>
+
                 </div>
             )}
 

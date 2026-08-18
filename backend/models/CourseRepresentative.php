@@ -214,7 +214,7 @@ class CourseRepresentative extends Student
     {
         if (empty($studentIDs)) return 0;
 
-        // Bulk insert into app_notification
+    
         $query = "INSERT INTO app_notification (repID, enrollmentNo, message) VALUES ";
         $values = [];
         $params = [];
