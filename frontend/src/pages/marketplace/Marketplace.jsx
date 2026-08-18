@@ -272,7 +272,11 @@ const Marketplace = () => {
                                                     : (item.description || '')}
                                             </p>
 
-                                            {/* Usage Duration (used items) */}
+                                            {/* Condition & Usage */}
+                                            <div className="d-flex align-items-center gap-1 text-secondary small mb-1">
+                                                <Package size={13} className={item.condition_type === 'new' ? 'text-success' : 'text-warning'} />
+                                                <span className="text-capitalize">{item.condition_type}</span>
+                                            </div>
                                             {item.condition_type === 'used' && item.usage_duration && (
                                                 <div className="d-flex align-items-center gap-1 text-secondary small mb-1">
                                                     <Clock size={13} />
@@ -626,6 +630,10 @@ const Marketplace = () => {
                                             </div>
 
                                             <div className="d-flex flex-column gap-2 mb-4">
+                                                <div className="d-flex align-items-center gap-2 text-secondary small">
+                                                    <Package size={15} className={selectedItem.condition_type === 'new' ? 'text-success' : 'text-warning'} />
+                                                    <span><strong>Condition:</strong> <span className="text-capitalize">{selectedItem.condition_type}</span></span>
+                                                </div>
                                                 {selectedItem.condition_type === 'used' && selectedItem.usage_duration && (
                                                     <div className="d-flex align-items-center gap-2 text-secondary small">
                                                         <Clock size={15} className="text-warning" />
