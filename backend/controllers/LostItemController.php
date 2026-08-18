@@ -14,6 +14,21 @@ class LostItemController {
         } elseif ($method === 'POST') {
             
             $data = $_POST;
+            
+            $validator = new \Utils\Validator($data);
+            $validator->validate([
+                'lostItemName' => 'required|maxLength:150',
+                'last_seen_place' => 'required|maxLength:150',
+                'last_seen_datetime' => 'required',
+                'contact_number' => 'required|phone',
+                'description' => 'required|maxLength:1000'
+            ]);
+
+            if (!$validator->passes()) {
+                echo json_encode(['success' => false, 'message' => $validator->getFirstError()]);
+                return;
+            }
+            
             $data['userID'] = $decoded->userID;
             
             if (isset($_FILES['item_image'])) {
@@ -123,6 +138,22 @@ class LostItemController {
                 ]);
                 echo json_encode(['success' => $success]);
                 return;
+            }
+            
+            if (!isset($data['status']) || count($data) > 1) {
+                $validator = new \Utils\Validator($data);
+                $validator->validate([
+                    'lostItemName' => 'required|maxLength:150',
+                    'last_seen_place' => 'required|maxLength:150',
+                    'last_seen_datetime' => 'required',
+                    'contact_number' => 'required|phone',
+                    'description' => 'required|maxLength:1000'
+                ]);
+
+                if (!$validator->passes()) {
+                    echo json_encode(['success' => false, 'message' => $validator->getFirstError()]);
+                    return;
+                }
             }
             
             $model = new LostItem();

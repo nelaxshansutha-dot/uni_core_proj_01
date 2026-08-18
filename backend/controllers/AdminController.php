@@ -27,9 +27,18 @@ class AdminController {
         
     public function createUser() {
         AuthMiddleware::authenticate(['admin']);
-        $data = json_decode(file_get_contents("php://input"), true);
-        if (!$data || !isset($data['email'])) {
-            echo json_encode(['success' => false, 'message' => 'Invalid payload']);
+        $data = json_decode(file_get_contents("php://input"), true) ?? [];
+        
+        $validator = new \Utils\Validator($data);
+        $validator->validate([
+            'email' => 'required|email',
+            'first_name' => 'required',
+            'last_name' => 'required',
+            'password' => 'required|minLength:6'
+        ]);
+
+        if (!$validator->passes()) {
+            echo json_encode(['success' => false, 'message' => $validator->getFirstError()]);
             return;
         }
 
