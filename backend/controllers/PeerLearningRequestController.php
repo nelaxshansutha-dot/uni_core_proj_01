@@ -130,16 +130,22 @@ class PeerLearningRequestController {
 
         // ─── POST — Student submits a request ─────────────────────────────
         if ($method === 'POST') {
-            $data         = json_decode(file_get_contents("php://input"), true);
+            $data         = json_decode(file_get_contents("php://input"), true) ?? [];
             
             $validator = new \Utils\Validator($data);
             $validator->validate([
-                'courseUnitID' => 'required',
-                'description' => 'required|maxLength:1000'
+                'courseUnitID' => 'required|string|maxLength:20',
+                'courseUnitName' => 'nullable|string|maxLength:200',
+                'semester' => 'nullable|integer|min:1|max:2',
+                'description' => 'required|string|maxLength:1000'
             ]);
 
             if (!$validator->passes()) {
-                echo json_encode(['status' => 'error', 'message' => $validator->getFirstError()]);
+                echo json_encode([
+                    'status' => 'error',
+                    'message' => $validator->getFirstError(),
+                    'errors' => $validator->getErrors()
+                ]);
                 return;
             }
             
@@ -218,16 +224,22 @@ class PeerLearningRequestController {
         // ─── PUT — Rep updates status ──────────────────────────────────────
         if ($method === 'PUT') {
             AuthMiddleware::authenticate(['course_representative']);
-            $data = json_decode(file_get_contents("php://input"), true);
+            $data = json_decode(file_get_contents("php://input"), true) ?? [];
 
             $validator = new \Utils\Validator($data);
             $validator->validate([
-                'courseUnitID' => 'required',
-                'status' => 'required'
+                'courseUnitID' => 'required|string|maxLength:20',
+                'courseUnitName' => 'nullable|string|maxLength:200',
+                'status' => 'required|string|in:approved,rejected,completed,broadcast_help',
+                'message' => 'nullable|string|maxLength:1000'
             ]);
 
             if (!$validator->passes()) {
-                echo json_encode(['status' => 'error', 'message' => $validator->getFirstError()]);
+                echo json_encode([
+                    'status' => 'error',
+                    'message' => $validator->getFirstError(),
+                    'errors' => $validator->getErrors()
+                ]);
                 return;
             }
 
@@ -274,6 +286,9 @@ class PeerLearningRequestController {
             echo json_encode(['status' => $ok ? 'success' : 'error']);
             return;
         }
+
+        http_response_code(405);
+        echo json_encode(['status' => 'error', 'message' => 'Method not allowed.']);
     }
 
     /**

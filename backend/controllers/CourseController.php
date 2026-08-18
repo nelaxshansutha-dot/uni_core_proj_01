@@ -55,6 +55,17 @@ class CourseController {
             $semester = $_GET['semester'] ?? '';
             $userID   = $decoded->userID;
 
+            $validator = new \Utils\Validator(['semester' => $semester]);
+            $validator->validate(['semester' => 'required|integer|min:1|max:2']);
+            if (!$validator->passes()) {
+                echo json_encode([
+                    'status' => 'error',
+                    'message' => $validator->getFirstError(),
+                    'errors' => $validator->getErrors()
+                ]);
+                return;
+            }
+
             $db = \Config\Database::getInstance()->getConnection();
 
             // Get student's enrollment number and courseID

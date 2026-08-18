@@ -5,22 +5,21 @@ use Models\OtpVerification;
 use Firebase\JWT\JWT;
 use Middleware\AuthMiddleware;
 use Exception;
+use Utils\Validator;
 
 class AuthController {
     public function register() {
         $data = json_decode(file_get_contents("php://input"), true) ?? [];
         
-        $validator = new \Utils\Validator($data);
-        $validator->validate([
-            'fname' => 'required',
-            'lname' => 'required',
-            'email' => 'required|email',
-            'password' => 'required|minLength:6',
-            'phoneNum' => 'phone'
-        ]);
-
-        if (!$validator->passes()) {
-            echo json_encode(['success' => false, 'message' => $validator->getFirstError()]);
+        if (!$this->validatePayload($data, [
+            'fname' => "required|string|maxLength:100|regex:/^[A-Za-z][A-Za-z .'-]*$/D",
+            'lname' => "required|string|maxLength:100|regex:/^[A-Za-z][A-Za-z .'-]*$/D",
+            'email' => 'required|string|email|maxLength:150',
+            'password' => 'required|string|minLength:6|maxLength:72',
+            'phoneNum' => 'required|phone',
+            'role' => 'required|string|in:student,staff',
+            'enrollmentNo' => 'requiredIf:role,student|nullable|string|maxLength:50'
+        ])) {
             return;
         }
          
@@ -55,14 +54,11 @@ class AuthController {
     public function login() {
         $data = json_decode(file_get_contents("php://input"), true) ?? [];
         
-        $validator = new \Utils\Validator($data);
-        $validator->validate([
-            'identifier' => 'required',
-            'password' => 'required'
-        ]);
-
-        if (!$validator->passes()) {
-            echo json_encode(['success' => false, 'message' => $validator->getFirstError()]);
+        if (!$this->validatePayload($data, [
+            'identifier' => 'required|string|maxLength:150',
+            'password' => 'required|string|maxLength:255',
+            'role' => 'required|string|in:student,staff,course_representative,admin'
+        ])) {
             return;
         }
 
@@ -170,14 +166,17 @@ class AuthController {
 
    
     public function forceChangeRepPassword() {
-        $data     = json_decode(file_get_contents("php://input"), true);
-        $userID   = $data['user_id'] ?? null;
-        $newPass  = $data['new_password'] ?? '';
+        $data     = json_decode(file_get_contents("php://input"), true) ?? [];
 
-        if (!$userID || strlen($newPass) < 6) {
-            echo json_encode(['status' => 'error', 'message' => 'User ID and a password of at least 6 characters are required.']);
+        if (!$this->validatePayload($data, [
+            'user_id' => 'required|positiveInteger',
+            'new_password' => 'required|string|minLength:6|maxLength:72'
+        ], true)) {
             return;
         }
+
+        $userID   = $data['user_id'] ?? null;
+        $newPass  = $data['new_password'] ?? '';
 
         $db   = \Config\Database::getInstance()->getConnection();
         $hash = password_hash($newPass, PASSWORD_BCRYPT);
@@ -196,14 +195,17 @@ class AuthController {
     }
 
     public function verifyOtp() {
-        $data = json_decode(file_get_contents("php://input"), true);
-        $userID = $data['user_id'] ?? null;
-        $otp    = $data['otp'] ?? '';
+        $data = json_decode(file_get_contents("php://input"), true) ?? [];
 
-        if (!$userID) {
-            echo json_encode(['success' => false, 'message' => 'User ID is required.']);
+        if (!$this->validatePayload($data, [
+            'user_id' => 'required|positiveInteger',
+            'otp' => 'required|string|regex:/^[0-9]{6}$/D'
+        ])) {
             return;
         }
+
+        $userID = $data['user_id'] ?? null;
+        $otp    = $data['otp'] ?? '';
 
    
         $db = \Config\Database::getInstance()->getConnection();
@@ -226,13 +228,15 @@ class AuthController {
     }
 
     public function resendOtp() {
-        $data   = json_decode(file_get_contents("php://input"), true);
-        $userID = $data['user_id'] ?? null;
+        $data   = json_decode(file_get_contents("php://input"), true) ?? [];
 
-        if (!$userID) {
-            echo json_encode(['success' => false, 'message' => 'User ID is required.']);
+        if (!$this->validatePayload($data, [
+            'user_id' => 'required|positiveInteger'
+        ])) {
             return;
         }
+
+        $userID = $data['user_id'] ?? null;
 
         $db = \Config\Database::getInstance()->getConnection();
         $stmt = $db->prepare("SELECT * FROM users WHERE userID = :uid");
@@ -256,13 +260,15 @@ class AuthController {
     }
 
     public function forgotPassword() {
-        $data = json_decode(file_get_contents("php://input"), true);
-        $email = $data['email'] ?? '';
+        $data = json_decode(file_get_contents("php://input"), true) ?? [];
 
-        if (!$email) {
-            echo json_encode(['status' => 'error', 'message' => 'Email is required.']);
+        if (!$this->validatePayload($data, [
+            'email' => 'required|string|email|maxLength:150'
+        ], true)) {
             return;
         }
+
+        $email = $data['email'] ?? '';
 
         $db = \Config\Database::getInstance()->getConnection();
         $stmt = $db->prepare("SELECT userID FROM users WHERE email = :email");
@@ -286,14 +292,17 @@ class AuthController {
     }
 
     public function verifyResetOtp() {
-        $data = json_decode(file_get_contents("php://input"), true);
-        $userID = $data['user_id'] ?? null;
-        $otp = $data['otp'] ?? '';
+        $data = json_decode(file_get_contents("php://input"), true) ?? [];
 
-        if (!$userID || !$otp) {
-            echo json_encode(['status' => 'error', 'message' => 'User ID and OTP are required.']);
+        if (!$this->validatePayload($data, [
+            'user_id' => 'required|positiveInteger',
+            'otp' => 'required|string|regex:/^[0-9]{6}$/D'
+        ], true)) {
             return;
         }
+
+        $userID = $data['user_id'] ?? null;
+        $otp = $data['otp'] ?? '';
 
         $db = \Config\Database::getInstance()->getConnection();
         $stmt = $db->prepare("SELECT * FROM users WHERE userID = :uid");
@@ -319,15 +328,20 @@ class AuthController {
     }
 
     public function resetPassword() {
-        $data = json_decode(file_get_contents("php://input"), true);
+        $data = json_decode(file_get_contents("php://input"), true) ?? [];
+
+        if (!$this->validatePayload($data, [
+            'user_id' => 'required|positiveInteger',
+            'reset_token' => 'required|string|regex:/^[a-f0-9]{64}$/D',
+            'new_password' => 'required|string|minLength:6|maxLength:72',
+            'confirm_password' => 'required|string|same:new_password'
+        ], true)) {
+            return;
+        }
+
         $userID = $data['user_id'] ?? null;
         $resetToken = $data['reset_token'] ?? '';
         $newPassword = $data['new_password'] ?? '';
-
-        if (!$userID || !$resetToken || !$newPassword) {
-            echo json_encode(['status' => 'error', 'message' => 'Missing required fields.']);
-            return;
-        }
 
         $db = \Config\Database::getInstance()->getConnection();
         $hash = password_hash($newPassword, PASSWORD_BCRYPT);
@@ -421,9 +435,18 @@ class AuthController {
         $decoded = AuthMiddleware::authenticate();
         if (!$decoded) return;
 
-        $data = json_decode(file_get_contents("php://input"), true);
-        if (!$data) {
-            echo json_encode(['status' => 'error', 'message' => 'Invalid data']);
+        $data = json_decode(file_get_contents("php://input"), true) ?? [];
+        if (!$this->validatePayload($data, [
+            'first_name' => "required|string|maxLength:100|regex:/^[A-Za-z][A-Za-z .'-]*$/D",
+            'last_name' => "required|string|maxLength:100|regex:/^[A-Za-z][A-Za-z .'-]*$/D",
+            'email' => 'nullable|string|email|maxLength:150',
+            'phone_number' => 'required|phone',
+            'lost_item_sms_notification' => 'nullable|boolean',
+            'peer_learning_app_notification' => 'nullable|boolean',
+            'old_password' => 'requiredWith:new_password|nullable|string|maxLength:255',
+            'new_password' => 'nullable|string|minLength:6|maxLength:72',
+            'confirm_password' => 'requiredWith:new_password|nullable|string|same:new_password'
+        ], true)) {
             return;
         }
 
@@ -438,11 +461,6 @@ class AuthController {
         $fname = $data['first_name'] ?? '';
         $lname = $data['last_name'] ?? '';
         $phoneNum = $data['phone_number'] ?? '';
-        
-        if (!preg_match('/^[0-9]{10}$/', $phoneNum)) {
-            echo json_encode(['status' => 'error', 'message' => 'Phone number must be exactly 10 digits and contain only numbers.']);
-            return;
-        }
         
         $smsPref = $data['lost_item_sms_notification'] ?? 0;
         $peerPref = $data['peer_learning_app_notification'] ?? 1;
@@ -533,5 +551,28 @@ class AuthController {
         } catch (\Exception $e) {
             echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
         }
+    }
+
+    private function validatePayload(array $data, array $rules, bool $statusResponse = false): bool {
+        $validator = new Validator($data);
+        $validator->validate($rules);
+
+        if ($validator->passes()) {
+            return true;
+        }
+
+        $response = [
+            'message' => $validator->getFirstError(),
+            'errors' => $validator->getErrors()
+        ];
+
+        if ($statusResponse) {
+            $response['status'] = 'error';
+        } else {
+            $response['success'] = false;
+        }
+
+        echo json_encode($response);
+        return false;
     }
 }

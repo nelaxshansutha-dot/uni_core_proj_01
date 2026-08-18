@@ -11,28 +11,54 @@ class NotesController {
         if ($method === 'GET') {
             if ($action === 'search') {
                 $q = $_GET['q'] ?? '';
+                if (!$this->validatePayload(['q' => $q], ['q' => 'required|string|maxLength:100'])) {
+                    return;
+                }
                 echo json_encode(['success' => true, 'data' => $model->search($q)]);
                 return;
             }
             if ($action === 'download' && $id) {
+                if (!$this->validatePayload(['noteID' => $id], ['noteID' => 'required|positiveInteger'])) {
+                    return;
+                }
                 echo json_encode(['success' => true, 'url' => $model->download($id)]);
                 return;
             }
+
+            if ($id !== null && !$this->validatePayload(['noteID' => $id], ['noteID' => 'required|positiveInteger'])) {
+                return;
+            }
+
             $filters = $_GET;
+            if (!$this->validatePayload($filters, [
+                'courseUnitID' => 'nullable|string|maxLength:20',
+                'academicYear' => 'nullable|integer|min:1|max:4',
+                'semester' => 'nullable|integer|min:1|max:2',
+                'courseCode' => 'nullable|string|maxLength:10|regex:/^[A-Za-z]+$/D'
+            ])) {
+                return;
+            }
             $filters['enrollmentNo'] = $decoded->enrollmentNo ?? null;
             echo json_encode(['success' => true, 'data' => $model->view($id, $filters)]);
         } elseif ($method === 'POST') {
             $data = $_POST;
             
-            $validator = new \Utils\Validator($data);
-            $validator->validate([
-                'title' => 'required|maxLength:150',
-                'courseUnitID' => 'required',
-                'moduleID' => 'required'
-            ]);
+            if (!$this->validatePayload($data, [
+                'title' => 'required|string|maxLength:200',
+                'courseUnitID' => 'required|string|maxLength:20',
+                'description' => 'nullable|string|maxLength:5000',
+                'academicYear' => 'required|integer|min:1|max:4',
+                'noteType' => 'required|string|in:notes,past_paper,scheme'
+            ])) {
+                return;
+            }
 
-            if (!$validator->passes()) {
-                echo json_encode(['success' => false, 'message' => $validator->getFirstError()]);
+            if (!$this->validatePayload(
+                ['file' => $_FILES['file'] ?? null],
+                [
+                    'file' => 'uploaded|maxFileSize:10485760|mimes:application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,image/jpeg,image/png,image/webp'
+                ]
+            )) {
                 return;
             }
             
@@ -104,17 +130,13 @@ class NotesController {
             $nid = $model->upload();
             echo json_encode(['success' => true, 'noteID' => $nid]);
         } elseif ($method === 'PUT') {
-            $data = json_decode(file_get_contents("php://input"), true);
+            $data = json_decode(file_get_contents("php://input"), true) ?? [];
             
-            $validator = new \Utils\Validator($data);
-            $validator->validate([
-                'title' => 'required|maxLength:150',
-                'courseUnitID' => 'required',
-                'moduleID' => 'required'
-            ]);
-
-            if (!$validator->passes()) {
-                echo json_encode(['success' => false, 'message' => $validator->getFirstError()]);
+            if (!$this->validatePayload(array_merge($data, ['noteID' => $id]), [
+                'noteID' => 'required|positiveInteger',
+                'title' => 'required|string|maxLength:200',
+                'description' => 'nullable|string|maxLength:5000'
+            ])) {
                 return;
             }
             
@@ -122,6 +144,9 @@ class NotesController {
             $model->setNoteID($id);
             echo json_encode(['success' => $model->update()]);
         } elseif ($method === 'DELETE') {
+            if (!$this->validatePayload(['noteID' => $id], ['noteID' => 'required|positiveInteger'])) {
+                return;
+            }
             $note = $model->view($id);
             if (!$note) {
                 echo json_encode(['success' => false, 'message' => 'Note not found']);
@@ -153,6 +178,25 @@ class NotesController {
                 http_response_code(403);
                 echo json_encode(['success' => false, 'message' => 'Unauthorized to delete this note']);
             }
+        } else {
+            http_response_code(405);
+            echo json_encode(['success' => false, 'message' => 'Method not allowed.']);
         }
+    }
+
+    private function validatePayload(array $data, array $rules): bool {
+        $validator = new \Utils\Validator($data);
+        $validator->validate($rules);
+
+        if ($validator->passes()) {
+            return true;
+        }
+
+        echo json_encode([
+            'success' => false,
+            'message' => $validator->getFirstError(),
+            'errors' => $validator->getErrors()
+        ]);
+        return false;
     }
 }

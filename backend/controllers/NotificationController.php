@@ -45,7 +45,11 @@ class NotificationController {
         $enrollmentNo = $decoded->enrollmentNo ?? null;
         $db = Database::getInstance()->getConnection();
 
-        if ($method === 'DELETE' && $id) {
+        if ($method === 'DELETE') {
+            if (!$this->validateNotificationID($id)) {
+                return;
+            }
+
             // Dismiss a specific notification
             $stmt = $db->prepare("DELETE FROM app_notification WHERE appID = :id AND enrollmentNo = :enr");
             $stmt->execute([':id' => $id, ':enr' => $enrollmentNo]);
@@ -86,6 +90,10 @@ class NotificationController {
         $enrollmentNo = $decoded->enrollmentNo ?? null;
         $db           = Database::getInstance()->getConnection();
 
+        if (!$this->validateNotificationID($id)) {
+            return;
+        }
+
         // Only dismiss from app_notification (peer_learning); lost-item SMS rows are unaffected
         if ($enrollmentNo) {
             $stmt = $db->prepare("DELETE FROM app_notification WHERE appID = :id AND enrollmentNo = :enr");
@@ -93,5 +101,21 @@ class NotificationController {
         }
 
         echo json_encode(['status' => 'success']);
+    }
+
+    private function validateNotificationID($id): bool {
+        $validator = new \Utils\Validator(['notification_id' => $id]);
+        $validator->validate(['notification_id' => 'required|positiveInteger']);
+
+        if ($validator->passes()) {
+            return true;
+        }
+
+        echo json_encode([
+            'status' => 'error',
+            'message' => $validator->getFirstError(),
+            'errors' => $validator->getErrors()
+        ]);
+        return false;
     }
 }

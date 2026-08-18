@@ -10,22 +10,30 @@ class LostItemController {
         $model = new LostItem();
 
         if ($method === 'GET') {
+            if ($id !== null && !$this->validatePayload(['lostID' => $id], ['lostID' => 'required|positiveInteger'])) {
+                return;
+            }
             echo json_encode(['success' => true, 'data' => $model->view($id)]);
         } elseif ($method === 'POST') {
             
             $data = $_POST;
             
-            $validator = new \Utils\Validator($data);
-            $validator->validate([
-                'lostItemName' => 'required|maxLength:150',
-                'last_seen_place' => 'required|maxLength:150',
-                'last_seen_datetime' => 'required',
+            if (!$this->validatePayload($data, [
+                'lostItemName' => 'required|string|maxLength:150',
+                'last_seen_place' => 'required|string|maxLength:150',
+                'last_seen_datetime' => 'required|string|dateFormat:Y-m-d\TH:i|beforeOrEqual:now',
                 'contact_number' => 'required|phone',
-                'description' => 'required|maxLength:1000'
-            ]);
+                'description' => 'required|string|maxLength:1000',
+                'send_sms_alert' => 'nullable|boolean',
+                'update_id' => 'nullable|positiveInteger'
+            ])) {
+                return;
+            }
 
-            if (!$validator->passes()) {
-                echo json_encode(['success' => false, 'message' => $validator->getFirstError()]);
+            if (!$this->validatePayload(
+                ['item_image' => $_FILES['item_image'] ?? null],
+                ['item_image' => 'nullable|maxFileSize:5242880|mimes:image/jpeg,image/png,image/webp']
+            )) {
                 return;
             }
             
@@ -119,10 +127,19 @@ class LostItemController {
             
         } elseif ($method === 'PUT') {
             $data = json_decode(file_get_contents("php://input"), true);
-            if (!$data) $data = $_POST; // Fallback
+            if (!is_array($data) && !empty($_POST)) $data = $_POST; // Fallback
+            if (!is_array($data)) $data = [];
             
            
             if (isset($data['update_preference'])) {
+                if (!$this->validatePayload($data, [
+                    'update_preference' => 'required|boolean',
+                    'lost_item_sms_notification' => 'required|boolean',
+                    'has_seen_lost_item_popup' => 'required|boolean'
+                ])) {
+                    return;
+                }
+
                 $db = \Config\Database::getInstance()->getConnection();
                 
                 try {
@@ -139,21 +156,26 @@ class LostItemController {
                 echo json_encode(['success' => $success]);
                 return;
             }
+
+            if (!$this->validatePayload(['lostID' => $id], ['lostID' => 'required|positiveInteger'])) {
+                return;
+            }
             
             if (!isset($data['status']) || count($data) > 1) {
-                $validator = new \Utils\Validator($data);
-                $validator->validate([
-                    'lostItemName' => 'required|maxLength:150',
-                    'last_seen_place' => 'required|maxLength:150',
-                    'last_seen_datetime' => 'required',
+                if (!$this->validatePayload($data, [
+                    'lostItemName' => 'required|string|maxLength:150',
+                    'last_seen_place' => 'required|string|maxLength:150',
+                    'last_seen_datetime' => 'required|string|dateFormat:Y-m-d\TH:i|beforeOrEqual:now',
                     'contact_number' => 'required|phone',
-                    'description' => 'required|maxLength:1000'
-                ]);
-
-                if (!$validator->passes()) {
-                    echo json_encode(['success' => false, 'message' => $validator->getFirstError()]);
+                    'description' => 'required|string|maxLength:1000',
+                    'status' => 'nullable|string|in:lost,found,resolved'
+                ])) {
                     return;
                 }
+            } elseif (!$this->validatePayload($data, [
+                'status' => 'required|string|in:lost,found,resolved'
+            ])) {
+                return;
             }
             
             $model = new LostItem();
@@ -164,8 +186,30 @@ class LostItemController {
             echo json_encode(['success' => $success]);
             
         } elseif ($method === 'DELETE') {
+            if (!$this->validatePayload(['lostID' => $id], ['lostID' => 'required|positiveInteger'])) {
+                return;
+            }
             $success = $model->delete($id, $decoded->userID);
             echo json_encode(['success' => $success]);
+        } else {
+            http_response_code(405);
+            echo json_encode(['success' => false, 'message' => 'Method not allowed.']);
         }
+    }
+
+    private function validatePayload(array $data, array $rules): bool {
+        $validator = new \Utils\Validator($data);
+        $validator->validate($rules);
+
+        if ($validator->passes()) {
+            return true;
+        }
+
+        echo json_encode([
+            'success' => false,
+            'message' => $validator->getFirstError(),
+            'errors' => $validator->getErrors()
+        ]);
+        return false;
     }
 }
