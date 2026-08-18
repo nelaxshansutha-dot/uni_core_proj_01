@@ -23,14 +23,20 @@ class UploadController {
                     echo json_encode(['status' => 'error', 'success' => false, 'message' => 'Upload failed: ' . $errorMsg]);
                     return;
                 }
-                
-                // Validate Image MIME Type
-                $mimeType = mime_content_type($_FILES['image']['tmp_name']);
-                $allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
-                
-                if (!in_array($mimeType, $allowedImageTypes)) {
+
+                $validator = new \Utils\Validator(['image' => $_FILES['image']]);
+                $validator->validate([
+                    'image' => 'uploaded|maxFileSize:5242880|mimes:image/jpeg,image/png,image/webp'
+                ]);
+
+                if (!$validator->passes()) {
                     http_response_code(400);
-                    echo json_encode(['status' => 'error', 'success' => false, 'message' => 'Invalid file type. Only JPG, PNG, and WebP are allowed.']);
+                    echo json_encode([
+                        'status' => 'error',
+                        'success' => false,
+                        'message' => $validator->getFirstError(),
+                        'errors' => $validator->getErrors()
+                    ]);
                     return;
                 }
 

@@ -235,9 +235,5 @@ class Admin extends User {
         ];
     }
 
-    public function viewSystemLogs() {
-        // TODO: Implement a proper admin_logs / activity_logs table. 
-        // For now, return an empty array to match previous mock behavior.
-        return [];
-    }
+   
 }

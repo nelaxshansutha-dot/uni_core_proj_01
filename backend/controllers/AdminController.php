@@ -2,6 +2,7 @@
 namespace Controllers;
 
 use Middleware\AuthMiddleware;
+use Utils\Validator;
 
 class AdminController {
     public function handleUsers($method, $id = null) {
@@ -12,6 +13,16 @@ class AdminController {
                 $q = $_GET['q'] ?? '';
                 $role = $_GET['role'] ?? 'all';
                 if ($role === '') $role = 'all'; 
+
+                if (!$this->validatePayload(
+                    ['q' => $q, 'role' => $role],
+                    [
+                        'q' => 'nullable|string|maxLength:100',
+                        'role' => 'required|string|in:all,student,staff,rep,course_representative,admin'
+                    ]
+                )) {
+                    return;
+                }
                 
                 $admin = new \Models\Admin();
                 $users = $admin->manageUsers($role, $q);
@@ -29,16 +40,17 @@ class AdminController {
         AuthMiddleware::authenticate(['admin']);
         $data = json_decode(file_get_contents("php://input"), true) ?? [];
         
-        $validator = new \Utils\Validator($data);
-        $validator->validate([
-            'email' => 'required|email',
-            'first_name' => 'required',
-            'last_name' => 'required',
-            'password' => 'required|minLength:6'
-        ]);
-
-        if (!$validator->passes()) {
-            echo json_encode(['success' => false, 'message' => $validator->getFirstError()]);
+        if (!$this->validatePayload($data, [
+            'email' => 'required|string|email|maxLength:150',
+            'first_name' => "required|string|maxLength:100|regex:/^[A-Za-z][A-Za-z .'-]*$/D",
+            'last_name' => "required|string|maxLength:100|regex:/^[A-Za-z][A-Za-z .'-]*$/D",
+            'phone_number' => 'required|phone',
+            'password' => 'required|string|minLength:6|maxLength:72',
+            'role' => 'required|string|in:student,staff,course_representative,admin',
+            'enrollment_no' => 'requiredIf:role,student|requiredIf:role,course_representative|nullable|string|maxLength:50',
+            'course' => 'nullable|positiveInteger',
+            'year' => 'nullable|integer|min:1|max:4'
+        ])) {
             return;
         }
 
@@ -49,7 +61,7 @@ class AdminController {
         $data['fname'] = $data['first_name'];
         $data['lname'] = $data['last_name'];
         $data['phoneNum'] = $data['phone_number'];
-        $data['enrollmentNo'] = $data['enrollment_no']; // Student specific
+        $data['enrollmentNo'] = $data['enrollment_no'] ?? null; // Student specific
         $data['courseID'] = isset($data['course']) && !empty($data['course']) ? $data['course'] : 1; // Default to 1 if empty
         $data['std_year'] = isset($data['year']) && !empty($data['year']) ? $data['year'] : 1;
         
@@ -77,7 +89,18 @@ class AdminController {
 
     public function updateUser($id) {
         AuthMiddleware::authenticate(['admin']);
-        $data = json_decode(file_get_contents("php://input"), true);
+        $data = json_decode(file_get_contents("php://input"), true) ?? [];
+
+        if (!$this->validatePayload(array_merge($data, ['user_id' => $id]), [
+            'user_id' => 'required|positiveInteger',
+            'email' => 'required|string|email|maxLength:150',
+            'first_name' => "required|string|maxLength:100|regex:/^[A-Za-z][A-Za-z .'-]*$/D",
+            'last_name' => "required|string|maxLength:100|regex:/^[A-Za-z][A-Za-z .'-]*$/D",
+            'phone_number' => 'required|phone'
+        ])) {
+            return;
+        }
+
         $db = \Config\Database::getInstance()->getConnection();
         
         $sql = "UPDATE users SET fname = :fname, lname = :lname, phoneNum = :phone, email = :email WHERE userID = :uid";
@@ -96,10 +119,20 @@ class AdminController {
 
     public function toggleUserStatus($id) {
         AuthMiddleware::authenticate(['admin']);
-        $data = json_decode(file_get_contents("php://input"), true);
+        $data = json_decode(file_get_contents("php://input"), true) ?? [];
         
         // Allow un-assigning reps
-        if (strpos($id, 'rep_') === 0) {
+        if (is_string($id) && strpos($id, 'rep_') === 0) {
+            if (!$this->validatePayload(
+                array_merge($data, ['rep_target' => $id]),
+                [
+                    'rep_target' => 'required|string|regex:/^rep_[1-9][0-9]*$/D',
+                    'is_active' => 'required|boolean'
+                ]
+            )) {
+                return;
+            }
+
             $uid = str_replace('rep_', '', $id);
             $db = \Config\Database::getInstance()->getConnection();
             $db->prepare("UPDATE users SET role = 'student' WHERE userID = ?")->execute([$uid]);
@@ -108,7 +141,16 @@ class AdminController {
             return;
         }
 
-        $isActive = isset($data['is_active']) && $data['is_active'] ? 1 : 0;
+        if (!$this->validatePayload(array_merge($data, ['user_id' => $id]), [
+            'user_id' => 'required|positiveInteger',
+            'is_active' => 'required|boolean',
+            'reason' => 'requiredIf:is_active,false|nullable|string|maxLength:1000'
+        ])) {
+            return;
+        }
+
+        $isActiveValue = filter_var($data['is_active'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+        $isActive = $isActiveValue ? 1 : 0;
         $reason = $data['reason'] ?? 'No reason provided by administrator.';
         $db = \Config\Database::getInstance()->getConnection();
         
@@ -132,6 +174,13 @@ class AdminController {
     public function searchStudents() {
         AuthMiddleware::authenticate(['admin']);
         $q = $_GET['q'] ?? '';
+
+        if (!$this->validatePayload(['q' => $q], [
+            'q' => 'required|string|maxLength:100'
+        ])) {
+            return;
+        }
+
         $db = \Config\Database::getInstance()->getConnection();
         
         $sql = "SELECT u.userID as id, u.fname as first_name, u.lname as last_name, u.email, u.phoneNum as phone_number, u.role, s.enrollmentNo as enrollment_no, s.courseID as course, s.std_year as year
@@ -148,7 +197,21 @@ class AdminController {
 
     public function assignCourseRep() {
         AuthMiddleware::authenticate(['admin']);
-        $data = json_decode(file_get_contents("php://input"), true);
+        $data = json_decode(file_get_contents("php://input"), true) ?? [];
+
+        if (!$this->validatePayload($data, [
+            'user_id' => 'required|positiveInteger',
+            'fname' => "required|string|maxLength:100|regex:/^[A-Za-z][A-Za-z .'-]*$/D",
+            'lname' => "required|string|maxLength:100|regex:/^[A-Za-z][A-Za-z .'-]*$/D",
+            'phone' => 'required|phone',
+            'email' => 'required|string|email|maxLength:150',
+            'rep_id' => 'required|string|maxLength:50|regex:/^[A-Za-z0-9_\/-]+$/D',
+            'password' => 'required|string|minLength:6|maxLength:72',
+            'course' => 'nullable|positiveInteger',
+            'year' => 'nullable|integer|min:1|max:4'
+        ])) {
+            return;
+        }
         
         try {
             $admin = new \Models\Admin();
@@ -162,7 +225,17 @@ class AdminController {
     
     public function moderateContent() {
         AuthMiddleware::authenticate(['admin']);
-        $data = json_decode(file_get_contents("php://input"), true);
+        $data = json_decode(file_get_contents("php://input"), true) ?? [];
+
+        if (!$this->validatePayload($data, [
+            'content_type' => 'required|string|in:lost_item,marketplace,notes',
+            'content_id' => 'required|positiveInteger',
+            'status' => 'required|string|in:removed',
+            'reason' => 'required|string|maxLength:1000'
+        ])) {
+            return;
+        }
+
         $db = \Config\Database::getInstance()->getConnection();
         
         $contentType = $data['content_type'] ?? '';
@@ -220,6 +293,15 @@ class AdminController {
 
     public function moderateReport() {
         AuthMiddleware::authenticate(['admin']);
+        $data = json_decode(file_get_contents("php://input"), true) ?? [];
+
+        if (!$this->validatePayload($data, [
+            'report_id' => 'required|positiveInteger',
+            'status' => 'required|string|maxLength:50'
+        ])) {
+            return;
+        }
+
         echo json_encode(['success' => true]);
     }
 
@@ -257,5 +339,21 @@ class AdminController {
             error_log("getReports error: " . $e->getMessage());
             echo json_encode(['success' => false, 'message' => 'An error occurred while fetching reports.']);
         }
+    }
+
+    private function validatePayload(array $data, array $rules): bool {
+        $validator = new Validator($data);
+        $validator->validate($rules);
+
+        if ($validator->passes()) {
+            return true;
+        }
+
+        echo json_encode([
+            'success' => false,
+            'message' => $validator->getFirstError(),
+            'errors' => $validator->getErrors()
+        ]);
+        return false;
     }
 }

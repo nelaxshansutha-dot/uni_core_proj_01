@@ -16,10 +16,6 @@ class Validator {
         foreach ($rules as $field => $fieldRules) {
             $rulesArray = explode('|', $fieldRules);
             $value = $this->data[$field] ?? null;
-
-            if (in_array('nullable', $rulesArray, true) && $this->isEmpty($value)) {
-                continue;
-            }
             
             foreach ($rulesArray as $rule) {
                 $ruleParts = explode(':', $rule, 2);
@@ -172,6 +168,24 @@ class Validator {
                         if (!$this->isEmpty($value)
                             && (!is_string($value) || !$this->matchesDateFormat($value, (string)$ruleValue))) {
                             $this->addError($field, "The {$field} field must use the {$ruleValue} format.");
+                        }
+                        break;
+                    case 'beforeOrEqual':
+                        if (!$this->isEmpty($value) && is_string($value)) {
+                            $timestamp = strtotime($value);
+                            $limit = $ruleValue === 'now' ? time() : strtotime((string)$ruleValue);
+                            if ($timestamp !== false && $limit !== false && $timestamp > $limit) {
+                                $this->addError($field, "The {$field} field must be before or equal to {$ruleValue}.");
+                            }
+                        }
+                        break;
+                    case 'afterOrEqual':
+                        if (!$this->isEmpty($value) && is_string($value)) {
+                            $timestamp = strtotime($value);
+                            $limit = $ruleValue === 'now' ? time() : strtotime((string)$ruleValue);
+                            if ($timestamp !== false && $limit !== false && $timestamp < $limit) {
+                                $this->addError($field, "The {$field} field must be after or equal to {$ruleValue}.");
+                            }
                         }
                         break;
                     case 'regex':

@@ -135,7 +135,7 @@ class LostItem
     public function getContactNumber() { return $this->contactNumber; }
     public function setContactNumber($val) { $this->contactNumber = $val; return $this; }
 
-    // Added missing getters/setters for description, lastSeenPlace, and status
+   
     public function getDescription() { return $this->description; }
     public function setDescription($val) { $this->description = $val; return $this; }
 

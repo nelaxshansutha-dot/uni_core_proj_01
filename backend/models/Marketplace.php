@@ -19,8 +19,8 @@ class Marketplace {
     private $itemImage3;
     private $itemImage4;
     private $usageDuration;
-    private $price = 0.00;
-    private $status = 'available';
+    private $price;
+    private $status;
 
     public function __construct() {
         $this->conn = Database::getInstance()->getConnection();
@@ -55,9 +55,9 @@ class Marketplace {
         }
 
         if (array_key_exists('condition_type', $data)) {
-            $this->setConditionType((bool)$data['condition_type']);
+            $this->setConditionType($data['condition_type']);
         } elseif (array_key_exists('conditionType', $data)) {
-            $this->setConditionType((bool)$data['conditionType']);
+            $this->setConditionType($data['conditionType']);
         }
 
         if (array_key_exists('image_url', $data)) {
@@ -193,7 +193,7 @@ class Marketplace {
             ':uid' => $this->userID,
             ':pname' => $this->itemName,
             ':price' => $this->price,
-            ':cond' => $this->conditionType ? 1 : 0,
+            ':cond' => $this->conditionType,
             ':loc' => $this->location,
             ':img1' => $this->itemImage,
             ':img2' => $this->itemImage2 ?? null,
