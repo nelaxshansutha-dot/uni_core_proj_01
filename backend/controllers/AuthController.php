@@ -20,7 +20,7 @@ class AuthController {
                 return;
             }
         }
-
+         
         $role = $data['role'] ?? 'student';
         $data['hash_password'] = password_hash($data['password'], PASSWORD_BCRYPT);
         
