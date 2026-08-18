@@ -131,6 +131,18 @@ class PeerLearningRequestController {
         // ─── POST — Student submits a request ─────────────────────────────
         if ($method === 'POST') {
             $data         = json_decode(file_get_contents("php://input"), true);
+            
+            $validator = new \Utils\Validator($data);
+            $validator->validate([
+                'courseUnitID' => 'required',
+                'description' => 'required|maxLength:1000'
+            ]);
+
+            if (!$validator->passes()) {
+                echo json_encode(['status' => 'error', 'message' => $validator->getFirstError()]);
+                return;
+            }
+            
             $enrollmentNo = $decoded->enrollmentNo ?? null;
 
             if (!$enrollmentNo) {
@@ -208,13 +220,19 @@ class PeerLearningRequestController {
             AuthMiddleware::authenticate(['course_representative']);
             $data = json_decode(file_get_contents("php://input"), true);
 
-            $courseUnitID = $data['courseUnitID'] ?? null;
-            $status       = $data['status']       ?? null;
+            $validator = new \Utils\Validator($data);
+            $validator->validate([
+                'courseUnitID' => 'required',
+                'status' => 'required'
+            ]);
 
-            if (!$courseUnitID || !$status) {
-                echo json_encode(['status' => 'error', 'message' => 'courseUnitID and status are required.']);
+            if (!$validator->passes()) {
+                echo json_encode(['status' => 'error', 'message' => $validator->getFirstError()]);
                 return;
             }
+
+            $courseUnitID = $data['courseUnitID'] ?? null;
+            $status       = $data['status']       ?? null;
 
             // Get rep's repID
             $repStmt = $db->prepare("SELECT repID FROM course_representative WHERE userID = :uid LIMIT 1");

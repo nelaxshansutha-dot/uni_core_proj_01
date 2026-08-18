@@ -8,17 +8,20 @@ use Exception;
 
 class AuthController {
     public function register() {
-        $data = json_decode(file_get_contents("php://input"), true);
-        if (!$data || !isset($data['email'])) {
-            echo json_encode(['success' => false, 'message' => 'Invalid payload']);
-            return;
-        }
+        $data = json_decode(file_get_contents("php://input"), true) ?? [];
+        
+        $validator = new \Utils\Validator($data);
+        $validator->validate([
+            'fname' => 'required',
+            'lname' => 'required',
+            'email' => 'required|email',
+            'password' => 'required|minLength:6',
+            'phoneNum' => 'phone'
+        ]);
 
-        if (isset($data['phoneNum']) && !empty($data['phoneNum'])) {
-            if (!preg_match('/^[0-9]{10}$/', $data['phoneNum'])) {
-                echo json_encode(['success' => false, 'message' => 'Phone number must be exactly 10 digits.']);
-                return;
-            }
+        if (!$validator->passes()) {
+            echo json_encode(['success' => false, 'message' => $validator->getFirstError()]);
+            return;
         }
          
         $role = $data['role'] ?? 'student';
@@ -50,7 +53,19 @@ class AuthController {
     }
 
     public function login() {
-        $data = json_decode(file_get_contents("php://input"), true);
+        $data = json_decode(file_get_contents("php://input"), true) ?? [];
+        
+        $validator = new \Utils\Validator($data);
+        $validator->validate([
+            'identifier' => 'required',
+            'password' => 'required'
+        ]);
+
+        if (!$validator->passes()) {
+            echo json_encode(['success' => false, 'message' => $validator->getFirstError()]);
+            return;
+        }
+
         $identifier = $data['identifier'] ?? '';
         $role = $data['role'] ?? 'student';
         $password = $data['password'] ?? '';

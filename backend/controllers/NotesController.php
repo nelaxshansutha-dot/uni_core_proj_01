@@ -23,6 +23,19 @@ class NotesController {
             echo json_encode(['success' => true, 'data' => $model->view($id, $filters)]);
         } elseif ($method === 'POST') {
             $data = $_POST;
+            
+            $validator = new \Utils\Validator($data);
+            $validator->validate([
+                'title' => 'required|maxLength:150',
+                'courseUnitID' => 'required',
+                'moduleID' => 'required'
+            ]);
+
+            if (!$validator->passes()) {
+                echo json_encode(['success' => false, 'message' => $validator->getFirstError()]);
+                return;
+            }
+            
             $data['enrollmentNo'] = $decoded->enrollmentNo ?? $decoded->enrollment_no ?? null;
             $data['userID'] = $decoded->userID ?? null;
             $data['file_url'] = null; // Default value to prevent undefined key error
@@ -92,6 +105,19 @@ class NotesController {
             echo json_encode(['success' => true, 'noteID' => $nid]);
         } elseif ($method === 'PUT') {
             $data = json_decode(file_get_contents("php://input"), true);
+            
+            $validator = new \Utils\Validator($data);
+            $validator->validate([
+                'title' => 'required|maxLength:150',
+                'courseUnitID' => 'required',
+                'moduleID' => 'required'
+            ]);
+
+            if (!$validator->passes()) {
+                echo json_encode(['success' => false, 'message' => $validator->getFirstError()]);
+                return;
+            }
+            
             $model->hydrateFromRequest($data);
             $model->setNoteID($id);
             echo json_encode(['success' => $model->update()]);
