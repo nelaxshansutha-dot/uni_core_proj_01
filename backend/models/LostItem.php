@@ -182,7 +182,8 @@ class LostItem
                       last_seen_place = :lsp,
                       description = :desc,
                       contact_number = :phone,
-                      status = :status 
+                      status = :status,
+                      item_image = :item_image
                       WHERE lostID = :id AND userID = :uid";
             
             $stmt = $this->conn->prepare($query);
@@ -199,6 +200,7 @@ class LostItem
                 ':desc' => $this->description,
                 ':phone' => $this->contactNumber,
                 ':status' => $this->status,
+                ':item_image' => $this->itemImage,
                 ':id' => $this->lostID,
                 ':uid' => $this->userID
             ]);

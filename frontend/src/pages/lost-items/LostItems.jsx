@@ -23,6 +23,7 @@ const LostItems = () => {
         last_seen_place: '',
         contact_number: '',
         item_image: null,
+        existingImage: '',
         send_sms_alert: false
     });
 
@@ -116,6 +117,7 @@ const handleDelete = async () => {
             last_seen_place: item.last_seen_place,
             contact_number: item.contact_number,
             item_image: null,
+            existingImage: item.item_image,
             send_sms_alert: false
         });
         setShowModal(true);
