@@ -32,7 +32,7 @@ class LostItemController {
 
             if (!$this->validatePayload(
                 ['item_image' => $_FILES['item_image'] ?? null],
-                ['item_image' => 'nullable|maxFileSize:5242880|mimes:image/jpeg,image/png,image/webp']
+                ['item_image' => 'uploaded|maxFileSize:5242880|mimes:image/jpeg,image/png,image/webp']
             )) {
                 return;
             }
@@ -55,22 +55,19 @@ class LostItemController {
                     return;
                 }
                 
-                $mimeType = mime_content_type($_FILES['item_image']['tmp_name']);
-                $allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
-                
-                if (!in_array($mimeType, $allowedImageTypes)) {
-                    echo json_encode(['success' => false, 'message' => 'Invalid file type. Only JPG, PNG, and WebP are allowed.']);
-                    return;
-                }
 
                 try {
                     $url = \Services\CloudinaryUploader::upload($_FILES['item_image']['tmp_name'], 'image');
                     $data['item_image'] = $url;
                 } catch (\Exception $e) {
-                    // Log the error but continue saving without the image
-                    error_log('[UniCore] Cloudinary upload failed: ' . $e->getMessage());
-                    $data['item_image'] = null;
-                }
+    error_log('[UniCore] Cloudinary upload failed: ' . $e->getMessage());
+
+    echo json_encode([
+        'success' => false,
+        'message' => 'Image upload failed. Please try again.'
+    ]);
+    return;
+}
             }
             
             
