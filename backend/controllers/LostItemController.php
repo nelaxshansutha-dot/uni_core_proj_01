@@ -39,7 +39,7 @@ class LostItemController {
             
             $data['userID'] = $decoded->userID;
             
-            if (isset($_FILES['item_image'])) {
+            if (isset($_FILES['item_image']) && $_FILES['item_image']['error'] !== UPLOAD_ERR_NO_FILE) {
                 if ($_FILES['item_image']['error'] !== UPLOAD_ERR_OK) {
                     $uploadErrors = [
                         UPLOAD_ERR_INI_SIZE => 'File exceeds upload_max_filesize in php.ini',
@@ -129,13 +129,17 @@ class LostItemController {
             
            
             if (isset($data['update_preference'])) {
-                if (!$this->validatePayload($data, [
-                    'update_preference' => 'required|boolean',
-                    'lost_item_sms_notification' => 'required|boolean',
-                    'has_seen_lost_item_popup' => 'required|boolean'
-                ])) {
-                    return;
-                }
+               // Image validation
+$imageRules = isset($data['update_id'])
+    ? 'nullable|maxFileSize:5242880|mimes:image/jpeg,image/png,image/webp'
+    : 'uploaded|maxFileSize:5242880|mimes:image/jpeg,image/png,image/webp';
+
+if (!$this->validatePayload(
+    ['item_image' => $_FILES['item_image'] ?? null],
+    ['item_image' => $imageRules]
+)) {
+    return;
+}
 
                 $db = \Config\Database::getInstance()->getConnection();
                 
