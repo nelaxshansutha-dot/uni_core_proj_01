@@ -182,6 +182,7 @@ class LostItem
                       last_seen_place = :lsp,
                       description = :desc,
                       contact_number = :phone,
+                      item_image = :item_image,
                       status = :status 
                       WHERE lostID = :id AND userID = :uid";
             
@@ -200,6 +201,7 @@ class LostItem
                 ':phone' => $this->contactNumber,
                 ':status' => $this->status,
                 ':id' => $this->lostID,
+                ':item_image' => $this->itemImage,
                 ':uid' => $this->userID
             ]);
         } catch (Exception $e) {
