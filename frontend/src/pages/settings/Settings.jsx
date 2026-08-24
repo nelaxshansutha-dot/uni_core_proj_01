@@ -98,7 +98,7 @@ const Settings = () => {
         setError('');
         setSuccess('');
 
-        // Basic validations
+    
         const nameRegex = /^[a-zA-Z\s]+$/;
         if (user?.role !== 'admin' && (!nameRegex.test((formData.first_name || '').trim()) || !nameRegex.test((formData.last_name || '').trim()))) {
             setError('First name and last name must contain only letters and spaces.');
