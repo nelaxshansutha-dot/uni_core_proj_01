@@ -187,8 +187,8 @@ const Notes = () => {
                     {Object.keys(groupedNotes).length === 0 ? (
                         <div className="text-center text-muted py-5 mt-4">
                             <BookOpen size={48} className="mb-3 opacity-50" />
-                            <h5>No notes found for this filter</h5>
-                            <p className="small">You are only seeing notes for your enrolled course.</p>
+                            <h5>No notes found</h5>
+                            <p className="small">No course materials have been uploaded yet, or no notes match the selected filters.</p>
                         </div>
                     ) : (
                         Object.keys(groupedNotes).map(courseName => (

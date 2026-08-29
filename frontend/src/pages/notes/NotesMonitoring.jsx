@@ -12,12 +12,14 @@ const NotesMonitoring = () => {
     const fetchNotes = async () => {
         setLoading(true);
         try {
-            // Fetch all notes (the backend automatically filters by the rep's course if they are logged in, 
-            // or we just fetch notes and show them)
-            // Wait, NotesController GET /notes handles rep filtering?
-            // Actually, in Models\Notes.php, it filters by the logged in user's course if enrollmentNo is provided.
-            // Let's just fetch them.
-            const res = await api.get('/notes');
+            // For Notes Monitoring (rep view), only show notes from the rep's own course.
+            // Extract the course code from the rep's enrollment_no e.g. UWU/CST/23/001 → CST
+            const enrollmentNo = user?.enrollment_no || '';
+            const parts = enrollmentNo.split('/');
+            const repCourseCode = parts.length >= 2 ? parts[1].toUpperCase() : '';
+
+            const params = repCourseCode ? `?courseCode=${repCourseCode}` : '';
+            const res = await api.get(`/notes${params}`);
             if (res.data.success) {
                 setNotes(res.data.data);
             }
@@ -29,8 +31,10 @@ const NotesMonitoring = () => {
     };
 
     useEffect(() => {
-        fetchNotes();
-    }, []);
+        if (user) {
+            fetchNotes();
+        }
+    }, [user]);
 
     const handleDeleteNote = async () => {
         if (!deleteNoteID) return;

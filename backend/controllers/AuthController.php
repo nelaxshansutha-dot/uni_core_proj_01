@@ -12,12 +12,12 @@ class AuthController {
         $data = json_decode(file_get_contents("php://input"), true) ?? [];
         
         if (!$this->validatePayload($data, [
-            'fname' => "required|string|maxLength:100|regex:/^[A-Za-z][A-Za-z .'-]*$/D",
-            'lname' => "required|string|maxLength:100|regex:/^[A-Za-z][A-Za-z .'-]*$/D",
-            'email' => 'required|string|email|maxLength:150',
-            'password' => 'required|string|minLength:6|maxLength:72',
-            'phoneNum' => 'required|phone',
-            'role' => 'required|string|in:student,staff',
+            'fname'        => "required|string|maxLength:100|regex:/^[A-Za-z][A-Za-z .'-]*$/D",
+            'lname'        => "required|string|maxLength:100|regex:/^[A-Za-z][A-Za-z .'-]*$/D",
+            'email'        => 'required|string|email|maxLength:150',
+            'password'     => 'required|string|minLength:6|maxLength:72',
+            'phoneNum'     => 'required|phone',
+            'role'         => 'required|string|in:student,staff',
             'enrollmentNo' => 'requiredIf:role,student|nullable|string|maxLength:50'
         ])) {
             return;
@@ -33,11 +33,8 @@ class AuthController {
             $userID = $user->register();
             if ($userID) {
                 $otpModel = new OtpVerification();
-                $otp = $otpModel->generate($userID);
-                
-                // Send the OTP via email
+                $otp      = $otpModel->generate($userID);
                 $mailSent = \Utils\MailService::sendOTP($data['email'], $otp);
-                
                 if ($mailSent) {
                     echo json_encode(['success' => true, 'message' => 'Registration successful. OTP sent.', 'userID' => $userID]);
                 } else {
@@ -56,15 +53,15 @@ class AuthController {
         
         if (!$this->validatePayload($data, [
             'identifier' => 'required|string|maxLength:150',
-            'password' => 'required|string|maxLength:255',
-            'role' => 'required|string|in:student,staff,course_representative,admin'
+            'password'   => 'required|string|maxLength:255',
+            'role'       => 'required|string|in:student,staff,course_representative,admin'
         ])) {
             return;
         }
 
         $identifier = $data['identifier'] ?? '';
-        $role = $data['role'] ?? 'student';
-        $password = $data['password'] ?? '';
+        $role       = $data['role']       ?? 'student';
+        $password   = $data['password']   ?? '';
 
         $user = \Models\User::loadByIdentifier($identifier, $role);
         if (!$user) {
@@ -76,10 +73,10 @@ class AuthController {
             if ($user->login($password)) {
                 $payload = [
                     'userID' => $user->getUserID(),
-                    'role' => $user->getRole(),
-                    'jti' => uniqid('jwt_', true),
-                    'iat' => time(),
-                    'exp' => time() + 3600 * 24 // 24 hrs
+                    'role'   => $user->getRole(),
+                    'jti'    => uniqid('jwt_', true),
+                    'iat'    => time(),
+                    'exp'    => time() + 3600 * 24
                 ];
                 if (method_exists($user, 'getEnrollmentNo')) {
                     $payload['enrollmentNo'] = $user->getEnrollmentNo();
@@ -94,22 +91,22 @@ class AuthController {
                     $payload['staffID'] = $user->getStaffID();
                 }
 
-                $token = JWT::encode($payload, AuthMiddleware::getSecretKey(), 'HS256');
-                $db = \Config\Database::getInstance()->getConnection();
-                $stmt = $db->prepare("SELECT * FROM users WHERE userID = :uid");
+                $token   = JWT::encode($payload, AuthMiddleware::getSecretKey(), 'HS256');
+                $db      = \Config\Database::getInstance()->getConnection();
+                $stmt    = $db->prepare("SELECT * FROM users WHERE userID = :uid");
                 $stmt->execute([':uid' => $user->getUserID()]);
                 $userRow = $stmt->fetch(\PDO::FETCH_ASSOC);
 
                 $userObj = [
-                    'userID'       => $userRow['userID'],
-                    'first_name'   => $userRow['fname'],
-                    'last_name'    => $userRow['lname'],
-                    'email'        => $userRow['email'],
-                    'role'         => $user->getRole(),
-                    'phone_number' => $userRow['phoneNum'],
-                    'lost_item_sms_notification' => $userRow['lost_item_sms_notification'] ?? 0,
+                    'userID'                         => $userRow['userID'],
+                    'first_name'                     => $userRow['fname'],
+                    'last_name'                      => $userRow['lname'],
+                    'email'                          => $userRow['email'],
+                    'role'                           => $user->getRole(),
+                    'phone_number'                   => $userRow['phoneNum'],
+                    'lost_item_sms_notification'     => $userRow['lost_item_sms_notification'] ?? 0,
                     'peer_learning_app_notification' => $userRow['peer_learning_app_notification'] ?? 1,
-                    'has_seen_lost_item_popup' => $userRow['has_seen_lost_item_popup'] ?? 0
+                    'has_seen_lost_item_popup'       => $userRow['has_seen_lost_item_popup'] ?? 0
                 ];
                 if (method_exists($user, 'getEnrollmentNo')) {
                     $userObj['enrollment_no'] = $user->getEnrollmentNo();
@@ -123,9 +120,9 @@ class AuthController {
 
                 $isFirstLogin = false;
                 if ($user->getRole() === 'course_representative') {
-                    $repStmt = $db->prepare("SELECT is_first_login FROM course_representative WHERE userID = :uid LIMIT 1");
+                    $repStmt      = $db->prepare("SELECT is_first_login FROM course_representative WHERE userID = :uid LIMIT 1");
                     $repStmt->execute([':uid' => $user->getUserID()]);
-                    $repRow = $repStmt->fetch(\PDO::FETCH_ASSOC);
+                    $repRow       = $repStmt->fetch(\PDO::FETCH_ASSOC);
                     $isFirstLogin = $repRow ? (bool)$repRow['is_first_login'] : false;
                 }
 
@@ -169,13 +166,13 @@ class AuthController {
         $data     = json_decode(file_get_contents("php://input"), true) ?? [];
 
         if (!$this->validatePayload($data, [
-            'user_id' => 'required|positiveInteger',
+            'user_id'      => 'required|positiveInteger',
             'new_password' => 'required|string|minLength:6|maxLength:72'
         ], true)) {
             return;
         }
 
-        $userID   = $data['user_id'] ?? null;
+        $userID   = $data['user_id']      ?? null;
         $newPass  = $data['new_password'] ?? '';
 
         $db   = \Config\Database::getInstance()->getConnection();
@@ -199,16 +196,15 @@ class AuthController {
 
         if (!$this->validatePayload($data, [
             'user_id' => 'required|positiveInteger',
-            'otp' => 'required|string|regex:/^[0-9]{6}$/D'
+            'otp'     => 'required|string|regex:/^[0-9]{6}$/D'
         ])) {
             return;
         }
 
         $userID = $data['user_id'] ?? null;
-        $otp    = $data['otp'] ?? '';
+        $otp    = $data['otp']     ?? '';
 
-   
-        $db = \Config\Database::getInstance()->getConnection();
+        $db   = \Config\Database::getInstance()->getConnection();
         $stmt = $db->prepare("SELECT * FROM users WHERE userID = :uid");
         $stmt->execute([':uid' => $userID]);
         $userData = $stmt->fetch();
@@ -238,7 +234,7 @@ class AuthController {
 
         $userID = $data['user_id'] ?? null;
 
-        $db = \Config\Database::getInstance()->getConnection();
+        $db   = \Config\Database::getInstance()->getConnection();
         $stmt = $db->prepare("SELECT * FROM users WHERE userID = :uid");
         $stmt->execute([':uid' => $userID]);
         $userData = $stmt->fetch();
@@ -270,7 +266,7 @@ class AuthController {
 
         $email = $data['email'] ?? '';
 
-        $db = \Config\Database::getInstance()->getConnection();
+        $db   = \Config\Database::getInstance()->getConnection();
         $stmt = $db->prepare("SELECT userID FROM users WHERE email = :email");
         $stmt->execute([':email' => $email]);
         $userID = $stmt->fetchColumn();
@@ -281,7 +277,7 @@ class AuthController {
         }
 
         $otpModel = new OtpVerification();
-        $otp = $otpModel->generate($userID);
+        $otp      = $otpModel->generate($userID);
         $mailSent = \Utils\MailService::sendOTP($email, $otp);
 
         if ($mailSent) {
@@ -296,15 +292,15 @@ class AuthController {
 
         if (!$this->validatePayload($data, [
             'user_id' => 'required|positiveInteger',
-            'otp' => 'required|string|regex:/^[0-9]{6}$/D'
+            'otp'     => 'required|string|regex:/^[0-9]{6}$/D'
         ], true)) {
             return;
         }
 
         $userID = $data['user_id'] ?? null;
-        $otp = $data['otp'] ?? '';
+        $otp    = $data['otp']     ?? '';
 
-        $db = \Config\Database::getInstance()->getConnection();
+        $db   = \Config\Database::getInstance()->getConnection();
         $stmt = $db->prepare("SELECT * FROM users WHERE userID = :uid");
         $stmt->execute([':uid' => $userID]);
         $userData = $stmt->fetch(\PDO::FETCH_ASSOC);
@@ -317,10 +313,7 @@ class AuthController {
         $user = \Models\User::createInstanceFromRole($userData['role'], $userData);
 
         if ($user->verifyOTP($otp)) {
-            // Generate a temporary reset token (for demo purposes, a simple hash)
             $resetToken = hash('sha256', $userID . $otp . time());
-            
-          
             echo json_encode(['status' => 'success', 'data' => ['reset_token' => $resetToken]]);
         } else {
             echo json_encode(['status' => 'error', 'message' => 'Invalid or expired OTP.']);
@@ -331,22 +324,22 @@ class AuthController {
         $data = json_decode(file_get_contents("php://input"), true) ?? [];
 
         if (!$this->validatePayload($data, [
-            'user_id' => 'required|positiveInteger',
-            'reset_token' => 'required|string|regex:/^[a-f0-9]{64}$/D',
-            'new_password' => 'required|string|minLength:6|maxLength:72',
+            'user_id'          => 'required|positiveInteger',
+            'reset_token'      => 'required|string|regex:/^[a-f0-9]{64}$/D',
+            'new_password'     => 'required|string|minLength:6|maxLength:72',
             'confirm_password' => 'required|string|same:new_password'
         ], true)) {
             return;
         }
 
-        $userID = $data['user_id'] ?? null;
-        $resetToken = $data['reset_token'] ?? '';
+        $userID      = $data['user_id']      ?? null;
+        $resetToken  = $data['reset_token']  ?? '';
         $newPassword = $data['new_password'] ?? '';
 
-        $db = \Config\Database::getInstance()->getConnection();
-        $hash = password_hash($newPassword, PASSWORD_BCRYPT);
+        $db         = \Config\Database::getInstance()->getConnection();
+        $hash       = password_hash($newPassword, PASSWORD_BCRYPT);
         $updateStmt = $db->prepare("UPDATE users SET hash_password = :hash WHERE userID = :uid");
-        $success = $updateStmt->execute([':hash' => $hash, ':uid' => $userID]);
+        $success    = $updateStmt->execute([':hash' => $hash, ':uid' => $userID]);
 
         if ($success) {
             echo json_encode(['status' => 'success', 'message' => 'Password reset successfully. You can now login.']);
@@ -374,15 +367,15 @@ class AuthController {
         
         if ($userRow) {
             $userData = [
-                'userID' => $userRow['userID'],
-                'first_name' => $userRow['fname'],
-                'last_name' => $userRow['lname'],
-                'email' => $userRow['email'],
-                'role' => $decoded->role,
-                'phone_number' => $userRow['phoneNum'],
-                'lost_item_sms_notification' => $userRow['lost_item_sms_notification'],
+                'userID'                         => $userRow['userID'],
+                'first_name'                     => $userRow['fname'],
+                'last_name'                      => $userRow['lname'],
+                'email'                          => $userRow['email'],
+                'role'                           => $decoded->role,
+                'phone_number'                   => $userRow['phoneNum'],
+                'lost_item_sms_notification'     => $userRow['lost_item_sms_notification'],
                 'peer_learning_app_notification' => $userRow['peer_learning_app_notification'],
-                'has_seen_lost_item_popup' => $userRow['has_seen_lost_item_popup']
+                'has_seen_lost_item_popup'       => $userRow['has_seen_lost_item_popup']
             ];
 
             // Fetch staffID for staff role
@@ -399,7 +392,7 @@ class AuthController {
             if ($decoded->role === 'admin') {
                 $adminStmt = $db->prepare("SELECT adminID FROM admin WHERE userID = :uid LIMIT 1");
                 $adminStmt->execute([':uid' => $decoded->userID]);
-                $adminRow = $adminStmt->fetch(\PDO::FETCH_ASSOC);
+                $adminRow  = $adminStmt->fetch(\PDO::FETCH_ASSOC);
                 if ($adminRow) {
                     $userData['admin_id'] = $adminRow['adminID'];
                 }
@@ -437,15 +430,15 @@ class AuthController {
 
         $data = json_decode(file_get_contents("php://input"), true) ?? [];
         if (!$this->validatePayload($data, [
-            'first_name' => "required|string|maxLength:100|regex:/^[A-Za-z][A-Za-z .'-]*$/D",
-            'last_name' => "required|string|maxLength:100|regex:/^[A-Za-z][A-Za-z .'-]*$/D",
-            'email' => 'nullable|string|email|maxLength:150',
-            'phone_number' => 'required|phone',
-            'lost_item_sms_notification' => 'nullable|boolean',
+            'first_name'                     => "required|string|maxLength:100|regex:/^[A-Za-z][A-Za-z .'-]*$/D",
+            'last_name'                      => "required|string|maxLength:100|regex:/^[A-Za-z][A-Za-z .'-]*$/D",
+            'email'                          => 'nullable|string|email|maxLength:150',
+            'phone_number'                   => 'required|phone',
+            'lost_item_sms_notification'     => 'nullable|boolean',
             'peer_learning_app_notification' => 'nullable|boolean',
-            'old_password' => 'requiredWith:new_password|nullable|string|maxLength:255',
-            'new_password' => 'nullable|string|minLength:6|maxLength:72',
-            'confirm_password' => 'requiredWith:new_password|nullable|string|same:new_password'
+            'old_password'                   => 'requiredWith:new_password|nullable|string|maxLength:255',
+            'new_password'                   => 'nullable|string|minLength:6|maxLength:72',
+            'confirm_password'               => 'requiredWith:new_password|nullable|string|same:new_password'
         ], true)) {
             return;
         }
@@ -458,11 +451,10 @@ class AuthController {
             $db->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS has_seen_lost_item_popup TINYINT(1) DEFAULT 0");
         } catch (\Exception $e) {}
         
-        $fname = $data['first_name'] ?? '';
-        $lname = $data['last_name'] ?? '';
+        $fname    = $data['first_name']  ?? '';
+        $lname    = $data['last_name']   ?? '';
         $phoneNum = $data['phone_number'] ?? '';
-        
-        $smsPref = $data['lost_item_sms_notification'] ?? 0;
+        $smsPref  = $data['lost_item_sms_notification']     ?? 0;
         $peerPref = $data['peer_learning_app_notification'] ?? 1;
 
         $user = \Models\User::createInstanceFromRole($decoded->role);
@@ -476,7 +468,7 @@ class AuthController {
 
         if (!empty($data['new_password'])) {
             // Verify old password
-            $stmt = $db->prepare("SELECT hash_password FROM users WHERE userID = :uid");
+            $stmt    = $db->prepare("SELECT hash_password FROM users WHERE userID = :uid");
             $stmt->execute([':uid' => $decoded->userID]);
             $userRow = $stmt->fetch(\PDO::FETCH_ASSOC);
 
@@ -493,19 +485,18 @@ class AuthController {
 
             if ($success) {
                 // Fetch updated user to return
-                $stmt = $db->prepare("SELECT * FROM users WHERE userID = :uid");
+                $stmt        = $db->prepare("SELECT * FROM users WHERE userID = :uid");
                 $stmt->execute([':uid' => $decoded->userID]);
                 $updatedUser = $stmt->fetch(\PDO::FETCH_ASSOC);
                 
-                // Keep token same, just return updated user data (matching what Login does)
                 $userData = [
-                    'userID' => $updatedUser['userID'],
-                    'first_name' => $updatedUser['fname'],
-                    'last_name' => $updatedUser['lname'],
-                    'email' => $updatedUser['email'],
-                    'role' => $decoded->role,
-                    'phone_number' => $updatedUser['phoneNum'],
-                    'lost_item_sms_notification' => $updatedUser['lost_item_sms_notification'],
+                    'userID'                         => $updatedUser['userID'],
+                    'first_name'                     => $updatedUser['fname'],
+                    'last_name'                      => $updatedUser['lname'],
+                    'email'                          => $updatedUser['email'],
+                    'role'                           => $decoded->role,
+                    'phone_number'                   => $updatedUser['phoneNum'],
+                    'lost_item_sms_notification'     => $updatedUser['lost_item_sms_notification'],
                     'peer_learning_app_notification' => $updatedUser['peer_learning_app_notification']
                 ];
                 
@@ -513,36 +504,45 @@ class AuthController {
                 if ($decoded->role === 'student' || $decoded->role === 'course_representative') {
                     $studentStmt = $db->prepare("SELECT enrollmentNo FROM student WHERE userID = :uid LIMIT 1");
                     $studentStmt->execute([':uid' => $decoded->userID]);
-                    $studentRow = $studentStmt->fetch(\PDO::FETCH_ASSOC);
+                    $studentRow  = $studentStmt->fetch(\PDO::FETCH_ASSOC);
                     if ($studentRow) {
                         $userData['enrollment_no'] = $studentRow['enrollmentNo'];
                     }
                 }
 
+                // Fetch adminID for admin role
+                if ($decoded->role === 'admin') {
+                    $adminStmt = $db->prepare("SELECT adminID FROM admin WHERE userID = :uid LIMIT 1");
+                    $adminStmt->execute([':uid' => $decoded->userID]);
+                    $adminRow  = $adminStmt->fetch(\PDO::FETCH_ASSOC);
+                    if ($adminRow) {
+                        $userData['admin_id'] = $adminRow['adminID'];
+                    }
+                }
+
                 if (isset($updatedUser['staffID'])) $userData['staff_id'] = $updatedUser['staffID'];
-                if (isset($updatedUser['adminID'])) $userData['admin_id'] = $updatedUser['adminID'];
                 
                 // Generate a fresh token matching login structure
                 $payload = [
                     'userID' => $updatedUser['userID'],
-                    'role' => $decoded->role,
-                    'jti' => uniqid('jwt_', true),
-                    'iat' => time(),
-                    'exp' => time() + 3600 * 24 // 24 hrs
+                    'role'   => $decoded->role,
+                    'jti'    => uniqid('jwt_', true),
+                    'iat'    => time(),
+                    'exp'    => time() + 3600 * 24
                 ];
                 if (isset($userData['enrollment_no'])) $payload['enrollmentNo'] = $userData['enrollment_no'];
-                if (isset($updatedUser['repID'])) $payload['repID'] = $updatedUser['repID'];
-                if (isset($updatedUser['adminID'])) $payload['adminID'] = $updatedUser['adminID'];
-                if (isset($updatedUser['staffID'])) $payload['staffID'] = $updatedUser['staffID'];
+                if (isset($updatedUser['repID']))       $payload['repID']        = $updatedUser['repID'];
+                if (isset($updatedUser['adminID']))     $payload['adminID']      = $updatedUser['adminID'];
+                if (isset($updatedUser['staffID']))     $payload['staffID']      = $updatedUser['staffID'];
                 
                 $jwt = JWT::encode($payload, AuthMiddleware::getSecretKey(), 'HS256');
 
                 echo json_encode([
-                    'status' => 'success',
+                    'status'  => 'success',
                     'message' => 'Profile updated successfully',
-                    'data' => [
+                    'data'    => [
                         'token' => $jwt,
-                        'user' => $userData
+                        'user'  => $userData
                     ]
                 ]);
             } else {
@@ -563,7 +563,7 @@ class AuthController {
 
         $response = [
             'message' => $validator->getFirstError(),
-            'errors' => $validator->getErrors()
+            'errors'  => $validator->getErrors()
         ];
 
         if ($statusResponse) {
