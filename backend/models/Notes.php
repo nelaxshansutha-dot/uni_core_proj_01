@@ -223,16 +223,8 @@ class Notes {
             $params = [];
             
         
-            if (!empty($filters['enrollmentNo'])) {
-                $parts = explode('/', strtolower($filters['enrollmentNo']));
-                if (count($parts) >= 3) {
-                    $courseCode = $parts[1]; // e.g. 'cst'
-                    // We only want notes uploaded by students in the same course, OR we assume the note's enrollmentNo indicates the course it belongs to.
-                    // Better yet, the system relies on checking the uploader's course.
-                    $query .= " AND LOWER(n.enrollmentNo) LIKE :courseFilter";
-                    $params[':courseFilter'] = "%/{$courseCode}/%";
-                }
-            }
+            // Note: we intentionally do NOT filter by the viewer's own enrollmentNo/course here.
+            // Notes are shared across all courses. Use the explicit courseCode filter below if needed.
             
             if (!empty($filters['courseUnitID'])) {
                 $query .= " AND n.courseUnitID = :cuid";

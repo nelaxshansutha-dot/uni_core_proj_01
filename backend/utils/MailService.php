@@ -72,16 +72,19 @@ class MailService {
     }
 
     public static function sendOTP(string $toEmail, string $otpCode): bool {
+        // ALWAYS log OTP for local debugging, even if real SMTP is used
+        $subject = "Your UniCore OTP Verification Code ({$otpCode})";
+        self::logMailToFile($toEmail, $subject, "Your UniCore OTP is: {$otpCode}. It expires in 15 minutes.");
+
         $mail = self::getMailer();
         if (!$mail) {
-            self::logMailToFile($toEmail, 'Your UniCore OTP Verification Code', "Your UniCore OTP is: {$otpCode}. It expires in 15 minutes.");
             return true;
         }
 
         try {
             $mail->addAddress($toEmail);
             $mail->isHTML(true);
-            $mail->Subject = 'Your UniCore OTP Verification Code';
+            $mail->Subject = $subject;
             $mail->Body    = "
                 <div style='font-family: Arial, sans-serif; max-width: 480px; margin: auto; padding: 30px; border: 1px solid #e0e0e0; border-radius: 10px; color: #333;'>
                     <h2 style='color: #4f46e5;'>UniCore — Email Verification</h2>
@@ -99,7 +102,6 @@ class MailService {
             $result = $mail->send();
             if (!$result) {
                 error_log('[UniCore MailService] OTP send failed: ' . $mail->ErrorInfo);
-                self::logMailToFile($toEmail, $mail->Subject, $mail->AltBody);
                 return true;
             }
             return $result;

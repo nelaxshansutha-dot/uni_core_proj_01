@@ -201,3 +201,58 @@ INSERT INTO Course_units (courseUnitID, courseID, courseUnitName, academicYear, 
 ('ESD 121-2', 1, 'English Language Level I', 1, 1),
 ('CST 122-2', 1, 'Web Programming', 1, 1),
 ('CST 131-2', 1, 'Fundamentals of Computer Networks', 1, 1);
+
+-- Insert 'Science and Technology' Course
+INSERT INTO Course (courseName) VALUES ('Science and Technology');
+
+-- Insert Course Units for Science and Technology (2nd Year, 1st Semester)
+INSERT INTO Course_units (courseUnitID, courseID, courseUnitName, academicYear, semester) VALUES
+('SCT 201-1', 2, 'Abstract Algebra', 2, 1),
+('SCT 211-2', 2, 'Statistical Methods', 2, 1),
+('SCT 221-1', 2, 'Microbiology - I', 2, 1),
+('SCT 222-2', 2, 'Biochemistry', 2, 1),
+('SCT 231-2', 2, 'Physical Chemistry', 2, 1),
+('SCT 252-1', 2, 'Optics', 2, 1),
+('SCT 251-2', 2, 'Electricity and Magnetism', 2, 1),
+('SCT 261-1', 2, 'Database Management Systems', 2, 1);
+
+-- Insert Course Units for Science and Technology (2nd Year, 2nd Semester)
+INSERT INTO Course_units (courseUnitID, courseID, courseUnitName, academicYear, semester) VALUES
+('SCT 202-3', 2, 'Differential Equations and Applications', 2, 2),
+('SCT 212-1', 2, 'Operational Research', 2, 2),
+('SCT 223-3', 2, 'Diversity of Life', 2, 2),
+('SCT 232-2', 2, 'Organic Chemistry', 2, 2),
+('SCT 242-2', 2, 'Engineering Thermodynamics', 2, 2),
+('SCT 253-1', 2, 'Basic Electronics', 2, 2),
+('SCT 241-2', 2, 'Mechanics of Materials', 2, 2),
+('BGE 213-1', 2, 'History', 2, 2),
+('BGE 214-1', 2, 'Geography', 2, 2);
+
+-- Insert Course Units for Computer Science and Technology (3rd Year, 1st Semester)
+INSERT INTO Course_units (courseUnitID, courseID, courseUnitName, academicYear, semester) VALUES
+('CST 328-2', 1, 'Advanced Programming Techniques', 3, 1),
+('CST 371-2', 1, 'Human Computer Interaction', 3, 1),
+('CST 372-3', 1, 'Intelligent Systems', 3, 1),
+('CST 327-2', 1, 'Advanced Database Management Systems', 3, 1),
+('CST 381-2', 1, 'Computer Graphics', 3, 1),
+('CST 333-2', 1, 'Data and Network Security', 3, 1),
+('SCT 384-2', 1, 'Embedded Systems', 3, 1),
+('CST 344-2', 1, 'Management Information Systems', 3, 1),
+('CST 345-2', 1, 'Mobile Application Development', 3, 1),
+('CST 393-2', 1, 'Principles of Management', 3, 1),
+('ESD 311-1', 1, 'Communication Skills - II', 3, 1),
+('CST 315-2', 1, 'Mathematics for Computing', 3, 1);
+
+-- Insert Course Units for Computer Science and Technology (3rd Year, 2nd Semester)
+INSERT INTO Course_units (courseUnitID, courseID, courseUnitName, academicYear, semester) VALUES
+('CST 347-2', 1, 'Software Architecture & Design Patterns', 3, 2),
+('CST 363-2', 1, 'Computer Systems Architecture', 3, 2),
+('CST 394-2', 1, 'Project - II', 3, 2),
+('CST 346-2', 1, 'Software Quality Assurance', 3, 2),
+('CST 382-3', 1, 'Digital Image Processing', 3, 2),
+('CST 364-2', 1, 'Systems Level Programming', 3, 2),
+('CST 395-2', 1, 'Research Methodology and Scientific Writing', 3, 2),
+('CST 396-1', 1, 'Emerging Technologies in Computer Science and Informatics', 3, 2),
+('CST 334-2', 1, 'Mobile Computing', 3, 2),
+('CST 316-2', 1, 'Statistical Method - II', 3, 2),
+('CST 351-2', 1, 'Parallel and Distributed Computing', 3, 2);

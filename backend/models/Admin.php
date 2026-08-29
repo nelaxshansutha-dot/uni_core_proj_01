@@ -7,12 +7,20 @@ use Exception;
 
 class Admin extends User {
     
+    private $adminID;
+
+    public function getAdminID() { return $this->adminID; }
+    public function setAdminID($val) { $this->adminID = $val; return $this; }
+
     public function __construct() {
         parent::__construct();
     }
 
     public function hydrate(array $data = []): static {
         parent::hydrate($data);
+        if (array_key_exists('adminID', $data)) {
+            $this->setAdminID($data['adminID']);
+        }
         return $this;
     }
 
@@ -22,8 +30,12 @@ class Admin extends User {
             if (!parent::register()) {
                 throw new \Exception("Failed to register user");
             }
-            $query = "INSERT INTO admin (userID) VALUES (:uid)";
+            if (empty($this->adminID)) {
+                $this->adminID = uniqid('admin_');
+            }
+            $query = "INSERT INTO admin (adminID, userID) VALUES (:adminID, :uid)";
             $stmt = $this->conn->prepare($query);
+            $stmt->bindValue(':adminID', $this->adminID, PDO::PARAM_STR);
             $stmt->bindValue(':uid', $this->getUserID(), PDO::PARAM_INT);
             $stmt->execute();
             $this->conn->commit();
@@ -116,6 +128,34 @@ class Admin extends User {
                 $this->conn->prepare("UPDATE student SET courseID = :cid, std_year = COALESCE(std_year, :yr) WHERE userID = :uid")
                    ->execute([':cid' => $courseID, ':yr' => $stdYear, ':uid' => $userID]);
             }
+
+            // ─── DUPLICATE CHECK ──────────────────────────────────────────────────────
+            // Block assignment if ANOTHER rep already exists for the same course + batch year.
+            // Batch year is extracted from enrollmentNo (e.g. UWU/CST/23/088 → batch 23).
+            if ($courseID && $batchYear) {
+                $dupStmt = $this->conn->prepare(
+                    "SELECT cr.userID, cr.enrollmentNo, u.fname, u.lname
+                     FROM course_representative cr
+                     JOIN users u ON cr.userID = u.userID
+                     WHERE cr.courseID = :cid
+                       AND cr.userID != :uid
+                       AND CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(cr.enrollmentNo, '/', 3), '/', -1) AS UNSIGNED) = :batch
+                     LIMIT 1"
+                );
+                $dupStmt->execute([':cid' => $courseID, ':uid' => $userID, ':batch' => $batchYear]);
+                $existing = $dupStmt->fetch(PDO::FETCH_ASSOC);
+
+                if ($existing) {
+                    $this->conn->rollBack();
+                    return [
+                        'success' => false,
+                        'message' => "A Course Representative already exists for this course and batch year. "
+                                   . "Existing rep: {$existing['fname']} {$existing['lname']} ({$existing['enrollmentNo']}). "
+                                   . "Please un-assign the current rep first before assigning a new one."
+                    ];
+                }
+            }
+            // ─────────────────────────────────────────────────────────────────────────
 
             $repId = !empty($data['rep_id']) 
                 ? strtolower(trim($data['rep_id'])) 

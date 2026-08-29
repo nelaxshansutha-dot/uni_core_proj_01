@@ -15,15 +15,21 @@ class NotificationController {
         $db      = Database::getInstance()->getConnection();
 
         try {
+            // Use UNION so this works for both regular students and course representatives.
+            // Students: look up via the student table.
+            // Reps: look up via the course_representative table (which also holds an enrollmentNo).
             $stmt = $db->prepare(
                 "SELECT an.appID AS id, an.message, an.created_at, 'peer_learning' AS type
                  FROM app_notification an
-                 JOIN student s ON an.enrollmentNo = s.enrollmentNo
-                 WHERE s.userID = :uid
+                 WHERE an.enrollmentNo IN (
+                     SELECT s.enrollmentNo FROM student s WHERE s.userID = :uid1
+                     UNION
+                     SELECT cr.enrollmentNo FROM course_representative cr WHERE cr.userID = :uid2
+                 )
                  ORDER BY an.created_at DESC
                  LIMIT 20"
             );
-            $stmt->execute([':uid' => $userID]);
+            $stmt->execute([':uid1' => $userID, ':uid2' => $userID]);
             $notifications = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
             echo json_encode([
@@ -87,11 +93,21 @@ class NotificationController {
      */
     public function dismiss($id) {
         $decoded      = AuthMiddleware::authenticate();
+        $userID       = $decoded->userID;
         $enrollmentNo = $decoded->enrollmentNo ?? null;
         $db           = Database::getInstance()->getConnection();
 
         if (!$this->validateNotificationID($id)) {
             return;
+        }
+
+        // For course_representative users the JWT may not carry enrollmentNo,
+        // so resolve it from the course_representative table if needed.
+        if (!$enrollmentNo && ($decoded->role ?? '') === 'course_representative') {
+            $repStmt = $db->prepare("SELECT enrollmentNo FROM course_representative WHERE userID = :uid LIMIT 1");
+            $repStmt->execute([':uid' => $userID]);
+            $repRow = $repStmt->fetch(\PDO::FETCH_ASSOC);
+            $enrollmentNo = $repRow['enrollmentNo'] ?? null;
         }
 
         // Only dismiss from app_notification (peer_learning); lost-item SMS rows are unaffected
