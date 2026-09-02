@@ -5,8 +5,6 @@ namespace Middleware;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 use Exception;
-use Config\Database;
-use PDO;
 
 class AuthMiddleware {
     
@@ -36,26 +34,13 @@ class AuthMiddleware {
 
         try {
             $decoded = JWT::decode($token, new Key(self::getSecretKey(), 'HS256'));
-            
-            // Check if token is revoked
-            $db = Database::getInstance()->getConnection();
-            $stmt = $db->prepare("SELECT id FROM revoked_tokens WHERE jti = :jti LIMIT 1");
-            $stmt->bindParam(':jti', $decoded->jti);
-            $stmt->execute();
-            if ($stmt->fetch(PDO::FETCH_ASSOC)) {
-                http_response_code(401);
-                echo json_encode(["success" => false, "message" => "Unauthorized. Token has been revoked."]);
-                exit;
-            }
 
-            // Role check
             if (!empty($allowedRoles) && !in_array($decoded->role, $allowedRoles)) {
                 http_response_code(403);
                 echo json_encode(["success" => false, "message" => "Forbidden. Insufficient permissions."]);
                 exit;
             }
 
-            // Return user context
             return $decoded;
 
         } catch (Exception $e) {

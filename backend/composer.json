@@ -12,7 +12,8 @@
             "Middleware\\": "middleware/",
             "Controllers\\": "controllers/",
             "Utils\\": "utils/",
-            "Services\\": "services/"
+            "Services\\": "services/",
+            "DAO\\": "dao/"
         }
     },
     "config": {

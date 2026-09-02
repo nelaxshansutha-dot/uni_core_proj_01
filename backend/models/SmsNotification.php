@@ -4,16 +4,15 @@ use Config\Database;
 use PDO;
 
 class SmsNotification {
-    private $conn;
-
     private $smsID;
     private $lostID;
     private $userID;
     private $message;
     private $created_at;
+    private $dao;
 
     public function __construct() {
-        $this->conn = Database::getInstance()->getConnection();
+        $this->dao = new \DAO\SmsNotificationDAO();
     }
 
     public function hydrate(array $data = []): static {
@@ -62,25 +61,15 @@ class SmsNotification {
             return false;
         }
 
-        $stmt = $this->conn->prepare("SELECT lost_item_sms_notification FROM users WHERE userID = :uid");
-        $stmt->execute([':uid' => $this->userID]);
-        $pref = $stmt->fetchColumn();
+        $pref = $this->dao->getUserPreference($this->userID);
 
         if ($pref) {
-            $query = "INSERT INTO sms_notification (lostID, userID, message) VALUES (:lid, :uid, :msg)";
-            $ins = $this->conn->prepare($query);
-            return $ins->execute([
-                ':lid' => $this->lostID,
-                ':uid' => $this->userID,
-                ':msg' => $this->message
-            ]);
+            return $this->dao->insert($this->lostID, $this->userID, $this->message);
         }
         return false;
     }
 
     public function view($userID) {
-        $stmt = $this->conn->prepare("SELECT * FROM sms_notification WHERE userID = :uid ORDER BY created_at DESC");
-        $stmt->execute([':uid' => $userID]);
-        return $stmt->fetchAll();
+        return $this->dao->view($userID);
     }
 }

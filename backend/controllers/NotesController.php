@@ -160,10 +160,8 @@ class NotesController {
                 }
             } elseif ($decoded->role === 'course_representative' || $decoded->role === 'rep') {
                 // Check if rep belongs to the same course and year
-                $db = \Config\Database::getInstance()->getConnection();
-                $stmt = $db->prepare("SELECT s.courseID, s.std_year FROM student s WHERE s.enrollmentNo = :enr");
-                $stmt->execute([':enr' => $decoded->enrollmentNo]);
-                $repData = $stmt->fetch(\PDO::FETCH_ASSOC);
+                $studentDao = new \DAO\StudentDAO();
+                $repData = $studentDao->getStudentByEnrollmentNo($decoded->enrollmentNo);
                 
                 if ($repData && $repData['courseID'] == $note['courseID']) {
                     $canDelete = true;

@@ -1,19 +1,16 @@
 <?php
 namespace Models;
 use Config\Database;
-use PDO;
-
 class OtpVerification {
-    private $conn;
-
     private $otpID;
     private $otpCode;
     private $created_at;
     private $expired_at;
     private $verified_at;
+    private $dao;
 
     public function __construct() {
-        $this->conn = Database::getInstance()->getConnection();
+        $this->dao = new \DAO\OtpVerificationDAO();
     }
 
    
@@ -57,17 +54,7 @@ class OtpVerification {
         $this->expired_at = date('Y-m-d H:i:s', strtotime('+15 minutes'));
         $this->created_at = date('Y-m-d H:i:s');
         
-        // $userID is used directly since it's not a requested class property
-        $query = "INSERT INTO otp_verification (userID, otp_code, created_at, expired_at) VALUES (:uid, :otp, :cr, :exp)";
-        $stmt = $this->conn->prepare($query);
-        $stmt->execute([
-            ':uid' => $userID, 
-            ':otp' => $this->otpCode,
-            ':cr' => $this->created_at,
-            ':exp' => $this->expired_at
-        ]);
-        
-        $this->otpID = $this->conn->lastInsertId();
+        $this->otpID = $this->dao->generate($userID, $this->otpCode, $this->created_at, $this->expired_at);
         return $this->otpCode;
     }
 
@@ -75,11 +62,7 @@ class OtpVerification {
         $this->otpCode = $otp; 
         $now = date('Y-m-d H:i:s');
         
-        $query = "SELECT * FROM otp_verification WHERE userID = :uid AND otp_code = :otp AND expired_at > :now AND verified_at IS NULL LIMIT 1";
-        $stmt = $this->conn->prepare($query);
-        // Note: $userID is not a property so it is passed directly
-        $stmt->execute([':uid' => $userID, ':otp' => $this->otpCode, ':now' => $now]);
-        $row = $stmt->fetch();
+        $row = $this->dao->getActiveOtp($userID, $this->otpCode, $now);
 
         if ($row) {
             // Hydrate the model
@@ -88,11 +71,7 @@ class OtpVerification {
             $this->expired_at = $row['expired_at'];
             $this->verified_at = $now;
             
-            $upd = $this->conn->prepare("UPDATE otp_verification SET verified_at = :ver WHERE otpID = :id");
-            $upd->execute([
-                ':ver' => $this->verified_at,
-                ':id' => $this->otpID
-            ]);
+            $this->dao->setVerified($this->otpID, $this->verified_at);
             return true;
         }
         return false;
@@ -101,12 +80,10 @@ class OtpVerification {
     public function isExpired($otpID) {
         $this->otpID = $otpID; // Map parameter to property
         
-        $stmt = $this->conn->prepare("SELECT expired_at FROM otp_verification WHERE otpID = :id");
-        $stmt->execute([':id' => $this->otpID]);
-        $res = $stmt->fetch();
+        $expired_at = $this->dao->getExpiredAt($this->otpID);
         
-        if ($res) {
-            $this->expired_at = $res['expired_at'];
+        if ($expired_at) {
+            $this->expired_at = $expired_at;
             return strtotime($this->expired_at) < time();
         }
         return true;

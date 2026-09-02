@@ -6,16 +6,13 @@ use PDO;
 class Course {
     private $courseID;
     private $courseName;
-    private $conn;
+    private $dao;
 
     public function __construct() {
-        $this->conn = Database::getInstance()->getConnection();
+        $this->dao = new \DAO\CourseDAO();
     }
 
     public function getCourseUnits() {
-        $stmt = $this->conn->prepare("SELECT * FROM course_units WHERE courseID = :cid");
-        $stmt->bindParam(':cid', $this->courseID);
-        $stmt->execute();
-        return $stmt->fetchAll();
+        return $this->dao->getCourseUnits($this->courseID);
     }
 }

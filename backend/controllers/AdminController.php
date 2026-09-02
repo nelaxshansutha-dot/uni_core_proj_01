@@ -78,8 +78,8 @@ class AdminController {
             $userID = $user->register();
             
             // Auto verify admin created users
-            $db = \Config\Database::getInstance()->getConnection();
-            $db->prepare("UPDATE users SET is_verified = 1 WHERE userID = ?")->execute([$userID]);
+            $userDao = new \DAO\UserDAO();
+            $userDao->markUserVerified($userID);
             
             echo json_encode(['success' => true, 'message' => 'User created successfully']);
         } catch (\Exception $e) {
@@ -101,17 +101,14 @@ class AdminController {
             return;
         }
 
-        $db = \Config\Database::getInstance()->getConnection();
-        
-        $sql = "UPDATE users SET fname = :fname, lname = :lname, phoneNum = :phone, email = :email WHERE userID = :uid";
-        $stmt = $db->prepare($sql);
-        $success = $stmt->execute([
-            ':fname' => $data['first_name'],
-            ':lname' => $data['last_name'],
-            ':phone' => $data['phone_number'],
-            ':email' => $data['email'],
-            ':uid' => $id
-        ]);
+        $userDao = new \DAO\UserDAO();
+        $success = $userDao->updateBasicProfile(
+            $id,
+            $data['first_name'],
+            $data['last_name'],
+            $data['phone_number'],
+            $data['email']
+        );
         
         if ($success) echo json_encode(['success' => true]);
         else echo json_encode(['success' => false, 'message' => 'Failed to update user']);
@@ -134,9 +131,12 @@ class AdminController {
             }
 
             $uid = str_replace('rep_', '', $id);
-            $db = \Config\Database::getInstance()->getConnection();
-            $db->prepare("UPDATE users SET role = 'student' WHERE userID = ?")->execute([$uid]);
-            $db->prepare("DELETE FROM course_representative WHERE userID = ?")->execute([$uid]);
+            $userDao = new \DAO\UserDAO();
+            $userDao->updateRole($uid, 'student');
+            
+            $courseRepDao = new \DAO\CourseRepresentativeDAO();
+            $courseRepDao->deleteRepByUserId($uid);
+            
             echo json_encode(['success' => true]);
             return;
         }
@@ -152,12 +152,10 @@ class AdminController {
         $isActiveValue = filter_var($data['is_active'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
         $isActive = $isActiveValue ? 1 : 0;
         $reason = $data['reason'] ?? 'No reason provided by administrator.';
-        $db = \Config\Database::getInstance()->getConnection();
+        $userDao = new \DAO\UserDAO();
         
         if ($isActive === 0) {
-            $stmt = $db->prepare("SELECT email FROM users WHERE userID = :uid");
-            $stmt->execute([':uid' => $id]);
-            $user = $stmt->fetch(\PDO::FETCH_ASSOC);
+            $user = $userDao->getUserById($id);
             
             if ($user && !empty($user['email'])) {
                 require_once __DIR__ . '/../utils/MailService.php';
@@ -165,8 +163,7 @@ class AdminController {
             }
         }
         
-        $stmt = $db->prepare("UPDATE users SET is_active = :status WHERE userID = :uid");
-        $success = $stmt->execute([':status' => $isActive, ':uid' => $id]);
+        $success = $userDao->updateActiveStatus($id, $isActive);
         
         echo json_encode(['success' => $success]);
     }
@@ -181,16 +178,8 @@ class AdminController {
             return;
         }
 
-        $db = \Config\Database::getInstance()->getConnection();
-        
-        $sql = "SELECT u.userID as id, u.fname as first_name, u.lname as last_name, u.email, u.phoneNum as phone_number, u.role, s.enrollmentNo as enrollment_no, s.courseID as course, s.std_year as year
-                FROM users u 
-                JOIN student s ON u.userID = s.userID 
-                WHERE u.role = 'student' AND (s.enrollmentNo LIKE :q OR u.fname LIKE :q OR u.email LIKE :q)";
-        
-        $stmt = $db->prepare($sql);
-        $stmt->execute([':q' => "%$q%"]);
-        $students = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        $studentDao = new \DAO\StudentDAO();
+        $students = $studentDao->searchStudents($q);
         
         echo json_encode(['success' => true, 'data' => $students]);
     }
@@ -236,8 +225,6 @@ class AdminController {
             return;
         }
 
-        $db = \Config\Database::getInstance()->getConnection();
-        
         $contentType = $data['content_type'] ?? '';
         $contentId = $data['content_id'] ?? null;
         $status = $data['status'] ?? '';
@@ -248,34 +235,31 @@ class AdminController {
             $title = '';
 
             if ($contentType === 'lost_item') {
-                $stmt = $db->prepare("SELECT u.email, l.lostItemName as title FROM lost_items l JOIN users u ON l.userID = u.userID WHERE l.lostID = ?");
-                $stmt->execute([$contentId]);
-                $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+                $lostItemDao = new \DAO\LostItemDAO();
+                $row = $lostItemDao->getLostItemWithOwner($contentId);
                 if ($row) {
                     $ownerEmail = $row['email'];
                     $title = $row['title'];
                 }
-                $db->prepare("DELETE FROM lost_items WHERE lostID = ?")->execute([$contentId]);
+                $lostItemDao->deleteByAdmin($contentId);
 
             } elseif ($contentType === 'marketplace') {
-                $stmt = $db->prepare("SELECT u.email, m.productName as title FROM marketplace m JOIN users u ON m.userID = u.userID WHERE m.productID = ?");
-                $stmt->execute([$contentId]);
-                $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+                $marketplaceDao = new \DAO\MarketplaceDAO();
+                $row = $marketplaceDao->getMarketItemWithOwner($contentId);
                 if ($row) {
                     $ownerEmail = $row['email'];
                     $title = $row['title'];
                 }
-                $db->prepare("DELETE FROM marketplace WHERE productID = ?")->execute([$contentId]);
+                $marketplaceDao->deleteByAdmin($contentId);
 
             } elseif ($contentType === 'notes') {
-                $stmt = $db->prepare("SELECT u.email, n.title FROM notes n JOIN student s ON n.enrollmentNo = s.enrollmentNo JOIN users u ON s.userID = u.userID WHERE n.noteID = ?");
-                $stmt->execute([$contentId]);
-                $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+                $notesDao = new \DAO\NotesDAO();
+                $row = $notesDao->getNoteWithOwner($contentId);
                 if ($row) {
                     $ownerEmail = $row['email'];
                     $title = $row['title'];
                 }
-                $db->prepare("DELETE FROM notes WHERE noteID = ?")->execute([$contentId]);
+                $notesDao->deleteByAdmin($contentId);
             }
 
             // Send notification email to content owner

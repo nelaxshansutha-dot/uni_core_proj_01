@@ -2,6 +2,10 @@
 namespace Controllers;
 use Models\PeerLearningRequest;
 use Middleware\AuthMiddleware;
+use DAO\PeerLearningRequestDAO;
+use DAO\CourseRepresentativeDAO;
+use DAO\StudentDAO;
+use DAO\CourseUnitDAO;
 
 class PeerLearningRequestController {
 
@@ -32,17 +36,16 @@ class PeerLearningRequestController {
         $studentBatchYear = \Models\Student::extractBatchYear($enrollmentNo);
         if (!$studentBatchYear) return null;
 
-        $db = \Config\Database::getInstance()->getConnection();
-        
-        $stmt = $db->prepare("SELECT courseID FROM student WHERE enrollmentNo = :enr LIMIT 1");
-        $stmt->execute([':enr' => $enrollmentNo]);
-        $studentCourseID = $stmt->fetchColumn();
-        if (!$studentCourseID) return null;
+        $studentDAO = new StudentDAO();
+        $student = $studentDAO->getStudentByEnrollmentNo($enrollmentNo);
+        if (!$student || empty($student['courseID'])) return null;
 
-        $stmt = $db->prepare("SELECT repID, enrollmentNo FROM course_representative WHERE courseID = :cid AND (is_active = 1 OR is_active IS NULL)");
-        $stmt->execute([':cid' => $studentCourseID]);
+        $studentCourseID = $student['courseID'];
+
+        $repDAO = new CourseRepresentativeDAO();
+        $activeReps = $repDAO->getActiveRepsByCourseID($studentCourseID);
         
-        while ($rep = $stmt->fetch(\PDO::FETCH_ASSOC)) {
+        foreach ($activeReps as $rep) {
             $repBatchYear = \Models\Student::extractBatchYear($rep['enrollmentNo']);
             if ($repBatchYear === $studentBatchYear) {
                 return (int)$rep['repID'];
@@ -54,7 +57,6 @@ class PeerLearningRequestController {
 
     public function handleRequest($method, $id = null, $action = null) {
         $decoded = AuthMiddleware::authenticate(['student', 'course_representative']);
-        $db      = \Config\Database::getInstance()->getConnection();
 
         // ─── GET ──────────────────────────────────────────────────────────
         if ($method === 'GET') {
@@ -63,41 +65,21 @@ class PeerLearningRequestController {
             if ($role === 'course_representative') {
                 // Rep sees ALL requests assigned to them, grouped by courseUnit
                 // showing the count of students who requested each module
-                $repStmt = $db->prepare("SELECT repID FROM course_representative WHERE userID = :uid LIMIT 1");
-                $repStmt->execute([':uid' => $decoded->userID]);
-                $repRow  = $repStmt->fetch(\PDO::FETCH_ASSOC);
-                $repID   = $repRow ? (int)$repRow['repID'] : null;
+                $repDAO = new CourseRepresentativeDAO();
+                $repID = $repDAO->getRepIdByUserId($decoded->userID);
 
                 if (!$repID) {
                     echo json_encode(['status' => 'success', 'data' => []]);
                     return;
                 }
 
-                // Group requests by courseUnitID + courseUnitName, count students
-                $stmt = $db->prepare(
-                    "SELECT 
-                        courseUnitID,
-                        courseUnitName,
-                        MAX(semester) as semester,
-                        MAX(std_year) as std_year,
-                        CASE WHEN SUM(status = 'pending') > 0 THEN 'pending' ELSE MAX(status) END AS status,
-                        COUNT(DISTINCT enrollmentNo) AS request_count,
-                        GROUP_CONCAT(description ORDER BY created_at ASC SEPARATOR '|||') AS descriptions,
-                        MAX(created_at) AS latest_request
-                     FROM peer_learning_request
-                     WHERE repID = :rid
-                     GROUP BY courseUnitID, courseUnitName
-                     ORDER BY request_count DESC, latest_request DESC"
-                );
-                $stmt->execute([':rid' => $repID]);
-                $grouped = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+                $plrDAO = new PeerLearningRequestDAO();
+                $grouped = $plrDAO->getGroupedRequestsForRep($repID);
 
                 // Convert grouped descriptions into arrays and filter out "General unit request" if there are specific ones
                 foreach ($grouped as &$row) {
                     if ($row['descriptions']) {
                         $allDesc = array_filter(explode('|||', $row['descriptions']));
-                        // Optional: filter out exact "General unit request" strings if you only want to show specific questions
-                        // But let's keep all for now so the count matches.
                         $row['descriptions_list'] = array_values($allDesc);
                     } else {
                         $row['descriptions_list'] = [];
@@ -114,15 +96,9 @@ class PeerLearningRequestController {
                     echo json_encode(['status' => 'success', 'data' => []]);
                     return;
                 }
-                $stmt = $db->prepare(
-                    "SELECT plr.*, cu.courseUnitName as unitLabel
-                     FROM peer_learning_request plr
-                     LEFT JOIN course_units cu ON plr.courseUnitID = cu.courseUnitID
-                     WHERE plr.enrollmentNo = :enr
-                     ORDER BY plr.created_at DESC"
-                );
-                $stmt->execute([':enr' => $enrollmentNo]);
-                $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+                
+                $plrDAO = new PeerLearningRequestDAO();
+                $rows = $plrDAO->getRequestsByEnrollmentNo($enrollmentNo);
                 echo json_encode(['status' => 'success', 'data' => $rows]);
             }
             return;
@@ -183,20 +159,15 @@ class PeerLearningRequestController {
 
             // If courseUnitName not given, look it up
             if (!$courseUnitName && $courseUnitID) {
-                $cu = $db->prepare("SELECT courseUnitName, semester FROM course_units WHERE courseUnitID = :id");
-                $cu->execute([':id' => $courseUnitID]);
-                $cuRow = $cu->fetch(\PDO::FETCH_ASSOC);
+                $cuDAO = new CourseUnitDAO();
+                $cuRow = $cuDAO->view($courseUnitID);
                 $courseUnitName = $cuRow['courseUnitName'] ?? $courseUnitID;
                 if (!$semester) $semester = $cuRow['semester'] ?? null;
             }
 
             // Check for duplicate request (same student + same courseUnit + pending)
-            $dupCheck = $db->prepare(
-                "SELECT requestID FROM peer_learning_request 
-                 WHERE enrollmentNo = :enr AND courseUnitID = :cuid AND status = 'pending'"
-            );
-            $dupCheck->execute([':enr' => $enrollmentNo, ':cuid' => $courseUnitID]);
-            if ($dupCheck->fetch()) {
+            $plrDAO = new PeerLearningRequestDAO();
+            if ($plrDAO->hasPendingRequest($enrollmentNo, $courseUnitID)) {
                 echo json_encode(['status' => 'error', 'message' => 'You have already submitted a pending request for this module.']);
                 return;
             }
@@ -247,23 +218,23 @@ class PeerLearningRequestController {
             $status       = $data['status']       ?? null;
 
             // Get rep's repID
-            $repStmt = $db->prepare("SELECT repID FROM course_representative WHERE userID = :uid LIMIT 1");
-            $repStmt->execute([':uid' => $decoded->userID]);
-            $repRow = $repStmt->fetch(\PDO::FETCH_ASSOC);
-            $repID  = $repRow ? (int)$repRow['repID'] : null;
+            $repDAO = new CourseRepresentativeDAO();
+            $repID = $repDAO->getRepIdByUserId($decoded->userID);
+
+            if (!$repID) {
+                echo json_encode(['status' => 'error', 'message' => 'Rep ID not found.']);
+                return;
+            }
+
+            $plrDAO = new PeerLearningRequestDAO();
 
             // Special handling for broadcast_help
             if ($status === 'broadcast_help') {
-                $stmt = $db->prepare(
-                    "UPDATE peer_learning_request 
-                     SET status = 'completed' 
-                     WHERE repID = :rid AND courseUnitID = :cuid AND status = 'pending'"
-                );
-                $ok = $stmt->execute([':rid' => $repID, ':cuid' => $courseUnitID]);
+                $ok = $plrDAO->updatePendingStatusForRepAndCourse($repID, $courseUnitID, 'completed');
 
                 if ($ok) {
                     $customMsg = $data['message'] ?? '';
-                    $this->dispatchBroadcastNotifications($repID, $courseUnitID, $db, $customMsg);
+                    $this->dispatchBroadcastNotifications($repID, $courseUnitID, $customMsg);
                 }
 
                 echo json_encode(['status' => $ok ? 'success' : 'error']);
@@ -271,16 +242,11 @@ class PeerLearningRequestController {
             }
 
             // Update ALL pending requests for this courseUnit assigned to this rep
-            $stmt = $db->prepare(
-                "UPDATE peer_learning_request 
-                 SET status = :status 
-                 WHERE repID = :rid AND courseUnitID = :cuid AND status = 'pending'"
-            );
-            $ok = $stmt->execute([':status' => $status, ':rid' => $repID, ':cuid' => $courseUnitID]);
+            $ok = $plrDAO->updatePendingStatusForRepAndCourse($repID, $courseUnitID, $status);
 
             // If approved, notify all the requesting students
             if ($ok && $status === 'approved') {
-                $this->dispatchApprovalNotifications($repID, $courseUnitID, $db);
+                $this->dispatchApprovalNotifications($repID, $courseUnitID);
             }
 
             echo json_encode(['status' => $ok ? 'success' : 'error']);
@@ -294,25 +260,17 @@ class PeerLearningRequestController {
     /**
      * Notify all students whose request for this courseUnit was just approved.
      */
-    private function dispatchApprovalNotifications(int $repID, string $courseUnitID, $db): void {
-        // Get courseUnitName
-        $cu = $db->prepare("SELECT courseUnitName FROM course_units WHERE courseUnitID = :id");
-        $cu->execute([':id' => $courseUnitID]);
-        $unitName = $cu->fetchColumn() ?: $courseUnitID;
+    private function dispatchApprovalNotifications(int $repID, string $courseUnitID): void {
+        $cuDAO = new CourseUnitDAO();
+        $cuRow = $cuDAO->view($courseUnitID);
+        $unitName = $cuRow ? $cuRow['courseUnitName'] : $courseUnitID;
 
         $message = "Your peer learning request for \"{$unitName}\" has been approved by your Course Representative!";
 
-        $students = $db->prepare(
-            "SELECT plr.enrollmentNo 
-             FROM peer_learning_request plr
-             JOIN student s ON plr.enrollmentNo = s.enrollmentNo
-             JOIN users u ON s.userID = u.userID
-             WHERE plr.repID = :rid AND plr.courseUnitID = :cuid AND plr.status = 'approved'
-             AND u.peer_learning_app_notification = 1"
-        );
-        $students->execute([':rid' => $repID, ':cuid' => $courseUnitID]);
+        $plrDAO = new PeerLearningRequestDAO();
+        $students = $plrDAO->getStudentsToNotifyForApprovedRequest($repID, $courseUnitID);
 
-        while ($row = $students->fetch(\PDO::FETCH_ASSOC)) {
+        foreach ($students as $row) {
             $appNotification = new \Models\AppNotification();
             $appNotification
                 ->setRepID($repID)
@@ -325,16 +283,13 @@ class PeerLearningRequestController {
     /**
      * Notify all seniors and batch mates for help.
      */
-    private function dispatchBroadcastNotifications(int $repID, string $courseUnitID, $db, string $customMsg = ''): void {
-        // Get courseUnitName
-        $cu = $db->prepare("SELECT courseUnitName FROM course_units WHERE courseUnitID = :id");
-        $cu->execute([':id' => $courseUnitID]);
-        $unitName = $cu->fetchColumn() ?: $courseUnitID;
+    private function dispatchBroadcastNotifications(int $repID, string $courseUnitID, string $customMsg = ''): void {
+        $cuDAO = new CourseUnitDAO();
+        $cuRow = $cuDAO->view($courseUnitID);
+        $unitName = $cuRow ? $cuRow['courseUnitName'] : $courseUnitID;
 
-        // Get Rep's details (rep_id_string)
-        $repStmt = $db->prepare("SELECT rep_id_string FROM course_representative WHERE repID = :rid LIMIT 1");
-        $repStmt->execute([':rid' => $repID]);
-        $rep_id_string = $repStmt->fetchColumn();
+        $repDAO = new CourseRepresentativeDAO();
+        $rep_id_string = $repDAO->getRepIdStringByRepId($repID);
         if (!$rep_id_string) return;
 
         // Extract course code and batch year from rep_id_string
@@ -348,16 +303,10 @@ class PeerLearningRequestController {
             : "Students in Batch {$batchYear} have requested Peer Learning for \"{$unitName}\". If you can help, please reach out to the Course Rep!";
 
         // Find all students in this course with batch year <= rep's batch year
-        $students = $db->prepare(
-            "SELECT s.enrollmentNo 
-             FROM student s
-             JOIN users u ON s.userID = u.userID
-             WHERE s.courseID = (SELECT courseID FROM course_representative WHERE repID = :rid LIMIT 1)
-             AND u.peer_learning_app_notification = 1"
-        );
-        $students->execute([':rid' => $repID]);
+        $studentDAO = new StudentDAO();
+        $students = $studentDAO->getEnrollmentsForRepCourseWithNotification($repID);
 
-        while ($row = $students->fetch(\PDO::FETCH_ASSOC)) {
+        foreach ($students as $row) {
             $studentBatch = $this->getBatchYear($row['enrollmentNo']);
             if ($studentBatch !== null && $studentBatch <= $batchYear) {
                 $appNotification = new \Models\AppNotification();

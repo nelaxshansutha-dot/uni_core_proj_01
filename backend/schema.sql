@@ -3,7 +3,6 @@
 
 SET FOREIGN_KEY_CHECKS = 0;
 
-DROP TABLE IF EXISTS `revoked_tokens`;
 DROP TABLE IF EXISTS `marketplace`;
 DROP TABLE IF EXISTS `sms_notification`;
 DROP TABLE IF EXISTS `lost_items`;
@@ -37,7 +36,6 @@ CREATE TABLE `users` (
     `lost_item_sms_notification` TINYINT(1) DEFAULT 1,
     `has_seen_lost_item_popup` TINYINT(1) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
 CREATE TABLE `course` (
     `courseID` INT AUTO_INCREMENT PRIMARY KEY,
     `courseName` VARCHAR(150) NOT NULL
@@ -151,7 +149,6 @@ CREATE TABLE `lost_items` (
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (`userID`) REFERENCES `users`(`userID`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
 CREATE TABLE `sms_notification` (
     `smsID` INT AUTO_INCREMENT PRIMARY KEY,
     `lostID` INT NOT NULL,
@@ -180,10 +177,4 @@ CREATE TABLE `marketplace` (
     `phone_number` VARCHAR(20),
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (`userID`) REFERENCES `users`(`userID`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE `revoked_tokens` (
-    `id` INT AUTO_INCREMENT PRIMARY KEY,
-    `jti` VARCHAR(255) NOT NULL UNIQUE,
-    `expires_at` INT NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

@@ -1,10 +1,11 @@
 <?php
 namespace Models;
-use Config\Database;
+
+use DAO\PeerLearningRequestDAO;
 use PDO;
 
 class PeerLearningRequest {
-    private $conn;
+    private $dao;
 
     private $requestID;
     private $courseUnitID;
@@ -19,7 +20,7 @@ class PeerLearningRequest {
     private $created_at;
 
     public function __construct() {
-        $this->conn = Database::getInstance()->getConnection();
+        $this->dao = new PeerLearningRequestDAO();
     }
 
     public function hydrate(array $data = []): static {
@@ -118,32 +119,23 @@ class PeerLearningRequest {
     public function setCreatedAt($val) { $this->created_at = $val; return $this; }
 
     public function submit() {
-        $query = "INSERT INTO peer_learning_request (courseUnitID, enrollmentNo, repID, std_year, courseUnitName, semester, description) 
-                  VALUES (:cuid, :enr, :repid, :year, :name, :sem, :description)";
-        $stmt = $this->conn->prepare($query);
-        return $stmt->execute([
-            ':cuid' => $this->courseUnitID,
-            ':enr' => $this->enrollmentNo,
-            ':repid' => $this->repID,
-            ':year' => $this->stdYear,
-            ':name' => $this->courseUnitName,
-            ':sem' => $this->semester,
-            ':description' => $this->description
-        ]);
+        return $this->dao->create(
+            $this->courseUnitID,
+            $this->enrollmentNo,
+            $this->repID,
+            $this->stdYear,
+            $this->courseUnitName,
+            $this->semester,
+            $this->description
+        );
     }
 
     public function view($requestID = null) {
-        if ($requestID) {
-            $stmt = $this->conn->prepare("SELECT * FROM peer_learning_request WHERE requestID = :id");
-            $stmt->execute([':id' => $requestID]);
-            return $stmt->fetch();
-        }
-        return false;
+        return $this->dao->view($requestID);
     }
 
     public function review($requestID, $status) {
-        $stmt = $this->conn->prepare("UPDATE peer_learning_request SET status = :status WHERE requestID = :id");
-        return $stmt->execute([':status' => $status, ':id' => $requestID]);
+        return $this->dao->review($requestID, $status);
     }
 
     public function generateForm() {
