@@ -165,6 +165,21 @@ class LostItem
 
     public function update()
     {
+   public function update()
+{
+    try {
+        $query = "UPDATE lost_items SET 
+                  lostItemName = :name, 
+                  last_seen_datetime = :lsdt,
+                  last_seen_place = :lsp,
+                  description = :desc,
+                  contact_number = :phone,
+                  status = :status,
+                  item_image = :item_image
+                  WHERE lostID = :id AND userID = :uid";
+
+        $stmt = $this->conn->prepare($query);
+
         $lsdt = null;
         if ($this->LastSeenDate && $this->lastSeenTime) {
             $lsdt = $this->LastSeenDate . ' ' . $this->lastSeenTime;
@@ -180,7 +195,22 @@ class LostItem
             $this->contactNumber,
             $this->status
         );
+        return $stmt->execute([
+            ':name' => $this->itemName,
+            ':lsdt' => $lsdt,
+            ':lsp' => $this->lastSeenPlace,
+            ':desc' => $this->description,
+            ':phone' => $this->contactNumber,
+            ':status' => $this->status,
+            ':item_image' => $this->itemImage,
+            ':id' => $this->lostID,
+            ':uid' => $this->userID
+        ]);
+
+    } catch (Exception $e) {
+        throw new Exception("Error updating lost item: " . $e->getMessage());
     }
+}
 
     public function delete($lostID, $userID)
     {
