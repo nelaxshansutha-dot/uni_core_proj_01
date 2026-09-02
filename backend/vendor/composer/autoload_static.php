@@ -45,6 +45,7 @@ class ComposerStaticInit5d0e1d76c8194e3979dcc201c14897ef
         'D' =>
         array (
             'Dotenv\\' => 7,
+            'DAO\\' => 4,
         ),
         'C' =>
         array (
@@ -69,6 +70,10 @@ class ComposerStaticInit5d0e1d76c8194e3979dcc201c14897ef
         'Symfony\\Polyfill\\Ctype\\' =>
         array (
             0 => __DIR__ . '/..' . '/symfony/polyfill-ctype',
+        ),
+        'Services\\' =>
+        array (
+            0 => __DIR__ . '/../..' . '/services',
         ),
         'PhpOption\\' =>
         array (
@@ -98,6 +103,10 @@ class ComposerStaticInit5d0e1d76c8194e3979dcc201c14897ef
         array (
             0 => __DIR__ . '/..' . '/vlucas/phpdotenv/src',
         ),
+        'DAO\\' =>
+        array (
+            0 => __DIR__ . '/../..' . '/dao',
+        ),
         'Controllers\\' =>
         array (
             0 => __DIR__ . '/../..' . '/controllers',
@@ -105,10 +114,6 @@ class ComposerStaticInit5d0e1d76c8194e3979dcc201c14897ef
         'Config\\' =>
         array (
             0 => __DIR__ . '/../..' . '/config',
-        ),
-        'Services\\' =>
-        array (
-            0 => __DIR__ . '/../..' . '/services',
         ),
     );
 

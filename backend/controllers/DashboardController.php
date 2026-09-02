@@ -13,9 +13,8 @@ class DashboardController {
 
         // Fetch recent app notifications
         try {
-            $stmt = $db->prepare("SELECT message, created_at FROM app_notification an JOIN student s ON an.enrollmentNo = s.enrollmentNo WHERE s.userID = :uid ORDER BY an.created_at DESC LIMIT 5");
-            $stmt->execute([':uid' => $userID]);
-            $notifications = $stmt->fetchAll();
+            $appNotifDao = new \DAO\AppNotificationDAO();
+            $notifications = $appNotifDao->getRecentForUser($userID, 5);
             
             foreach ($notifications as $notif) {
                 $activities[] = [
@@ -29,9 +28,8 @@ class DashboardController {
             }
             
             if ($decoded->role !== 'staff') {
-                $stmtNotes = $db->prepare("SELECT title, courseUnitID, created_at FROM notes ORDER BY created_at DESC LIMIT 5");
-                $stmtNotes->execute();
-                $recentNotes = $stmtNotes->fetchAll();
+                $notesDao = new \DAO\NotesDAO();
+                $recentNotes = $notesDao->getRecent(5);
                 
                 foreach ($recentNotes as $n) {
                     $activities[] = [
@@ -46,9 +44,8 @@ class DashboardController {
             }
 
             // Fetch lost items reported by user
-            $stmtLost = $db->prepare("SELECT lostItemName, created_at FROM lost_items WHERE userID = :uid ORDER BY created_at DESC LIMIT 5");
-            $stmtLost->execute([':uid' => $userID]);
-            $recentLost = $stmtLost->fetchAll();
+            $lostItemDao = new \DAO\LostItemDAO();
+            $recentLost = $lostItemDao->getRecentByUser($userID, 5);
             foreach ($recentLost as $l) {
                 $activities[] = [
                     'id' => uniqid(),
@@ -61,9 +58,8 @@ class DashboardController {
             }
 
             // Fetch marketplace products listed by user
-            $stmtMarket = $db->prepare("SELECT productName, price, created_at FROM marketplace WHERE userID = :uid ORDER BY created_at DESC LIMIT 5");
-            $stmtMarket->execute([':uid' => $userID]);
-            $recentMarket = $stmtMarket->fetchAll();
+            $marketplaceDao = new \DAO\MarketplaceDAO();
+            $recentMarket = $marketplaceDao->getRecentByUser($userID, 5);
             foreach ($recentMarket as $m) {
                 $activities[] = [
                     'id' => uniqid(),

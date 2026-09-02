@@ -9,6 +9,7 @@ class CourseRepresentative extends Student
     private $repID;
     private $rep_id_string;
     private $is_first_login;
+    private $courseRepDAO;
 
 
     public function getRepID()
@@ -44,6 +45,7 @@ class CourseRepresentative extends Student
     public function __construct()
     {
         parent::__construct();
+        $this->courseRepDAO = new \DAO\CourseRepresentativeDAO();
     }
 
     public function hydrate(array $data = []): static
@@ -72,36 +74,29 @@ class CourseRepresentative extends Student
     public function register()
     {
         $ownsTransaction = false;
-        if (!$this->conn->inTransaction()) {
-            $this->conn->beginTransaction();
+        if (!$this->courseRepDAO->inTransaction()) {
+            $this->courseRepDAO->beginTransaction();
             $ownsTransaction = true;
         }
         try {
-
             if (!parent::register()) {
                 throw new \Exception("Failed to register student part of rep");
             }
-            $query = "INSERT INTO course_representative (userID, enrollmentNo, courseID, rep_id_string) 
-                      VALUES (:uid, :enr, :cid, :repStr)";
-            $stmt = $this->conn->prepare($query);
-            $stmt->bindValue(':uid', $this->getUserID(), PDO::PARAM_INT);
-            $stmt->bindParam(':enr', $this->enrollmentNo);
-            if (empty($this->courseID)) {
-                $stmt->bindValue(':cid', null, PDO::PARAM_NULL);
-            } else {
-                $stmt->bindParam(':cid', $this->courseID, PDO::PARAM_INT);
-            }
-            $stmt->bindParam(':repStr', $this->rep_id_string);
-            $stmt->execute();
-            $this->repID = $this->conn->lastInsertId();
+            
+            $this->repID = $this->courseRepDAO->insertRep(
+                $this->getUserID(),
+                $this->enrollmentNo,
+                $this->courseID,
+                $this->rep_id_string
+            );
 
             if ($ownsTransaction) {
-                $this->conn->commit();
+                $this->courseRepDAO->commit();
             }
             return $this->getUserID();
         } catch (\Exception $e) {
             if ($ownsTransaction) {
-                $this->conn->rollBack();
+                $this->courseRepDAO->rollBack();
             }
             throw $e;
         }
@@ -144,8 +139,8 @@ class CourseRepresentative extends Student
     public function reviewPeerLearningRequest($requestID, $action)
     {
         $ownsTransaction = false;
-        if (!$this->conn->inTransaction()) {
-            $this->conn->beginTransaction();
+        if (!$this->courseRepDAO->inTransaction()) {
+            $this->courseRepDAO->beginTransaction();
             $ownsTransaction = true;
         }
 
@@ -163,9 +158,7 @@ class CourseRepresentative extends Student
                 $courseUnitID = $request['courseUnitID'];
 
                 // Fetch module name
-                $stmtUnit = $this->conn->prepare("SELECT courseUnitName FROM course_units WHERE courseUnitID = :cuid");
-                $stmtUnit->execute([':cuid' => $courseUnitID]);
-                $moduleName = $stmtUnit->fetchColumn() ?: $courseUnitID;
+                $moduleName = $this->courseRepDAO->getCourseUnitName($courseUnitID) ?: $courseUnitID;
 
                 $repBatch = \Models\Student::extractBatchYear($this->enrollmentNo);
                 if (!$repBatch) {
@@ -174,12 +167,10 @@ class CourseRepresentative extends Student
 
                 $message = "Students in Batch {$repBatch} have requested Peer Learning for {$moduleName}. If you can help, please reach out to the Course Rep!";
 
-                // Find all students in same course and batch <= Rep's batch
-                $stmtStud = $this->conn->prepare("SELECT enrollmentNo FROM student WHERE courseID = :cid");
-                $stmtStud->execute([':cid' => $this->courseID]);
+                $studRows = $this->courseRepDAO->getStudentEnrollmentsForCourse($this->courseID);
 
                 $studentIDs = [];
-                while ($stud = $stmtStud->fetch(\PDO::FETCH_ASSOC)) {
+                foreach ($studRows as $stud) {
                     $studBatch = \Models\Student::extractBatchYear($stud['enrollmentNo']);
                     if ($studBatch !== null && (int)$studBatch <= (int)$repBatch) {
                         $studentIDs[] = $stud['enrollmentNo'];
@@ -190,20 +181,18 @@ class CourseRepresentative extends Student
                     $this->sendNotification($studentIDs, $message);
                 }
 
-                // Update status to 'completed' for all requests belonging to this courseUnit and this Rep
-                $stmtComp = $this->conn->prepare("UPDATE peer_learning_request SET status = 'completed' WHERE courseUnitID = :cuid AND repID = :repid");
-                $stmtComp->execute([':cuid' => $courseUnitID, ':repid' => $this->repID]);
+                $this->courseRepDAO->updatePeerLearningRequestStatusCompleted($courseUnitID, $this->repID);
             } else {
                 throw new \Exception("Invalid action provided for peer learning request review.");
             }
 
             if ($ownsTransaction) {
-                $this->conn->commit();
+                $this->courseRepDAO->commit();
             }
             return true;
         } catch (\Exception $e) {
             if ($ownsTransaction) {
-                $this->conn->rollBack();
+                $this->courseRepDAO->rollBack();
             }
             throw $e;
         }
@@ -212,26 +201,6 @@ class CourseRepresentative extends Student
     
     public function sendNotification(array $studentIDs, string $message): int
     {
-        if (empty($studentIDs)) return 0;
-
-    
-        $query = "INSERT INTO app_notification (repID, enrollmentNo, message) VALUES ";
-        $values = [];
-        $params = [];
-        $i = 0;
-
-        foreach ($studentIDs as $enr) {
-            $values[] = "(:repid{$i}, :enr{$i}, :msg{$i})";
-            $params[":repid{$i}"] = $this->repID;
-            $params[":enr{$i}"] = $enr;
-            $params[":msg{$i}"] = $message;
-            $i++;
-        }
-
-        $query .= implode(', ', $values);
-        $stmt = $this->conn->prepare($query);
-        $stmt->execute($params);
-
-        return $stmt->rowCount();
+        return $this->courseRepDAO->insertNotifications($studentIDs, $this->repID, $message);
     }
 }

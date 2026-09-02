@@ -1,10 +1,11 @@
 <?php
 namespace Models;
-use Config\Database;
+
+use DAO\MarketplaceDAO;
 use PDO;
 
 class Marketplace {
-    private $conn;
+    private $dao;
 
     private $productID;
     private $sellerID;
@@ -23,7 +24,7 @@ class Marketplace {
     private $status;
 
     public function __construct() {
-        $this->conn = Database::getInstance()->getConnection();
+        $this->dao = new MarketplaceDAO();
     }
 
     public function hydrate(array $data = []): static {
@@ -186,83 +187,53 @@ class Marketplace {
     public function setStatus($val) { $this->status = $val; return $this; }
 
     public function create() {
-        $query = "INSERT INTO marketplace (userID, productName, price, condition_type, location, image_url, image_url2, image_url3, image_url4, usage_duration, description, phone_number) 
-                  VALUES (:uid, :pname, :price, :cond, :loc, :img1, :img2, :img3, :img4, :usage, :desc, :phone)";
-        $stmt = $this->conn->prepare($query);
-        $stmt->execute([
-            ':uid' => $this->userID,
-            ':pname' => $this->itemName,
-            ':price' => $this->price,
-            ':cond' => $this->conditionType,
-            ':loc' => $this->location,
-            ':img1' => $this->itemImage,
-            ':img2' => $this->itemImage2 ?? null,
-            ':img3' => $this->itemImage3 ?? null,
-            ':img4' => $this->itemImage4 ?? null,
-            ':usage' => $this->usageDuration ?? null,
-            ':desc' => $this->description,
-            ':phone' => $this->phoneNumber
-        ]);
-        $this->productID = $this->conn->lastInsertId();
+        $this->productID = $this->dao->create(
+            $this->userID,
+            $this->itemName,
+            $this->price,
+            $this->conditionType,
+            $this->location,
+            $this->itemImage,
+            $this->itemImage2 ?? null,
+            $this->itemImage3 ?? null,
+            $this->itemImage4 ?? null,
+            $this->usageDuration ?? null,
+            $this->description,
+            $this->phoneNumber
+        );
         $this->sellerID = $this->productID;
         return $this->productID;
     }
 
     public function update() {
-        $sets  = [];
-        $params = [
-            ':pid' => $this->productID ?? $this->sellerID,
-            ':uid' => $this->userID
-        ];
-
-        if ($this->itemName      !== null) { $sets[] = 'productName = :pname';       $params[':pname']  = $this->itemName; }
-        if ($this->price         !== null) { $sets[] = 'price = :price';              $params[':price']  = $this->price; }
-        if ($this->conditionType !== null) { $sets[] = 'condition_type = :cond';      $params[':cond']   = $this->conditionType; }
-        if ($this->location      !== null) { $sets[] = 'location = :loc';             $params[':loc']    = $this->location; }
-        if ($this->phoneNumber   !== null) { $sets[] = 'phone_number = :phone';       $params[':phone']  = $this->phoneNumber; }
-        if ($this->description   !== null) { $sets[] = 'description = :desc';         $params[':desc']   = $this->description; }
-        if ($this->usageDuration !== null) { $sets[] = 'usage_duration = :usage';     $params[':usage']  = $this->usageDuration; }
-        if ($this->itemImage     !== null) { $sets[] = 'image_url = :img1';           $params[':img1']   = $this->itemImage; }
-        if ($this->itemImage2    !== null) { $sets[] = 'image_url2 = :img2';          $params[':img2']   = $this->itemImage2; }
-        if ($this->itemImage3    !== null) { $sets[] = 'image_url3 = :img3';          $params[':img3']   = $this->itemImage3; }
-        if ($this->itemImage4    !== null) { $sets[] = 'image_url4 = :img4';          $params[':img4']   = $this->itemImage4; }
-        if ($this->status        !== null) { $sets[] = 'status = :status';            $params[':status'] = $this->status; }
-
-        if (empty($sets)) return false;
-
-        $query = 'UPDATE marketplace SET ' . implode(', ', $sets) . ' WHERE productID = :pid AND userID = :uid';
-        $stmt  = $this->conn->prepare($query);
-        return $stmt->execute($params);
+        return $this->dao->update(
+            $this->productID,
+            $this->sellerID,
+            $this->userID,
+            $this->itemName,
+            $this->price,
+            $this->conditionType,
+            $this->location,
+            $this->phoneNumber,
+            $this->description,
+            $this->usageDuration,
+            $this->itemImage,
+            $this->itemImage2,
+            $this->itemImage3,
+            $this->itemImage4,
+            $this->status
+        );
     }
 
     public function delete($productID, $userID) {
-        $stmt = $this->conn->prepare("DELETE FROM marketplace WHERE productID = :pid AND userID = :uid");
-        return $stmt->execute([':pid' => $productID, ':uid' => $userID]);
+        return $this->dao->delete($productID, $userID);
     }
 
     public function view($productID = null) {
-        if ($productID) {
-            $stmt = $this->conn->prepare(
-                "SELECT m.*, CONCAT(u.fname, ' ', u.lname) AS seller_name
-                 FROM marketplace m
-                 LEFT JOIN users u ON m.userID = u.userID
-                 WHERE m.productID = :pid"
-            );
-            $stmt->execute([':pid' => $productID]);
-            return $stmt->fetch(PDO::FETCH_ASSOC);
-        } else {
-            $stmt = $this->conn->query(
-                "SELECT m.*, CONCAT(u.fname, ' ', u.lname) AS seller_name
-                 FROM marketplace m
-                 LEFT JOIN users u ON m.userID = u.userID
-                 ORDER BY m.created_at DESC"
-            );
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        }
+        return $this->dao->view($productID);
     }
 
     public function flag($productID) {
-        $stmt = $this->conn->prepare("UPDATE marketplace SET is_flagged = 1 WHERE productID = :pid");
-        return $stmt->execute([':pid' => $productID]);
+        return $this->dao->flag($productID);
     }
 }

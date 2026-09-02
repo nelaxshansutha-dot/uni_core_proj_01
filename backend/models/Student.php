@@ -10,6 +10,7 @@ class Student extends User {
     protected $enrollmentNo;
     protected $courseID;
     protected $std_year;
+    private $studentDAO;
 
     public static function extractBatchYear(string $enrollmentNo): ?string {
         if (preg_match('/UWU\/[A-Z]+\/(\d{2})\//', strtoupper($enrollmentNo), $matches)) {
@@ -36,6 +37,7 @@ class Student extends User {
 
     public function __construct() {
         parent::__construct();
+        $this->studentDAO = new \DAO\StudentDAO();
     }
 
     public function hydrate(array $data = []): static {
@@ -102,39 +104,22 @@ class Student extends User {
 
     public function register() {
         $ownsTransaction = false;
-        if (!$this->conn->inTransaction()) {
-            $this->conn->beginTransaction();
+        if (!$this->studentDAO->inTransaction()) {
+            $this->studentDAO->beginTransaction();
             $ownsTransaction = true;
         }
         try {
             if (!parent::register()) {
                 throw new Exception("Failed to register user");
             }
-            $query = "INSERT INTO student (enrollmentNo, userID, courseID, std_year) VALUES (:enr, :uid, :cid, :year)";
-            $stmt = $this->conn->prepare($query);
-            $stmt->bindParam(':enr', $this->enrollmentNo);
-            $stmt->bindValue(':uid', $this->getUserID(), PDO::PARAM_INT);
-            
-            if (empty($this->courseID)) {
-                $stmt->bindValue(':cid', null, PDO::PARAM_NULL);
-            } else {
-                $stmt->bindParam(':cid', $this->courseID, PDO::PARAM_INT);
-            }
-            
-            if (empty($this->std_year)) {
-                $stmt->bindValue(':year', null, PDO::PARAM_NULL);
-            } else {
-                $stmt->bindParam(':year', $this->std_year, PDO::PARAM_INT);
-            }
-            
-            $stmt->execute();
+            $this->studentDAO->insertStudent($this->enrollmentNo, $this->getUserID(), $this->courseID, $this->std_year);
             if ($ownsTransaction) {
-                $this->conn->commit();
+                $this->studentDAO->commit();
             }
             return $this->getUserID();
         } catch (Exception $e) {
             if ($ownsTransaction) {
-                $this->conn->rollBack();
+                $this->studentDAO->rollBack();
             }
             throw $e;
         }

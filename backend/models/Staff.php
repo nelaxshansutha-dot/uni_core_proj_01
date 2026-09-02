@@ -8,6 +8,7 @@ use Exception;
 class Staff extends User {
     
     protected $staffID;
+    private $staffDAO;
 
    
     public function postLostItem(LostItem $lostItem) {
@@ -60,6 +61,7 @@ class Staff extends User {
 
     public function __construct() {
         parent::__construct();
+        $this->staffDAO = new \DAO\StaffDAO();
     }
 
     public function hydrate(array $data = []): static {
@@ -97,26 +99,22 @@ class Staff extends User {
 
     public function register() {
         $ownsTransaction = false;
-        if (!$this->conn->inTransaction()) {
-            $this->conn->beginTransaction();
+        if (!$this->staffDAO->inTransaction()) {
+            $this->staffDAO->beginTransaction();
             $ownsTransaction = true;
         }
         try {
             if (!parent::register()) {
                 throw new Exception("Failed to register user");
             }
-            $query = "INSERT INTO staff (staffID, userID) VALUES (:sid, :uid)";
-            $stmt = $this->conn->prepare($query);
-            $stmt->bindParam(':sid', $this->staffID);
-            $stmt->bindValue(':uid', $this->getUserID(), PDO::PARAM_INT);
-            $stmt->execute();
+            $this->staffDAO->insertStaff($this->staffID, $this->getUserID());
             if ($ownsTransaction) {
-                $this->conn->commit();
+                $this->staffDAO->commit();
             }
             return $this->getUserID();
         } catch (Exception $e) {
             if ($ownsTransaction) {
-                $this->conn->rollBack();
+                $this->staffDAO->rollBack();
             }
             throw $e;
         }

@@ -10,7 +10,7 @@ class Validator {
     }
 
     public function validate(array $rules) {
-        // A Validator instance can safely be reused for another validation pass.
+     
         $this->errors = [];
 
         foreach ($rules as $field => $fieldRules) {

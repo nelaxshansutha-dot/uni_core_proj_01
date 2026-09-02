@@ -10,11 +10,10 @@ class CourseUnit {
     private $courseUniName;
     private $academicYear;
     private $semester;
-    private $conn;
+    private $dao;
 
- 
     public function __construct() {
-        $this->conn = Database::getInstance()->getConnection();
+        $this->dao = new \DAO\CourseUnitDAO();
     }
 
     public function hydrate(array $data = []): static {
@@ -62,15 +61,12 @@ class CourseUnit {
    
     public function create() {
         try {
-            $query = "INSERT INTO course_units (courseUnitID, courseID, courseUnitName, semester) 
-                      VALUES (:cuid, :cid, :name, :sem)";
-            $stmt = $this->conn->prepare($query);
-            return $stmt->execute([
-                ':cuid' => $this->courseUnitID,
-                ':cid' => $this->courseID,
-                ':name' => $this->courseUniName,
-                ':sem' => $this->semester
-            ]);
+            return $this->dao->create(
+                $this->courseUnitID,
+                $this->courseID,
+                $this->courseUniName,
+                $this->semester
+            );
         } catch (\Exception $e) {
             throw new \Exception("Failed to create course unit: " . $e->getMessage());
         }
@@ -78,15 +74,7 @@ class CourseUnit {
 
   
     public function view($courseUnitID = null) {
-        if ($courseUnitID) {
-            $stmt = $this->conn->prepare("SELECT * FROM course_units WHERE courseUnitID = :cuid");
-            $stmt->execute([':cuid' => $courseUnitID]);
-            return $stmt->fetch(PDO::FETCH_ASSOC);
-        } else {
-            $stmt = $this->conn->prepare("SELECT * FROM course_units ORDER BY semester ASC, courseUnitName ASC");
-            $stmt->execute();
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        }
+        return $this->dao->view($courseUnitID);
     }
 
    
@@ -95,9 +83,6 @@ class CourseUnit {
             throw new \Exception("CourseUnitID must be set before fetching requests.");
         }
         
-        $stmt = $this->conn->prepare("SELECT * FROM peer_learning_request WHERE courseUnitID = :cuid");
-        $stmt->bindValue(':cuid', $this->courseUnitID, PDO::PARAM_STR);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return $this->dao->getRequest($this->courseUnitID);
     }
 }

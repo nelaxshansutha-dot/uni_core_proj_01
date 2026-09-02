@@ -2,13 +2,12 @@
 
 namespace Models;
 
-use Config\Database;
-use PDO;
+use DAO\LostItemDAO;
 use Exception;
 
 class LostItem
 {
-    private $conn;
+    private $dao;
 
     private $lostID;
     private $userID;
@@ -23,7 +22,7 @@ class LostItem
 
     public function __construct()
     {
-        $this->conn = Database::getInstance()->getConnection();
+        $this->dao = new LostItemDAO();
         $this->status = 'lost';
     }
 
@@ -147,32 +146,25 @@ class LostItem
 
     public function create()
     {
-        try {
-            $query = "INSERT INTO lost_items (userID, lostItemName, last_seen_datetime, last_seen_place, description, item_image, contact_number) 
-                      VALUES (:uid, :name, :lsdt, :lsp, :desc, :img, :phone)";
-            $stmt = $this->conn->prepare($query);
-
-            $lsdt = null;
-            if ($this->LastSeenDate && $this->lastSeenTime) {
-                $lsdt = $this->LastSeenDate . ' ' . $this->lastSeenTime;
-            }
-
-            $stmt->execute([
-                ':uid' => $this->userID,
-                ':name' => $this->itemName,
-                ':lsdt' => $lsdt,
-                ':lsp' => $this->lastSeenPlace,
-                ':desc' => $this->description,
-                ':img' => $this->itemImage,
-                ':phone' => $this->contactNumber
-            ]);
-            $this->lostID = $this->conn->lastInsertId();
-            return $this->lostID;
-        } catch (Exception $e) {
-            throw new Exception("Error creating lost item: " . $e->getMessage());
+        $lsdt = null;
+        if ($this->LastSeenDate && $this->lastSeenTime) {
+            $lsdt = $this->LastSeenDate . ' ' . $this->lastSeenTime;
         }
+
+        $this->lostID = $this->dao->create(
+            $this->userID,
+            $this->itemName,
+            $lsdt,
+            $this->lastSeenPlace,
+            $this->description,
+            $this->itemImage,
+            $this->contactNumber
+        );
+        return $this->lostID;
     }
 
+    public function update()
+    {
    public function update()
 {
     try {
@@ -193,6 +185,16 @@ class LostItem
             $lsdt = $this->LastSeenDate . ' ' . $this->lastSeenTime;
         }
 
+        return $this->dao->update(
+            $this->lostID,
+            $this->userID,
+            $this->itemName,
+            $lsdt,
+            $this->lastSeenPlace,
+            $this->description,
+            $this->contactNumber,
+            $this->status
+        );
         return $stmt->execute([
             ':name' => $this->itemName,
             ':lsdt' => $lsdt,
@@ -212,27 +214,11 @@ class LostItem
 
     public function delete($lostID, $userID)
     {
-        try {
-            $stmt = $this->conn->prepare("DELETE FROM lost_items WHERE lostID = :id AND userID = :uid");
-            return $stmt->execute([':id' => $lostID, ':uid' => $userID]);
-        } catch (Exception $e) {
-            throw new Exception("Error deleting lost item: " . $e->getMessage());
-        }
+        return $this->dao->delete($lostID, $userID);
     }
 
     public function view($lostID = null)
     {
-        try {
-            if ($lostID) {
-                $stmt = $this->conn->prepare("SELECT * FROM lost_items WHERE lostID = :id");
-                $stmt->execute([':id' => $lostID]);
-                return $stmt->fetch();
-            } else {
-                $stmt = $this->conn->query("SELECT * FROM lost_items ORDER BY created_at DESC");
-                return $stmt->fetchAll();
-            }
-        } catch (Exception $e) {
-            throw new Exception("Error viewing lost item(s): " . $e->getMessage());
-        }
+        return $this->dao->view($lostID);
     }
 }

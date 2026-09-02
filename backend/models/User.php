@@ -8,6 +8,7 @@ use Firebase\JWT\JWT;
 
 abstract class User {
     protected $conn;
+    protected $userDAO;
 
    
     private $userID;
@@ -26,7 +27,8 @@ abstract class User {
     private $has_seen_lost_item_popup;
 
     public function __construct() {
-        $this->conn = Database::getInstance()->getConnection();
+        $this->conn = Database::getInstance()->getConnection(); // Kept temporarily for backwards compatibility in subclasses
+        $this->userDAO = new \DAO\UserDAO();
     }
 
     public function hydrate(array $data = []): static {
@@ -185,22 +187,10 @@ abstract class User {
     }
 
     public function register() {
-        $query = "INSERT INTO users (fname, lname, email, phoneNum, hash_password, role) 
-                  VALUES (:fname, :lname, :email, :phoneNum, :hash, :role)";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':fname', $this->fname);
-        $stmt->bindParam(':lname', $this->lname);
-        $stmt->bindParam(':email', $this->email);
-        $stmt->bindParam(':phoneNum', $this->phoneNum);
-        $stmt->bindParam(':hash', $this->hash_password);
-        $stmt->bindParam(':role', $this->role);
-
-        if ($stmt->execute()) {
-            $this->userID = $this->conn->lastInsertId();
-            return $this->userID;
-        }
-        
-        throw new \Exception("Database insert into users failed: " . implode(" ", $stmt->errorInfo()));
+        $this->userID = $this->userDAO->insertUser(
+            $this->fname, $this->lname, $this->email, $this->phoneNum, $this->hash_password, $this->role
+        );
+        return $this->userID;
     }
 
     public function login($password) {
@@ -212,60 +202,26 @@ abstract class User {
                 throw new \Exception("Account is not verified.");
             }
             
-            // update last login
-            $upd = $this->conn->prepare("UPDATE users SET last_login = NOW() WHERE userID = :uid");
-            $upd->bindParam(':uid', $this->userID);
-            $upd->execute();
+            $this->userDAO->updateLastLogin($this->userID);
             return true;
         }
         return false;
     }
 
-    public function logout($jti, $expires_at) {
-       
-        try {
-            $cleanupQuery = "DELETE FROM revoked_tokens WHERE expires_at < :now";
-            $cleanupStmt = $this->conn->prepare($cleanupQuery);
-            $now = time();
-            $cleanupStmt->bindParam(':now', $now, PDO::PARAM_INT);
-            $cleanupStmt->execute();
-        } catch (\Exception $e) {
-         
-        }
-
-        $query = "INSERT INTO revoked_tokens (jti, expires_at) VALUES (:jti, :exp)";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':jti', $jti);
-        $stmt->bindParam(':exp', $expires_at);
-        return $stmt->execute();
-    }
-
     public function updateProfile() {
-        $query = "UPDATE users SET fname = :fname, lname = :lname, phoneNum = :phoneNum, lost_item_sms_notification = :smsPref, peer_learning_app_notification = :peerPref";
-        if ($this->hash_password) {
-            $query .= ", hash_password = :hash";
-        }
-        $query .= " WHERE userID = :uid";
-        
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':fname', $this->fname);
-        $stmt->bindParam(':lname', $this->lname);
-        $stmt->bindParam(':phoneNum', $this->phoneNum);
-        $stmt->bindParam(':smsPref', $this->lost_item_sms_notification);
-        $stmt->bindParam(':peerPref', $this->peer_learning_app_notification);
-        if ($this->hash_password) {
-            $stmt->bindParam(':hash', $this->hash_password);
-        }
-        $stmt->bindParam(':uid', $this->userID);
-        return $stmt->execute();
+        return $this->userDAO->updateProfile(
+            $this->userID,
+            $this->fname,
+            $this->lname,
+            $this->phoneNum,
+            $this->lost_item_sms_notification,
+            $this->peer_learning_app_notification,
+            $this->hash_password
+        );
     }
 
     public function changePassword($newHash) {
-        $query = "UPDATE users SET hash_password = :hash WHERE userID = :uid";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':hash', $newHash);
-        $stmt->bindParam(':uid', $this->userID);
-        return $stmt->execute();
+        return $this->userDAO->changePassword($this->userID, $newHash);
     }
 
     public function forgotPassword() {
@@ -279,66 +235,19 @@ abstract class User {
 
     public function verifyOTP($otpCode) {
         $now = date('Y-m-d H:i:s');
-        $query = "SELECT * FROM otp_verification WHERE userID = :uid AND otp_code = :otp AND expired_at > :now AND verified_at IS NULL LIMIT 1";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':uid', $this->userID);
-        $stmt->bindParam(':otp', $otpCode);
-        $stmt->bindParam(':now', $now);
-        $stmt->execute();
-        $row = $stmt->fetch();
+        $otpRow = $this->userDAO->getValidOTP($this->userID, $otpCode, $now);
 
-        if ($row) {
-            $upd = $this->conn->prepare("UPDATE otp_verification SET verified_at = :now WHERE otpID = :id");
-            $upd->bindParam(':now', $now);
-            $upd->bindParam(':id', $row['otpID']);
-            $upd->execute();
-
-            $updUser = $this->conn->prepare("UPDATE users SET is_verified = 1 WHERE userID = :uid");
-            $updUser->bindParam(':uid', $this->userID);
-            $updUser->execute();
-
+        if ($otpRow) {
+            $this->userDAO->markOtpVerified($otpRow['otpID'], $now);
+            $this->userDAO->markUserVerified($this->userID);
             return true;
         }
         return false;
     }
 
     public static function loadByIdentifier(string $identifier, string $role) {
-        $db = Database::getInstance()->getConnection();
-        
-        if ($role === 'student') {
-            $sql = "SELECT u.*, s.enrollmentNo, s.courseID, s.std_year 
-                    FROM users u 
-                    JOIN student s ON u.userID = s.userID 
-                    WHERE s.enrollmentNo = :identifier";
-        } elseif ($role === 'course_representative') {
-            // Rep can login using their rep_id_string (e.g. rep_uwu/cst/23/088)
-            // The users table role may still be 'student' — dual-login is supported
-            // Note: PDO does not support the same named param twice — use :identifier1 and :identifier2
-            $sql = "SELECT u.*, s.enrollmentNo, s.courseID, s.std_year, c.repID, c.rep_id_string, c.is_first_login, c.hash_password as rep_hash_password
-                    FROM course_representative c
-                    JOIN users u ON u.userID = c.userID
-                    LEFT JOIN student s ON s.userID = c.userID
-                    WHERE c.rep_id_string = :identifier1 OR s.enrollmentNo = :identifier2";
-        } elseif ($role === 'staff') {
-            // Note: PDO does not support the same named param twice — use :identifier1 and :identifier2
-            $sql = "SELECT u.*, st.staffID FROM users u JOIN staff st ON u.userID = st.userID WHERE st.staffID = :identifier1 OR u.email = :identifier2";
-        } elseif ($role === 'admin') {
-            // Note: PDO does not support the same named param twice — use :identifier1 and :identifier2
-            $sql = "SELECT u.*, a.adminID FROM users u JOIN admin a ON u.userID = a.userID WHERE a.adminID = :identifier1 OR u.email = :identifier2";
-        } else {
-            return null;
-        }
-
-        $stmt = $db->prepare($sql);
-        if (in_array($role, ['course_representative', 'staff', 'admin'])) {
-            // These queries use :identifier twice — PDO requires separate named params
-            $stmt->bindParam(':identifier1', $identifier);
-            $stmt->bindParam(':identifier2', $identifier);
-        } else {
-            $stmt->bindParam(':identifier', $identifier);
-        }
-        $stmt->execute();
-        $fullData = $stmt->fetch(PDO::FETCH_ASSOC);
+        $dao = new \DAO\UserDAO();
+        $fullData = $dao->loadByIdentifier($identifier, $role);
 
         if ($fullData) {
             $fullData['role'] = $role;
@@ -348,13 +257,8 @@ abstract class User {
     }
 
     public static function loadByEmail(string $email) {
-        $db = Database::getInstance()->getConnection();
-        
-        $sql = "SELECT * FROM users WHERE email = :email";
-        $stmt = $db->prepare($sql);
-        $stmt->bindParam(':email', $email);
-        $stmt->execute();
-        $userData = $stmt->fetch(PDO::FETCH_ASSOC);
+        $dao = new \DAO\UserDAO();
+        $userData = $dao->loadByEmail($email);
 
         if ($userData) {
             $role = $userData['role'];

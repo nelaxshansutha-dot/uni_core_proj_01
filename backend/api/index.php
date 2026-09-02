@@ -26,7 +26,7 @@ if (class_exists('Dotenv\Dotenv') && file_exists(__DIR__ . '/../.env')) {
     $dotenv->load();
 }
 
-// Routing logic
+
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $uri = str_replace('/uni_core_proj_01/backend/api', '', $uri); // Adjust base path as needed
 $parts = explode('/', trim($uri, '/'));
@@ -75,7 +75,7 @@ try {
 
         case 'marketplace':
             $controller = new Controllers\MarketplaceController();
-            // simple parsing: if $action is numeric, it's ID. If $id is flag, it's action.
+           
             $pid = is_numeric($action) ? $action : null;
             $act = $id === 'flag' ? 'flag' : (is_numeric($action) ? null : $action);
             $controller->handleRequest($method, $pid, $act);

@@ -4,16 +4,15 @@ use Config\Database;
 use PDO;
 
 class AppNotification {
-    private $conn;
-
     private $appID;
     private $repID;
     private $enrollmentNo;
     private $message;
     private $createdAt;
+    private $dao;
 
     public function __construct() {
-        $this->conn = Database::getInstance()->getConnection();
+        $this->dao = new \DAO\AppNotificationDAO();
     }
 
     public function hydrate(array $data = []): static {
@@ -59,26 +58,16 @@ class AppNotification {
 
     public function send() {
         
-        $stmt = $this->conn->prepare("SELECT peer_learning_app_notification FROM users u JOIN student s ON u.userID = s.userID WHERE s.enrollmentNo = :enr");
-        $stmt->execute([':enr' => $this->enrollmentNo]);
-        $pref = $stmt->fetchColumn();
+        $pref = $this->dao->getUserPreference($this->enrollmentNo);
 
         if ($pref) {
-            $query = "INSERT INTO app_notification (repID, enrollmentNo, message) VALUES (:repid, :enr, :msg)";
-            $ins = $this->conn->prepare($query);
-            return $ins->execute([
-                ':repid' => $this->repID,
-                ':enr' => $this->enrollmentNo,
-                ':msg' => $this->message
-            ]);
+            return $this->dao->insert($this->repID, $this->enrollmentNo, $this->message);
         }
         return false;
     }
 
     public function view($enrollmentNo) {
-        $stmt = $this->conn->prepare("SELECT * FROM app_notification WHERE enrollmentNo = :enr ORDER BY created_at DESC");
-        $stmt->execute([':enr' => $enrollmentNo]);
-        return $stmt->fetchAll();
+        return $this->dao->view($enrollmentNo);
     }
 
     public function markAsRead($appID) {

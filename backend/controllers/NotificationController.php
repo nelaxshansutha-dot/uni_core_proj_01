@@ -5,32 +5,15 @@ use Config\Database;
 
 class NotificationController {
 
-    /**
-     * GET /notifications  — used by the Topbar bell for ALL roles
-     * Only returns peer_learning (app_notification) rows — lost-item alerts are NOT shown here.
-     */
+   
     public function getNotifications() {
         $decoded = AuthMiddleware::authenticate();
         $userID  = $decoded->userID;
         $db      = Database::getInstance()->getConnection();
 
         try {
-            // Use UNION so this works for both regular students and course representatives.
-            // Students: look up via the student table.
-            // Reps: look up via the course_representative table (which also holds an enrollmentNo).
-            $stmt = $db->prepare(
-                "SELECT an.appID AS id, an.message, an.created_at, 'peer_learning' AS type
-                 FROM app_notification an
-                 WHERE an.enrollmentNo IN (
-                     SELECT s.enrollmentNo FROM student s WHERE s.userID = :uid1
-                     UNION
-                     SELECT cr.enrollmentNo FROM course_representative cr WHERE cr.userID = :uid2
-                 )
-                 ORDER BY an.created_at DESC
-                 LIMIT 20"
-            );
-            $stmt->execute([':uid1' => $userID, ':uid2' => $userID]);
-            $notifications = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            $appNotifDao = new \DAO\AppNotificationDAO();
+            $notifications = $appNotifDao->getNotificationsForUser($userID);
 
             echo json_encode([
                 'status' => 'success',
@@ -42,10 +25,7 @@ class NotificationController {
         }
     }
 
-    /**
-     * GET /notifications/app — used by the Notifications page (student/rep only)
-     * Reads from legacy app_notification table (tied to enrollmentNo).
-     */
+
     public function handleApp($method, $id = null) {
         $decoded = AuthMiddleware::authenticate(['student', 'course_representative']);
         $enrollmentNo = $decoded->enrollmentNo ?? null;
@@ -57,8 +37,8 @@ class NotificationController {
             }
 
             // Dismiss a specific notification
-            $stmt = $db->prepare("DELETE FROM app_notification WHERE appID = :id AND enrollmentNo = :enr");
-            $stmt->execute([':id' => $id, ':enr' => $enrollmentNo]);
+            $appNotifDao = new \DAO\AppNotificationDAO();
+            $appNotifDao->deleteByAppIDAndEnrollment($id, $enrollmentNo);
             echo json_encode(['status' => 'success']);
             return;
         }
@@ -69,14 +49,8 @@ class NotificationController {
                 echo json_encode(['status' => 'success', 'data' => []]);
                 return;
             }
-            $stmt = $db->prepare(
-                "SELECT appID, message, created_at
-                 FROM app_notification
-                 WHERE enrollmentNo = :enr
-                 ORDER BY created_at DESC LIMIT 20"
-            );
-            $stmt->execute([':enr' => $enrollmentNo]);
-            $notifications = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            $appNotifDao = new \DAO\AppNotificationDAO();
+            $notifications = $appNotifDao->getAllByEnrollment($enrollmentNo);
 
             echo json_encode([
                 'status' => 'success',
@@ -104,16 +78,14 @@ class NotificationController {
         // For course_representative users the JWT may not carry enrollmentNo,
         // so resolve it from the course_representative table if needed.
         if (!$enrollmentNo && ($decoded->role ?? '') === 'course_representative') {
-            $repStmt = $db->prepare("SELECT enrollmentNo FROM course_representative WHERE userID = :uid LIMIT 1");
-            $repStmt->execute([':uid' => $userID]);
-            $repRow = $repStmt->fetch(\PDO::FETCH_ASSOC);
-            $enrollmentNo = $repRow['enrollmentNo'] ?? null;
+            $courseRepDao = new \DAO\CourseRepresentativeDAO();
+            $enrollmentNo = $courseRepDao->getEnrollmentNoByUserId($userID);
         }
 
         // Only dismiss from app_notification (peer_learning); lost-item SMS rows are unaffected
         if ($enrollmentNo) {
-            $stmt = $db->prepare("DELETE FROM app_notification WHERE appID = :id AND enrollmentNo = :enr");
-            $stmt->execute([':id' => $id, ':enr' => $enrollmentNo]);
+            $appNotifDao = new \DAO\AppNotificationDAO();
+            $appNotifDao->deleteByAppIDAndEnrollment($id, $enrollmentNo);
         }
 
         echo json_encode(['status' => 'success']);

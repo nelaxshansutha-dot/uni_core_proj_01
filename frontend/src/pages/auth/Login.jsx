@@ -141,7 +141,7 @@ const Login = () => {
                         </div>
                     )}
 
-                    <form onSubmit={handleSubmit}>
+                    <form onSubmit={handleSubmit} autoComplete="off">
                         <div className="mb-3">
                             <label className="form-label">I am a</label>
                             <select 
@@ -163,6 +163,7 @@ const Login = () => {
                                 placeholder={getIdPlaceholder()}
                                 value={enrollmentNo}
                                 onChange={(e) => { setEnrollmentNo(e.target.value); setError(''); }}
+                                autoComplete="off"
                                 required
                             />
                         </div>
@@ -174,6 +175,7 @@ const Login = () => {
                                 placeholder="••••••••"
                                 value={password}
                                 onChange={(e) => { setPassword(e.target.value); setError(''); }}
+                                autoComplete="new-password"
                                 required
                             />
                         </div>

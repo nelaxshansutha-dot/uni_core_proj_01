@@ -1,6 +1,7 @@
 <?php
 namespace Models;
-use Config\Database;
+
+use DAO\NotesDAO;
 use PDO;
 
 class Notes {
@@ -13,14 +14,14 @@ class Notes {
     private $description;
     private $status;
     private $created_at;
-    private $conn;
+    private $dao;
 
     private $userID;
     private $academicYear;
     private $noteType;
 
     public function __construct() {
-        $this->conn = Database::getInstance()->getConnection();
+        $this->dao = new NotesDAO();
     }
 
     public function hydrate(array $data = []): static {
@@ -142,30 +143,22 @@ class Notes {
 
     public function upload() {
         if (empty($this->enrollmentNo) && !empty($this->userID)) {
-            $stmt = $this->conn->prepare("SELECT enrollmentNo FROM student WHERE userID = :uid UNION SELECT enrollmentNo FROM course_representative WHERE userID = :uid LIMIT 1");
-            $stmt->execute([':uid' => $this->userID]);
-            $res = $stmt->fetch();
+            $res = $this->dao->fetchEnrollmentNo($this->userID);
             if ($res && !empty($res['enrollmentNo'])) {
                 $this->enrollmentNo = $res['enrollmentNo'];
             }
         }
         $courseID = $this->courseID ?? null;
         if (!$courseID && !empty($this->courseUnitID)) {
-            $stmt = $this->conn->prepare("SELECT courseID FROM course_units WHERE courseUnitID = :cuid");
-            $stmt->execute([':cuid' => $this->courseUnitID]);
-            $res = $stmt->fetch();
+            $res = $this->dao->fetchCourseIDByUnit($this->courseUnitID);
             if ($res) $courseID = $res['courseID'];
         }
         
-     
         if (!$courseID && !empty($this->enrollmentNo)) {
-            $stmt = $this->conn->prepare("SELECT courseID FROM student WHERE enrollmentNo = :enr");
-            $stmt->execute([':enr' => $this->enrollmentNo]);
-            $res = $stmt->fetch();
+            $res = $this->dao->fetchCourseIDByEnrollment($this->enrollmentNo);
             if ($res) $courseID = $res['courseID'];
         }
 
-       
         if (!$courseID && !empty($this->enrollmentNo)) {
             $enrParts = explode('/', strtoupper(trim($this->enrollmentNo)));
             $courseCode = $enrParts[1] ?? '';
@@ -175,9 +168,7 @@ class Notes {
         $providedCuid = $this->courseUnitID ?? '';
         $normalizedInput = strtoupper(str_replace([' ', '-'], '', $providedCuid));
         
-        $stmtUnit = $this->conn->prepare("SELECT courseUnitID FROM course_units");
-        $stmtUnit->execute();
-        $allUnits = $stmtUnit->fetchAll(\PDO::FETCH_ASSOC);
+        $allUnits = $this->dao->fetchAllCourseUnits();
         
         foreach ($allUnits as $unit) {
             $dbUnit = strtoupper(str_replace([' ', '-'], '', $unit['courseUnitID']));
@@ -188,20 +179,16 @@ class Notes {
         }
         
         try {
-            $query = "INSERT INTO notes (enrollmentNo, courseID, courseUnitID, title, file_url, description, academicYear, noteType) 
-                      VALUES (:enr, :cid, :cuid, :title, :file, :desc, :ayear, :ntype)";
-            $stmt = $this->conn->prepare($query);
-            $stmt->execute([
-                ':enr' => $this->enrollmentNo,
-                ':cid' => $courseID,
-                ':cuid' => $this->courseUnitID,
-                ':title' => $this->title,
-                ':file' => $this->file_url,
-                ':desc' => $this->description ?? null,
-                ':ayear' => $this->academicYear ?? null,
-                ':ntype' => $this->noteType ?? 'notes'
-            ]);
-            $this->noteID = $this->conn->lastInsertId();
+            $this->noteID = $this->dao->create(
+                $this->enrollmentNo,
+                $courseID,
+                $this->courseUnitID,
+                $this->title,
+                $this->file_url,
+                $this->description,
+                $this->academicYear,
+                $this->noteType
+            );
             return $this->noteID;
         } catch (\Exception $e) {
             $msg = $e->getMessage();
@@ -214,72 +201,23 @@ class Notes {
     }
 
     public function view($noteID = null, $filters = []) {
-        if ($noteID) {
-            $stmt = $this->conn->prepare("SELECT n.*, cu.courseUnitName AS courseUniName, cu.academicYear, cu.semester FROM notes n LEFT JOIN course_units cu ON n.courseUnitID = cu.courseUnitID WHERE n.noteID = :nid");
-            $stmt->execute([':nid' => $noteID]);
-            return $stmt->fetch();
-        } else {
-            $query = "SELECT n.*, cu.courseUnitName AS courseUniName, cu.academicYear, cu.semester FROM notes n LEFT JOIN course_units cu ON n.courseUnitID = cu.courseUnitID WHERE 1=1";
-            $params = [];
-            
-        
-            // Note: we intentionally do NOT filter by the viewer's own enrollmentNo/course here.
-            // Notes are shared across all courses. Use the explicit courseCode filter below if needed.
-            
-            if (!empty($filters['courseUnitID'])) {
-                $query .= " AND n.courseUnitID = :cuid";
-                $params[':cuid'] = $filters['courseUnitID'];
-            }
-            
-            if (!empty($filters['academicYear'])) {
-                $query .= " AND n.academicYear = :ayear";
-                $params[':ayear'] = $filters['academicYear'];
-            }
-            
-            if (!empty($filters['semester'])) {
-                // If notes don't explicitly store semester, we might need to join course_units
-                $query .= " AND cu.semester = :sem";
-                $params[':sem'] = $filters['semester'];
-            }
-            
-            if (!empty($filters['courseCode'])) {
-                // n.enrollmentNo looks like UWU/CST/...
-                $query .= " AND LOWER(n.enrollmentNo) LIKE :cCode";
-                $params[':cCode'] = "%/" . strtolower($filters['courseCode']) . "/%";
-            }
-            
-            $query .= " ORDER BY n.academicYear DESC, n.created_at DESC";
-            $stmt = $this->conn->prepare($query);
-            $stmt->execute($params);
-            return $stmt->fetchAll();
-        }
+        return $this->dao->view($noteID, $filters);
     }
 
     public function download($noteID) {
-        // Logic for download tracking if needed, otherwise returns file_url
         $note = $this->view($noteID);
         return $note ? $note['file_url'] : null;
     }
 
     public function update() {
-        $query = "UPDATE notes SET title = :title, description = :desc WHERE noteID = :nid";
-        $stmt = $this->conn->prepare($query);
-        return $stmt->execute([
-            ':title' => $this->title,
-            ':desc' => $this->description,
-            ':nid' => $this->noteID
-        ]);
+        return $this->dao->update($this->noteID, $this->title, $this->description);
     }
 
     public function delete($noteID) {
-        $stmt = $this->conn->prepare("DELETE FROM notes WHERE noteID = :nid");
-        return $stmt->execute([':nid' => $noteID]);
+        return $this->dao->delete($noteID);
     }
 
     public function search($queryStr) {
-        $q = "%" . $queryStr . "%";
-        $stmt = $this->conn->prepare("SELECT * FROM notes WHERE title LIKE :q OR description LIKE :q");
-        $stmt->execute([':q' => $q]);
-        return $stmt->fetchAll();
+        return $this->dao->search($queryStr);
     }
 }

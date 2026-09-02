@@ -12,8 +12,11 @@ class Admin extends User {
     public function getAdminID() { return $this->adminID; }
     public function setAdminID($val) { $this->adminID = $val; return $this; }
 
+    private $adminDAO;
+
     public function __construct() {
         parent::__construct();
+        $this->adminDAO = new \DAO\AdminDAO();
     }
 
     public function hydrate(array $data = []): static {
@@ -25,7 +28,7 @@ class Admin extends User {
     }
 
     public function register() {
-        $this->conn->beginTransaction();
+        $this->adminDAO->beginTransaction();
         try {
             if (!parent::register()) {
                 throw new \Exception("Failed to register user");
@@ -33,49 +36,17 @@ class Admin extends User {
             if (empty($this->adminID)) {
                 $this->adminID = uniqid('admin_');
             }
-            $query = "INSERT INTO admin (adminID, userID) VALUES (:adminID, :uid)";
-            $stmt = $this->conn->prepare($query);
-            $stmt->bindValue(':adminID', $this->adminID, PDO::PARAM_STR);
-            $stmt->bindValue(':uid', $this->getUserID(), PDO::PARAM_INT);
-            $stmt->execute();
-            $this->conn->commit();
+            $this->adminDAO->insertAdmin($this->adminID, $this->getUserID());
+            $this->adminDAO->commit();
             return $this->getUserID();
         } catch (\Exception $e) {
-            $this->conn->rollBack();
+            $this->adminDAO->rollBack();
             throw $e;
         }
     }
 
     public function manageUsers($role = 'all', $q = '') {
-        if ($role === 'rep') $role = 'course_representative';
-        
-        $sql = "SELECT 
-                    u.userID as id, 
-                    u.fname as first_name, 
-                    u.lname as last_name, 
-                    u.email, 
-                    u.role, 
-                    u.is_active,
-                    s.enrollmentNo as enrollment_no,
-                    st.staffID as staff_id
-                FROM users u
-                LEFT JOIN student s ON u.userID = s.userID
-                LEFT JOIN staff st ON u.userID = st.userID
-                WHERE 1=1";
-        $params = [];
-        
-        if ($role !== 'all') {
-            $sql .= " AND u.role = :role";
-            $params[':role'] = $role;
-        }
-        if (!empty($q)) {
-            $sql .= " AND (u.fname LIKE :q OR u.lname LIKE :q OR u.email LIKE :q)";
-            $params[':q'] = "%$q%";
-        }
-        
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute($params);
-        $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $users = $this->adminDAO->manageUsers($role, $q);
         
         foreach ($users as &$u) {
             $u['is_active'] = (int)$u['is_active'];
@@ -89,22 +60,19 @@ class Admin extends User {
 
     public function assignCourseRep(array $data) {
         try {
-            $this->conn->beginTransaction();
+            $this->adminDAO->beginTransaction();
 
             $userID = $data['user_id'] ?? null;
             if (!$userID) {
-                $this->conn->rollBack();
+                $this->adminDAO->rollBack();
                 return ['success' => false, 'message' => 'User ID is required.'];
             }
 
-         
-            $stmt = $this->conn->prepare("SELECT enrollmentNo, courseID FROM student WHERE userID = :uid");
-            $stmt->execute([':uid' => $userID]);
-            $student = $stmt->fetch(PDO::FETCH_ASSOC);
+            $student = $this->adminDAO->getStudentByUserId($userID);
             $enrollmentNo = $student ? $student['enrollmentNo'] : null;
 
             if (!$enrollmentNo) {
-                $this->conn->rollBack();
+                $this->adminDAO->rollBack();
                 return ['success' => false, 'message' => 'Student enrollment number not found.'];
             }
 
@@ -125,28 +93,17 @@ class Admin extends User {
             $stdYear = $batchYear ? ($academicYear % 100 - $batchYear) : null;
 
             if ($courseID) {
-                $this->conn->prepare("UPDATE student SET courseID = :cid, std_year = COALESCE(std_year, :yr) WHERE userID = :uid")
-                   ->execute([':cid' => $courseID, ':yr' => $stdYear, ':uid' => $userID]);
+                $this->adminDAO->updateStudentCourse($courseID, $stdYear, $userID);
             }
 
             // ─── DUPLICATE CHECK ──────────────────────────────────────────────────────
             // Block assignment if ANOTHER rep already exists for the same course + batch year.
             // Batch year is extracted from enrollmentNo (e.g. UWU/CST/23/088 → batch 23).
             if ($courseID && $batchYear) {
-                $dupStmt = $this->conn->prepare(
-                    "SELECT cr.userID, cr.enrollmentNo, u.fname, u.lname
-                     FROM course_representative cr
-                     JOIN users u ON cr.userID = u.userID
-                     WHERE cr.courseID = :cid
-                       AND cr.userID != :uid
-                       AND CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(cr.enrollmentNo, '/', 3), '/', -1) AS UNSIGNED) = :batch
-                     LIMIT 1"
-                );
-                $dupStmt->execute([':cid' => $courseID, ':uid' => $userID, ':batch' => $batchYear]);
-                $existing = $dupStmt->fetch(PDO::FETCH_ASSOC);
+                $existing = $this->adminDAO->checkDuplicateRep($courseID, $userID, $batchYear);
 
                 if ($existing) {
-                    $this->conn->rollBack();
+                    $this->adminDAO->rollBack();
                     return [
                         'success' => false,
                         'message' => "A Course Representative already exists for this course and batch year. "
@@ -164,29 +121,15 @@ class Admin extends User {
             $password = $data['password'] ?? '';
             $hashPass = password_hash($password, PASSWORD_BCRYPT);
 
-        
-            $existCheck = $this->conn->prepare("SELECT repID FROM course_representative WHERE userID = :uid");
-            $existCheck->execute([':uid' => $userID]);
-            $existRep = $existCheck->fetch(PDO::FETCH_ASSOC);
+            $existRep = $this->adminDAO->getRepByUserId($userID);
 
             if ($existRep) {
-             
-                $this->conn->prepare("UPDATE course_representative SET rep_id_string = :repid, hash_password = :hash, courseID = :cid WHERE userID = :uid")
-                   ->execute([':repid' => $repId, ':hash' => $hashPass, ':cid' => $courseID, ':uid' => $userID]);
+                $this->adminDAO->updateRep($repId, $hashPass, $courseID, $userID);
             } else {
-              
-                $this->conn->prepare(
-                    "INSERT INTO course_representative (userID, enrollmentNo, courseID, rep_id_string, hash_password) VALUES (:uid, :enr, :cid, :repid, :hash)"
-                )->execute([
-                    ':uid' => $userID, 
-                    ':enr' => $enrollmentNo, 
-                    ':cid' => $courseID, 
-                    ':repid' => $repId, 
-                    ':hash' => $hashPass
-                ]);
+                $this->adminDAO->insertRep($userID, $enrollmentNo, $courseID, $repId, $hashPass);
             }
 
-            $this->conn->commit();
+            $this->adminDAO->commit();
             
          
             require_once __DIR__ . '/../utils/MailService.php';
@@ -204,29 +147,19 @@ class Admin extends User {
                 'rep_id' => $repId
             ];
         } catch (\Exception $e) {
-            if ($this->conn->inTransaction()) {
-                $this->conn->rollBack();
+            if ($this->adminDAO->inTransaction()) {
+                $this->adminDAO->rollBack();
             }
             return ['success' => false, 'message' => 'Failed to assign rep: ' . $e->getMessage()];
         }
     }
 
     public function deactivateUser($targetUserId) {
-        $query = "UPDATE users SET is_active = 0 WHERE userID = :uid";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':uid', $targetUserId);
-        return $stmt->execute();
+        return $this->adminDAO->deactivateUser($targetUserId);
     }
 
     public function monitorPlatform() {
-        $stats = [
-            'total_users' => (int)$this->conn->query("SELECT COUNT(*) FROM users")->fetchColumn(),
-            'active_users' => (int)$this->conn->query("SELECT COUNT(*) FROM users WHERE is_active = 1")->fetchColumn(),
-            'total_reps' => (int)$this->conn->query("SELECT COUNT(*) FROM users WHERE role = 'course_representative'")->fetchColumn(),
-            'total_posts' => (int)$this->conn->query("SELECT (SELECT COUNT(*) FROM lost_items) + (SELECT COUNT(*) FROM notes) + (SELECT COUNT(*) FROM marketplace)")->fetchColumn(),
-            'hidden_posts' => 0, // Mock for now
-            'recent_logs' => [] // Mock empty array so frontend map doesn't crash
-        ];
+        $stats = $this->adminDAO->getPlatformStats();
 
         $content = [
             'lost_items' => [],
@@ -234,35 +167,21 @@ class Admin extends User {
             'notes' => []
         ];
         
-     
-        $stmtLost = $this->conn->query("SELECT l.lostID as lost_id, l.lostItemName, l.contact_number as contact_no, l.last_seen_datetime, l.item_image, u.email, l.created_at, l.status 
-                            FROM lost_items l 
-                            JOIN users u ON l.userID = u.userID 
-                            ORDER BY l.created_at DESC LIMIT 50");
-        $itemsLost = $stmtLost->fetchAll(PDO::FETCH_ASSOC);
+        $itemsLost = $this->adminDAO->getPlatformLostItems();
         foreach ($itemsLost as $item) {
             $item['status'] = $item['status'] ?: 'active';
             $content['lost_items'][] = $item;
         }
         
         // Fetch Marketplace items
-        $stmtMarket = $this->conn->query("SELECT m.productID as id, m.productName as title, m.price, m.location, m.phone_number as contact_no, m.image_url as product_image, u.email, m.created_at, m.status 
-                            FROM marketplace m 
-                            JOIN users u ON m.userID = u.userID 
-                            ORDER BY m.created_at DESC LIMIT 50");
-        $itemsMarket = $stmtMarket->fetchAll(PDO::FETCH_ASSOC);
+        $itemsMarket = $this->adminDAO->getPlatformMarketplace();
         foreach ($itemsMarket as $item) {
             $item['status'] = $item['status'] ?: 'active';
             $content['marketplace'][] = $item;
         }
 
         // Fetch Shared Notes
-        $stmtNotes = $this->conn->query("SELECT n.noteID as id, n.title, n.courseUnitID, n.file_url, u.email, n.created_at 
-                            FROM Notes n 
-                            JOIN student s ON n.enrollmentNo = s.enrollmentNo
-                            JOIN users u ON s.userID = u.userID
-                            ORDER BY n.created_at DESC LIMIT 50");
-        $itemsNotes = $stmtNotes->fetchAll(PDO::FETCH_ASSOC);
+        $itemsNotes = $this->adminDAO->getPlatformNotes();
         foreach ($itemsNotes as $item) {
             $item['status'] = 'active'; // Notes doesn't have a status column yet
             $content['notes'][] = $item;

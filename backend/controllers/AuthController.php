@@ -92,10 +92,8 @@ class AuthController {
                 }
 
                 $token   = JWT::encode($payload, AuthMiddleware::getSecretKey(), 'HS256');
-                $db      = \Config\Database::getInstance()->getConnection();
-                $stmt    = $db->prepare("SELECT * FROM users WHERE userID = :uid");
-                $stmt->execute([':uid' => $user->getUserID()]);
-                $userRow = $stmt->fetch(\PDO::FETCH_ASSOC);
+                $userDao = new \DAO\UserDAO();
+                $userRow = $userDao->getUserById($user->getUserID());
 
                 $userObj = [
                     'userID'                         => $userRow['userID'],
@@ -120,10 +118,8 @@ class AuthController {
 
                 $isFirstLogin = false;
                 if ($user->getRole() === 'course_representative') {
-                    $repStmt      = $db->prepare("SELECT is_first_login FROM course_representative WHERE userID = :uid LIMIT 1");
-                    $repStmt->execute([':uid' => $user->getUserID()]);
-                    $repRow       = $repStmt->fetch(\PDO::FETCH_ASSOC);
-                    $isFirstLogin = $repRow ? (bool)$repRow['is_first_login'] : false;
+                    $courseRepDao = new \DAO\CourseRepresentativeDAO();
+                    $isFirstLogin = $courseRepDao->getIsFirstLogin($user->getUserID());
                 }
 
                 echo json_encode([
@@ -141,23 +137,7 @@ class AuthController {
     }
 
     public function logout() {
-        $decoded = AuthMiddleware::authenticate();
-        switch ($decoded->role) {
-            case 'admin':
-                 $user = new \Models\Admin(); 
-                 break;
-            case 'staff':
-                 $user = new \Models\Staff(); 
-                 break;
-            case 'course_representative': 
-                $user = new \Models\CourseRepresentative();
-                 break;
-            case 'student':
-            default:
-             $user = new \Models\Student();
-              break;
-        }
-        $user->logout($decoded->jti, $decoded->exp);
+        AuthMiddleware::authenticate();
         echo json_encode(['success' => true, 'message' => 'Logged out successfully']);
     }
 
@@ -175,16 +155,11 @@ class AuthController {
         $userID   = $data['user_id']      ?? null;
         $newPass  = $data['new_password'] ?? '';
 
-        $db   = \Config\Database::getInstance()->getConnection();
         $hash = password_hash($newPass, PASSWORD_BCRYPT);
+        $courseRepDao = new \DAO\CourseRepresentativeDAO();
+        $ok = $courseRepDao->forceChangePassword($userID, $hash);
 
-        // Update the password in course_representative table and mark first login as done
-        $stmt = $db->prepare(
-            "UPDATE course_representative SET hash_password = :hash, is_first_login = 0 WHERE userID = :uid"
-        );
-        $ok = $stmt->execute([':hash' => $hash, ':uid' => $userID]);
-
-        if ($ok && $stmt->rowCount() > 0) {
+        if ($ok) {
             echo json_encode(['status' => 'success', 'message' => 'Password updated successfully. You can now log in.']);
         } else {
             echo json_encode(['status' => 'error', 'message' => 'Failed to update password. Please contact your admin.']);
@@ -204,10 +179,8 @@ class AuthController {
         $userID = $data['user_id'] ?? null;
         $otp    = $data['otp']     ?? '';
 
-        $db   = \Config\Database::getInstance()->getConnection();
-        $stmt = $db->prepare("SELECT * FROM users WHERE userID = :uid");
-        $stmt->execute([':uid' => $userID]);
-        $userData = $stmt->fetch();
+        $userDao = new \DAO\UserDAO();
+        $userData = $userDao->getUserById($userID);
 
         if (!$userData) {
             echo json_encode(['success' => false, 'message' => 'User not found.']);
@@ -234,10 +207,8 @@ class AuthController {
 
         $userID = $data['user_id'] ?? null;
 
-        $db   = \Config\Database::getInstance()->getConnection();
-        $stmt = $db->prepare("SELECT * FROM users WHERE userID = :uid");
-        $stmt->execute([':uid' => $userID]);
-        $userData = $stmt->fetch();
+        $userDao = new \DAO\UserDAO();
+        $userData = $userDao->getUserById($userID);
 
         if (!$userData) {
             echo json_encode(['success' => false, 'message' => 'User not found.']);
@@ -266,10 +237,8 @@ class AuthController {
 
         $email = $data['email'] ?? '';
 
-        $db   = \Config\Database::getInstance()->getConnection();
-        $stmt = $db->prepare("SELECT userID FROM users WHERE email = :email");
-        $stmt->execute([':email' => $email]);
-        $userID = $stmt->fetchColumn();
+        $userDao = new \DAO\UserDAO();
+        $userID = $userDao->getUserIdByEmail($email);
 
         if (!$userID) {
             echo json_encode(['status' => 'success', 'data' => ['user_id' => null, 'email' => $email]]);
@@ -300,10 +269,8 @@ class AuthController {
         $userID = $data['user_id'] ?? null;
         $otp    = $data['otp']     ?? '';
 
-        $db   = \Config\Database::getInstance()->getConnection();
-        $stmt = $db->prepare("SELECT * FROM users WHERE userID = :uid");
-        $stmt->execute([':uid' => $userID]);
-        $userData = $stmt->fetch(\PDO::FETCH_ASSOC);
+        $userDao = new \DAO\UserDAO();
+        $userData = $userDao->getUserById($userID);
 
         if (!$userData) {
             echo json_encode(['status' => 'error', 'message' => 'Invalid user.']);
@@ -336,10 +303,9 @@ class AuthController {
         $resetToken  = $data['reset_token']  ?? '';
         $newPassword = $data['new_password'] ?? '';
 
-        $db         = \Config\Database::getInstance()->getConnection();
         $hash       = password_hash($newPassword, PASSWORD_BCRYPT);
-        $updateStmt = $db->prepare("UPDATE users SET hash_password = :hash WHERE userID = :uid");
-        $success    = $updateStmt->execute([':hash' => $hash, ':uid' => $userID]);
+        $userDao    = new \DAO\UserDAO();
+        $success    = $userDao->updatePassword($userID, $hash);
 
         if ($success) {
             echo json_encode(['status' => 'success', 'message' => 'Password reset successfully. You can now login.']);
@@ -352,18 +318,10 @@ class AuthController {
         $decoded = AuthMiddleware::authenticate();
         if (!$decoded) return;
         
-        $db = \Config\Database::getInstance()->getConnection();
+        $userDao = new \DAO\UserDAO();
+        $userDao->ensureProfileColumnsExist();
         
-        // Ensure columns exist to prevent crash during demo
-        try {
-            $db->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS lost_item_sms_notification TINYINT(1) DEFAULT 0");
-            $db->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS peer_learning_app_notification TINYINT(1) DEFAULT 1");
-            $db->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS has_seen_lost_item_popup TINYINT(1) DEFAULT 0");
-        } catch (\Exception $e) {}
-        
-        $stmt = $db->prepare("SELECT * FROM users WHERE userID = :uid");
-        $stmt->execute([':uid' => $decoded->userID]);
-        $userRow = $stmt->fetch(\PDO::FETCH_ASSOC);
+        $userRow = $userDao->getUserById($decoded->userID);
         
         if ($userRow) {
             $userData = [
@@ -380,42 +338,30 @@ class AuthController {
 
             // Fetch staffID for staff role
             if ($decoded->role === 'staff') {
-                $staffStmt = $db->prepare("SELECT staffID FROM staff WHERE userID = :uid LIMIT 1");
-                $staffStmt->execute([':uid' => $decoded->userID]);
-                $staffRow = $staffStmt->fetch(\PDO::FETCH_ASSOC);
-                if ($staffRow) {
-                    $userData['staff_id'] = $staffRow['staffID'];
-                }
+                $staffDao = new \DAO\StaffDAO();
+                $staffID = $staffDao->getStaffIDByUserId($decoded->userID);
+                if ($staffID) $userData['staff_id'] = $staffID;
             }
 
             // Fetch adminID for admin role
             if ($decoded->role === 'admin') {
-                $adminStmt = $db->prepare("SELECT adminID FROM admin WHERE userID = :uid LIMIT 1");
-                $adminStmt->execute([':uid' => $decoded->userID]);
-                $adminRow  = $adminStmt->fetch(\PDO::FETCH_ASSOC);
-                if ($adminRow) {
-                    $userData['admin_id'] = $adminRow['adminID'];
-                }
+                $adminDao = new \DAO\AdminDAO();
+                $adminID = $adminDao->getAdminIDByUserId($decoded->userID);
+                if ($adminID) $userData['admin_id'] = $adminID;
             }
 
             // Fetch enrollmentNo for students and course representatives
             if ($decoded->role === 'student' || $decoded->role === 'course_representative') {
-                $studentStmt = $db->prepare("SELECT enrollmentNo FROM student WHERE userID = :uid LIMIT 1");
-                $studentStmt->execute([':uid' => $decoded->userID]);
-                $studentRow = $studentStmt->fetch(\PDO::FETCH_ASSOC);
-                if ($studentRow) {
-                    $userData['enrollment_no'] = $studentRow['enrollmentNo'];
-                }
+                $studentDao = new \DAO\StudentDAO();
+                $enrollmentNo = $studentDao->getEnrollmentNoByUserId($decoded->userID);
+                if ($enrollmentNo) $userData['enrollment_no'] = $enrollmentNo;
             }
 
             // Fetch rep_id_string for course representatives
             if ($decoded->role === 'course_representative') {
-                $repStmt = $db->prepare("SELECT rep_id_string FROM course_representative WHERE userID = :uid LIMIT 1");
-                $repStmt->execute([':uid' => $decoded->userID]);
-                $repRow = $repStmt->fetch(\PDO::FETCH_ASSOC);
-                if ($repRow) {
-                    $userData['rep_id'] = $repRow['rep_id_string'];
-                }
+                $courseRepDao = new \DAO\CourseRepresentativeDAO();
+                $repID = $courseRepDao->getRepIdStringByUserId($decoded->userID);
+                if ($repID) $userData['rep_id'] = $repID;
             }
 
             echo json_encode(['success' => true, 'data' => $userData]);
@@ -443,13 +389,8 @@ class AuthController {
             return;
         }
 
-        $db = \Config\Database::getInstance()->getConnection();
-        
-        try {
-            $db->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS lost_item_sms_notification TINYINT(1) DEFAULT 0");
-            $db->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS peer_learning_app_notification TINYINT(1) DEFAULT 1");
-            $db->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS has_seen_lost_item_popup TINYINT(1) DEFAULT 0");
-        } catch (\Exception $e) {}
+        $userDao = new \DAO\UserDAO();
+        $userDao->ensureProfileColumnsExist();
         
         $fname    = $data['first_name']  ?? '';
         $lname    = $data['last_name']   ?? '';
@@ -468,9 +409,7 @@ class AuthController {
 
         if (!empty($data['new_password'])) {
             // Verify old password
-            $stmt    = $db->prepare("SELECT hash_password FROM users WHERE userID = :uid");
-            $stmt->execute([':uid' => $decoded->userID]);
-            $userRow = $stmt->fetch(\PDO::FETCH_ASSOC);
+            $userRow = $userDao->getUserById($decoded->userID);
 
             if (!password_verify($data['old_password'], $userRow['hash_password'])) {
                 echo json_encode(['status' => 'error', 'message' => 'Incorrect current password.']);
@@ -485,9 +424,7 @@ class AuthController {
 
             if ($success) {
                 // Fetch updated user to return
-                $stmt        = $db->prepare("SELECT * FROM users WHERE userID = :uid");
-                $stmt->execute([':uid' => $decoded->userID]);
-                $updatedUser = $stmt->fetch(\PDO::FETCH_ASSOC);
+                $updatedUser = $userDao->getUserById($decoded->userID);
                 
                 $userData = [
                     'userID'                         => $updatedUser['userID'],
@@ -502,25 +439,31 @@ class AuthController {
                 
                 // Fetch enrollmentNo for students and course representatives
                 if ($decoded->role === 'student' || $decoded->role === 'course_representative') {
-                    $studentStmt = $db->prepare("SELECT enrollmentNo FROM student WHERE userID = :uid LIMIT 1");
-                    $studentStmt->execute([':uid' => $decoded->userID]);
-                    $studentRow  = $studentStmt->fetch(\PDO::FETCH_ASSOC);
-                    if ($studentRow) {
-                        $userData['enrollment_no'] = $studentRow['enrollmentNo'];
-                    }
+                    $studentDao = new \DAO\StudentDAO();
+                    $enrollmentNo = $studentDao->getEnrollmentNoByUserId($decoded->userID);
+                    if ($enrollmentNo) $userData['enrollment_no'] = $enrollmentNo;
                 }
 
                 // Fetch adminID for admin role
                 if ($decoded->role === 'admin') {
-                    $adminStmt = $db->prepare("SELECT adminID FROM admin WHERE userID = :uid LIMIT 1");
-                    $adminStmt->execute([':uid' => $decoded->userID]);
-                    $adminRow  = $adminStmt->fetch(\PDO::FETCH_ASSOC);
-                    if ($adminRow) {
-                        $userData['admin_id'] = $adminRow['adminID'];
-                    }
+                    $adminDao = new \DAO\AdminDAO();
+                    $adminID = $adminDao->getAdminIDByUserId($decoded->userID);
+                    if ($adminID) $userData['admin_id'] = $adminID;
                 }
 
-                if (isset($updatedUser['staffID'])) $userData['staff_id'] = $updatedUser['staffID'];
+                // Fetch staffID for staff role
+                if ($decoded->role === 'staff') {
+                    $staffDao = new \DAO\StaffDAO();
+                    $staffID = $staffDao->getStaffIDByUserId($decoded->userID);
+                    if ($staffID) $userData['staff_id'] = $staffID;
+                }
+                
+                // Fetch rep_id for course representative role
+                if ($decoded->role === 'course_representative') {
+                    $courseRepDao = new \DAO\CourseRepresentativeDAO();
+                    $repID = $courseRepDao->getRepIdStringByUserId($decoded->userID);
+                    if ($repID) $userData['rep_id'] = $repID;
+                }
                 
                 // Generate a fresh token matching login structure
                 $payload = [
@@ -531,9 +474,9 @@ class AuthController {
                     'exp'    => time() + 3600 * 24
                 ];
                 if (isset($userData['enrollment_no'])) $payload['enrollmentNo'] = $userData['enrollment_no'];
-                if (isset($updatedUser['repID']))       $payload['repID']        = $updatedUser['repID'];
-                if (isset($updatedUser['adminID']))     $payload['adminID']      = $updatedUser['adminID'];
-                if (isset($updatedUser['staffID']))     $payload['staffID']      = $updatedUser['staffID'];
+                if (isset($userData['rep_id']))        $payload['repID']        = $userData['rep_id'];
+                if (isset($userData['admin_id']))      $payload['adminID']      = $userData['admin_id'];
+                if (isset($userData['staff_id']))      $payload['staffID']      = $userData['staff_id'];
                 
                 $jwt = JWT::encode($payload, AuthMiddleware::getSecretKey(), 'HS256');
 
