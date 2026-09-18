@@ -127,6 +127,8 @@ class Admin extends User {
                 $this->adminDAO->updateRep($repId, $hashPass, $courseID, $userID);
             } else {
                 $this->adminDAO->insertRep($userID, $enrollmentNo, $courseID, $repId, $hashPass);
+                $userDao = new \DAO\UserDAO();
+                $userDao->updateRole($userID, 'course_representative');
             }
 
             $this->adminDAO->commit();

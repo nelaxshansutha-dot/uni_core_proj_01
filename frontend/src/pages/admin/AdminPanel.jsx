@@ -930,7 +930,7 @@ const AdminPanel = () => {
                                             <tr key={item.id}>
                                                 <td className="fw-semibold">
                                                     <div>{item.title}</div>
-                                                    <small className="text-muted">${item.price}</small>
+                                                    <small className="text-muted">Rs. {parseFloat(item.price).toLocaleString()}</small>
                                                 </td>
                                                 <td>{item.email}</td>
                                                 <td>
@@ -1022,7 +1022,7 @@ const AdminPanel = () => {
                                         {selectedViewItem.product_image && (
                                             <img src={selectedViewItem.product_image.startsWith('http') ? selectedViewItem.product_image : `http://localhost/uni_core_proj_01/${selectedViewItem.product_image}`} alt={selectedViewItem.title} className="img-fluid rounded mb-3 w-100 object-fit-cover" style={{maxHeight: '250px'}} />
                                         )}
-                                        <p><strong>Price:</strong> ${selectedViewItem.price}</p>
+                                        <p><strong>Price:</strong> Rs. {parseFloat(selectedViewItem.price).toLocaleString()}</p>
                                         <p><strong>Location:</strong> {selectedViewItem.location}</p>
                                         <p><strong>Contact:</strong> {selectedViewItem.contact_no}</p>
                                         <p><strong>Posted By:</strong> {selectedViewItem.email}</p>

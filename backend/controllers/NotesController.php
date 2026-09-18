@@ -34,11 +34,35 @@ class NotesController {
                 'courseUnitID' => 'nullable|string|maxLength:20',
                 'academicYear' => 'nullable|integer|min:1|max:4',
                 'semester' => 'nullable|integer|min:1|max:2',
-                'courseCode' => 'nullable|string|maxLength:10|regex:/^[A-Za-z]+$/D'
+                'courseCode' => 'nullable|string|maxLength:10|regex:/^[A-Za-z]+$/D',
+                'forRep' => 'nullable|string'
             ])) {
                 return;
             }
             $filters['enrollmentNo'] = $decoded->enrollmentNo ?? null;
+            if (isset($_GET['forRep']) && $_GET['forRep'] === 'true' && isset($decoded->role) && $decoded->role === 'course_representative') {
+                $db = \Config\Database::getInstance()->getConnection();
+                $stmt = $db->prepare("SELECT cr.courseID, s.std_year, cr.enrollmentNo FROM course_representative cr JOIN student s ON cr.enrollmentNo = s.enrollmentNo WHERE cr.userID = :uid");
+                $stmt->execute([':uid' => $decoded->userID]);
+                $rep = $stmt->fetch(\PDO::FETCH_ASSOC);
+                if ($rep) {
+                    $parts = explode('/', $rep['enrollmentNo']);
+                    if (count($parts) >= 2) {
+                        $filters['courseCode'] = $parts[1];
+                    }
+                    $batchYearStr = \Models\Student::extractBatchYear($rep['enrollmentNo']);
+                    if ($batchYearStr !== null) {
+                        $batchYear = (int)$batchYearStr;
+                        // 24 -> 1st year, 23 -> 2nd year, 22 -> 3rd year, 21 -> 4th year
+                        $calculatedYear = 24 - $batchYear + 1;
+                        if ($calculatedYear < 1) $calculatedYear = 1;
+                        if ($calculatedYear > 4) $calculatedYear = 4;
+                        $filters['academicYear'] = $calculatedYear;
+                    } else {
+                        $filters['academicYear'] = $rep['std_year'] ?: 1;
+                    }
+                }
+            }
             echo json_encode(['success' => true, 'data' => $model->view($id, $filters)]);
         } elseif ($method === 'POST') {
             $data = $_POST;
