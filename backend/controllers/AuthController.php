@@ -15,11 +15,21 @@ class AuthController {
             'fname'        => "required|string|maxLength:100|regex:/^[A-Za-z][A-Za-z .'-]*$/D",
             'lname'        => "required|string|maxLength:100|regex:/^[A-Za-z][A-Za-z .'-]*$/D",
             'email'        => 'required|string|email|maxLength:150',
-            'password'     => 'required|string|minLength:6|maxLength:72',
+            'password'     => 'required|string|maxLength:72',
             'phoneNum'     => 'required|phone',
-            'role'         => 'required|string|in:student,staff',
+            'role'         => 'required|string|in:student,staff,course_representative,admin',
             'enrollmentNo' => 'requiredIf:role,student|nullable|string|maxLength:50'
         ])) {
+            return;
+        }
+
+        $passwordErrors = \Utils\Validator::isValidPassword($data['password'] ?? '', 8);
+        if (!empty($passwordErrors)) {
+            echo json_encode([
+                'success' => false,
+                'message' => $passwordErrors[0],
+                'errors'  => ['password' => $passwordErrors]
+            ]);
             return;
         }
          
@@ -65,6 +75,7 @@ class AuthController {
 
         $user = \Models\User::loadByIdentifier($identifier, $role);
         if (!$user) {
+            error_log("Login failed: User not found for identifier=$identifier, role=$role");
             echo json_encode(['success' => false, 'message' => 'Invalid credentials or role mismatch.']);
             return;
         }

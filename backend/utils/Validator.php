@@ -283,4 +283,18 @@ class Validator {
             $this->errors[$field][] = $message;
         }
     }
+
+    public static function isValidPassword(string $password, int $minLength = 8): array {
+        $errors = [];
+        if (strlen($password) < $minLength) {
+            $errors[] = "Password must be at least {$minLength} characters long.";
+        }
+        if (!preg_match('/[a-zA-Z]/', $password)) {
+            $errors[] = "Password must contain at least one letter.";
+        }
+        if (!preg_match('/[0-9]/', $password)) {
+            $errors[] = "Password must contain at least one number.";
+        }
+        return $errors;
+    }
 }

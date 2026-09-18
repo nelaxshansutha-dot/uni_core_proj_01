@@ -12,14 +12,8 @@ const NotesMonitoring = () => {
     const fetchNotes = async () => {
         setLoading(true);
         try {
-            // For Notes Monitoring (rep view), only show notes from the rep's own course.
-            // Extract the course code from the rep's enrollment_no e.g. UWU/CST/23/001 → CST
-            const enrollmentNo = user?.enrollment_no || '';
-            const parts = enrollmentNo.split('/');
-            const repCourseCode = parts.length >= 2 ? parts[1].toUpperCase() : '';
-
-            const params = repCourseCode ? `?courseCode=${repCourseCode}` : '';
-            const res = await api.get(`/notes${params}`);
+            // For Notes Monitoring (rep view), only show notes from the rep's own course and year.
+            const res = await api.get('/notes?forRep=true');
             if (res.data.success) {
                 setNotes(res.data.data);
             }

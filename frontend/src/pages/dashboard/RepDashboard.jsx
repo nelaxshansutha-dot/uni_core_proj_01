@@ -30,7 +30,7 @@ const RepDashboard = () => {
         }
 
         try {
-            const notesRes = await api.get('/notes');
+            const notesRes = await api.get('/notes?forRep=true');
             if (notesRes.data.success) {
                 setRecentNotes(notesRes.data.data.slice(0, 3)); // show top 3 recent notes
             }

@@ -68,10 +68,10 @@ const Register = () => {
         return /^0[0-9]{9}$/.test(formData.phone_number.trim());
     }, [formData.phone_number]);
 
-    // Password validation - Minimum 6 characters
+    // Password validation - Minimum 8 characters, letter, number
     const passwordValid = useMemo(() => {
         if (!formData.password) return null;
-        return formData.password.length >= 6;
+        return formData.password.length >= 8 && /[a-zA-Z]/.test(formData.password) && /[0-9]/.test(formData.password);
     }, [formData.password]);
 
     const handleSubmit = async (e) => {
@@ -100,8 +100,18 @@ const Register = () => {
             return;
         }
 
-        if (formData.password.length < 6) {
-            setError('Password must be at least 6 characters long.');
+        if (formData.password.length < 8) {
+            setError('Password must be at least 8 characters long.');
+            setLoading(false);
+            return;
+        }
+        if (!/[a-zA-Z]/.test(formData.password)) {
+            setError('Password must contain at least one letter.');
+            setLoading(false);
+            return;
+        }
+        if (!/[0-9]/.test(formData.password)) {
+            setError('Password must contain at least one number.');
             setLoading(false);
             return;
         }
@@ -273,7 +283,8 @@ const Register = () => {
                                         type={showPassword ? 'text' : 'password'}
                                         className={`form-control${passwordValid === false ? ' is-invalid' : passwordValid === true ? ' is-valid' : ''}`}
                                         name="password"
-                                        placeholder="Minimum 6 characters"
+                                        placeholder="Minimum 8 characters, with letters & numbers"
+                                        minLength={8}
                                         value={formData.password}
                                         onChange={handleChange}
                                         required
@@ -290,7 +301,7 @@ const Register = () => {
                                 </div>
                                 {passwordValid === false ? (
                                     <div className="text-danger small mt-1 d-flex align-items-center gap-1">
-                                        <XCircle size={13} /> Password must be at least 6 characters.
+                                        <XCircle size={13} /> Password must be at least 8 chars, with letters and numbers.
                                     </div>
                                 ) : passwordValid === true ? (
                                     <div className="text-success small mt-1 d-flex align-items-center gap-1">

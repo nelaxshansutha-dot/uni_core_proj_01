@@ -62,6 +62,9 @@ class CourseRepresentative extends Student
         if (array_key_exists('is_first_login', $data)) {
             $this->setIsFirstLogin($data['is_first_login']);
         }
+        if (array_key_exists('rep_hash_password', $data) && !empty($data['rep_hash_password'])) {
+            $this->setHashPassword($data['rep_hash_password']);
+        }
         return $this;
     }
 
