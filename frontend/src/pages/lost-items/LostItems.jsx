@@ -105,7 +105,7 @@ const handleDelete = async () => {
         setIsUpdating(true);
         setUpdateItemId(item.lostID);
         
-        // Format datetime correctly if needed
+     
         const formattedDate = item.last_seen_datetime 
             ? new Date(item.last_seen_datetime).toISOString().slice(0, 16) 
             : '';

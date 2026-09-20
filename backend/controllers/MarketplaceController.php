@@ -15,10 +15,10 @@ class MarketplaceController {
         }
 
         if ($method === 'GET') {
-            echo json_encode(['success' => true, 'data' => $model->view($id)]);
+            echo json_encode(['success' => true, 'data' => $model->view($id)]); //here is model view function is called
         } elseif ($method === 'POST') {
             if ($action === 'flag' && $id) {
-                echo json_encode(['success' => $model->flag($id)]);
+                echo json_encode(['success' => $model->flag($id)]);// flag funcion is called
                 return;
             }
             
@@ -129,3 +129,4 @@ class MarketplaceController {
         return false;
     }
 }
+// https://university-services-class-diagram.aranisivasakthivel10.chatgpt.site

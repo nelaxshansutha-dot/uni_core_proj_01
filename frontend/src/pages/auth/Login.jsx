@@ -53,7 +53,7 @@ const Login = () => {
         }
 
         try {
-            // Map frontend role value to backend role value
+          
             const backendRole = role === 'rep' ? 'course_representative' : role;
 
             const response = await api.post('/auth/login', {

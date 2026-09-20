@@ -14,7 +14,7 @@ class LostItem
     private $itemName;
     private $LastSeenDate;
     private $lastSeenTime;
-    private $itemImage; 
+    private $itemImage;
     private $contactNumber;
     private $description;
     private $lastSeenPlace;
@@ -112,37 +112,107 @@ class LostItem
         return $this;
     }
 
-    public function getLostID() { return $this->lostID; }
-    public function setLostID($val) { $this->lostID = $val; return $this; }
+    public function getLostID()
+    {
+        return $this->lostID;
+    }
+    public function setLostID($val)
+    {
+        $this->lostID = $val;
+        return $this;
+    }
 
-    public function getUserID() { return $this->userID; }
-    public function setUserID($val) { $this->userID = $val; return $this; }
+    public function getUserID()
+    {
+        return $this->userID;
+    }
+    public function setUserID($val)
+    {
+        $this->userID = $val;
+        return $this;
+    }
 
-    public function getItemName() { return $this->itemName; }
-    public function setItemName($val) { $this->itemName = $val; return $this; }
+    public function getItemName()
+    {
+        return $this->itemName;
+    }
+    public function setItemName($val)
+    {
+        $this->itemName = $val;
+        return $this;
+    }
 
-    public function getLastSeenDate() { return $this->LastSeenDate; }
-    public function setLastSeenDate($val) { $this->LastSeenDate = $val; return $this; }
+    public function getLastSeenDate()
+    {
+        return $this->LastSeenDate;
+    }
+    public function setLastSeenDate($val)
+    {
+        $this->LastSeenDate = $val;
+        return $this;
+    }
 
-    public function getLastSeenTime() { return $this->lastSeenTime; }
-    public function setLastSeenTime($val) { $this->lastSeenTime = $val; return $this; }
+    public function getLastSeenTime()
+    {
+        return $this->lastSeenTime;
+    }
+    public function setLastSeenTime($val)
+    {
+        $this->lastSeenTime = $val;
+        return $this;
+    }
 
-   
-    public function getItemImage() { return $this->itemImage; }
-    public function setItemImage($val) { $this->itemImage = $val; return $this; }
 
-    public function getContactNumber() { return $this->contactNumber; }
-    public function setContactNumber($val) { $this->contactNumber = $val; return $this; }
+    public function getItemImage()
+    {
+        return $this->itemImage;
+    }
+    public function setItemImage($val)
+    {
+        $this->itemImage = $val;
+        return $this;
+    }
 
-   
-    public function getDescription() { return $this->description; }
-    public function setDescription($val) { $this->description = $val; return $this; }
+    public function getContactNumber()
+    {
+        return $this->contactNumber;
+    }
+    public function setContactNumber($val)
+    {
+        $this->contactNumber = $val;
+        return $this;
+    }
 
-    public function getLastSeenPlace() { return $this->lastSeenPlace; }
-    public function setLastSeenPlace($val) { $this->lastSeenPlace = $val; return $this; }
 
-    public function getStatus() { return $this->status; }
-    public function setStatus($val) { $this->status = $val; return $this; }
+    public function getDescription()
+    {
+        return $this->description;
+    }
+    public function setDescription($val)
+    {
+        $this->description = $val;
+        return $this;
+    }
+
+    public function getLastSeenPlace()
+    {
+        return $this->lastSeenPlace;
+    }
+    public function setLastSeenPlace($val)
+    {
+        $this->lastSeenPlace = $val;
+        return $this;
+    }
+
+    public function getStatus()
+    {
+        return $this->status;
+    }
+    public function setStatus($val)
+    {
+        $this->status = $val;
+        return $this;
+    }
 
     public function create()
     {
@@ -163,23 +233,9 @@ class LostItem
         return $this->lostID;
     }
 
+    
     public function update()
     {
-   public function update()
-{
-    try {
-        $query = "UPDATE lost_items SET 
-                  lostItemName = :name, 
-                  last_seen_datetime = :lsdt,
-                  last_seen_place = :lsp,
-                  description = :desc,
-                  contact_number = :phone,
-                  status = :status,
-                  item_image = :item_image
-                  WHERE lostID = :id AND userID = :uid";
-
-        $stmt = $this->conn->prepare($query);
-
         $lsdt = null;
         if ($this->LastSeenDate && $this->lastSeenTime) {
             $lsdt = $this->LastSeenDate . ' ' . $this->lastSeenTime;
@@ -195,23 +251,8 @@ class LostItem
             $this->contactNumber,
             $this->status
         );
-        return $stmt->execute([
-            ':name' => $this->itemName,
-            ':lsdt' => $lsdt,
-            ':lsp' => $this->lastSeenPlace,
-            ':desc' => $this->description,
-            ':phone' => $this->contactNumber,
-            ':status' => $this->status,
-            ':item_image' => $this->itemImage,
-            ':id' => $this->lostID,
-            ':uid' => $this->userID
-        ]);
-
-    } catch (Exception $e) {
-        throw new Exception("Error updating lost item: " . $e->getMessage());
     }
-}
-
+    
     public function delete($lostID, $userID)
     {
         return $this->dao->delete($lostID, $userID);

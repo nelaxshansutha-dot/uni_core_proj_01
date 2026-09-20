@@ -60,12 +60,23 @@ class Student extends User {
             $this->setStdYear($data['year']);
         }
 
-        if (!empty($this->enrollmentNo) && strpos(strtoupper($this->enrollmentNo), 'UWU/CST') !== false) {
-            if (empty($this->courseID)) {
-                $this->setCourseID(1);
-            }
-            if (empty($this->std_year)) {
-                $this->setStdYear(1);
+        if (!empty($this->enrollmentNo)) {
+            $computedYear = \Controllers\CourseController::getAcademicYearFromEnrollment($this->enrollmentNo) ?? 1;
+
+            if (strpos(strtoupper($this->enrollmentNo), 'UWU/CST') !== false) {
+                if (empty($this->courseID)) {
+                    $this->setCourseID(1);
+                }
+                if (empty($this->std_year)) {
+                    $this->setStdYear($computedYear);
+                }
+            } elseif (strpos(strtoupper($this->enrollmentNo), 'UWU/SCT') !== false) {
+                if (empty($this->courseID)) {
+                    $this->setCourseID(2);
+                }
+                if (empty($this->std_year)) {
+                    $this->setStdYear($computedYear);
+                }
             }
         }
         return $this;
@@ -91,12 +102,23 @@ class Student extends User {
             $this->setStdYear($data['year']);
         }
 
-        if (!empty($this->enrollmentNo) && strpos(strtoupper($this->enrollmentNo), 'UWU/CST') !== false) {
-            if (empty($this->courseID)) {
-                $this->setCourseID(1);
-            }
-            if (empty($this->std_year)) {
-                $this->setStdYear(1);
+        if (!empty($this->enrollmentNo)) {
+            $computedYear = \Controllers\CourseController::getAcademicYearFromEnrollment($this->enrollmentNo) ?? 1;
+
+            if (strpos(strtoupper($this->enrollmentNo), 'UWU/CST') !== false) {
+                if (empty($this->courseID)) {
+                    $this->setCourseID(1);
+                }
+                if (empty($this->std_year)) {
+                    $this->setStdYear($computedYear);
+                }
+            } elseif (strpos(strtoupper($this->enrollmentNo), 'UWU/SCT') !== false) {
+                if (empty($this->courseID)) {
+                    $this->setCourseID(2);
+                }
+                if (empty($this->std_year)) {
+                    $this->setStdYear($computedYear);
+                }
             }
         }
         return $this;

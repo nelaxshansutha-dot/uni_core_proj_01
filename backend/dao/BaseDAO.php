@@ -11,12 +11,12 @@ abstract class BaseDAO {
         $this->db = Database::getInstance()->getConnection();
     }
 
-    /**
-     * Helper to execute a query and return the statement
-     */
+   
     protected function executeQuery($sql, $params = []) {
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
         return $stmt;
+
+        //IN HERE THE EXECUTING THE QUERY TO PREVENT THE SQL INJECTION
     }
 }

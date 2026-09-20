@@ -6,3 +6,19 @@ Your UniCore OTP is: 181804. It expires in 15 minutes.
 BODY:
 Your UniCore OTP is: 700575. It expires in 15 minutes.
 --------------------------------------------------
+[2026-09-18 12:09:13] TO: cst23086@std.uwu.ac.lk | SUBJECT: Your UniCore OTP Verification Code (909437)
+BODY:
+Your UniCore OTP is: 909437. It expires in 15 minutes.
+--------------------------------------------------
+[2026-09-19 14:37:35] TO: SCT23081@std.uwu.ac.lk | SUBJECT: Your UniCore OTP Verification Code (529441)
+BODY:
+Your UniCore OTP is: 529441. It expires in 15 minutes.
+--------------------------------------------------
+[2026-09-19 14:43:31] TO: cst23088@std.uwu.ac.lk | SUBJECT: Your UniCore OTP Verification Code (742382)
+BODY:
+Your UniCore OTP is: 742382. It expires in 15 minutes.
+--------------------------------------------------
+[2026-09-19 15:10:05] TO: sct23081@std.uwu.ac.lk | SUBJECT: Your UniCore OTP Verification Code (070621)
+BODY:
+Your UniCore OTP is: 070621. It expires in 15 minutes.
+--------------------------------------------------
