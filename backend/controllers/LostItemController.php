@@ -110,7 +110,12 @@ class LostItemController {
                         $stmt = $db->query("SELECT phoneNum FROM users WHERE phoneNum IS NOT NULL AND phoneNum != '' AND lost_item_sms_notification = 1");
                         $phones = $stmt->fetchAll(PDO::FETCH_COLUMN);
                         
-                        $smsMessage = "UniCore Alert: New lost item reported: $itemName. Check the portal!";
+                        $descShort = substr($data['description'] ?? '', 0, 50) . (strlen($data['description'] ?? '') > 50 ? '...' : '');
+                        $place = $data['last_seen_place'] ?? 'Unknown';
+                        $time = $data['last_seen_datetime'] ?? 'Unknown';
+                        $contact = $data['contact_number'] ?? 'Unknown';
+                        
+                        $smsMessage = "UniCore Lost Item\nItem: $itemName\nDesc: $descShort\nSeen: $place at $time\nCall: $contact";
                         // Pass the entire array of phones to SMSService to be sent in one batch request
                         if (!empty($phones)) {
                             \Utils\SMSService::sendSMS($phones, $smsMessage);
