@@ -32,7 +32,7 @@ class LostItemController {
 
             if (!$this->validatePayload(
                 ['item_image' => $_FILES['item_image'] ?? null],
-                ['item_image' => 'uploaded|maxFileSize:5242880|mimes:image/jpeg,image/png,image/webp']
+                ['item_image' => 'nullable|maxFileSize:5242880|mimes:image/jpeg,image/png,image/webp']
             )) {
                 return;
             }
@@ -111,8 +111,9 @@ class LostItemController {
                         $phones = $stmt->fetchAll(PDO::FETCH_COLUMN);
                         
                         $smsMessage = "UniCore Alert: New lost item reported: $itemName. Check the portal!";
-                        foreach ($phones as $phone) {
-                            \Utils\SMSService::sendSMS($phone, $smsMessage);
+                        // Pass the entire array of phones to SMSService to be sent in one batch request
+                        if (!empty($phones)) {
+                            \Utils\SMSService::sendSMS($phones, $smsMessage);
                         }
                     } catch (\Exception $e) {
                         error_log("[UniCore SMS] Broadcast failed: " . $e->getMessage());
@@ -129,17 +130,6 @@ class LostItemController {
             
            
             if (isset($data['update_preference'])) {
-               // Image validation
-$imageRules = isset($data['update_id'])
-    ? 'nullable|maxFileSize:5242880|mimes:image/jpeg,image/png,image/webp'
-    : 'uploaded|maxFileSize:5242880|mimes:image/jpeg,image/png,image/webp';
-
-if (!$this->validatePayload(
-    ['item_image' => $_FILES['item_image'] ?? null],
-    ['item_image' => $imageRules]
-)) {
-    return;
-}
 
                 $db = \Config\Database::getInstance()->getConnection();
                 

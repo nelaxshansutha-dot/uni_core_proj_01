@@ -83,6 +83,7 @@ class Admin extends User {
             if (!$courseID) {
                 $courseCode = $enrParts[1] ?? '';
                 if ($courseCode === 'CST') $courseID = 1;
+                elseif ($courseCode === 'SCT') $courseID = 2;
             }
 
            

@@ -67,6 +67,9 @@ class CourseController {
                 if ($courseCode === 'CST') {
                     $courseID = 1;
                     $studentDao->updateCourseId($userID, 1);
+                } elseif ($courseCode === 'SCT') {
+                    $courseID = 2;
+                    $studentDao->updateCourseId($userID, 2);
                 }
             }
 
