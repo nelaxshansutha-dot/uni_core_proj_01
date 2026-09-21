@@ -36,7 +36,7 @@ class AuthController {
         $role = $data['role'] ?? 'student';
         $data['hash_password'] = password_hash($data['password'], PASSWORD_BCRYPT);
         
-        $user = \Models\User::createInstanceFromRole($role);
+        $user = \Models\User::createInstanceFromRole($role);  //user model is create
         $user->hydrateFromRequest($data);
         $user->setRole($role);
         try {
@@ -125,6 +125,9 @@ class AuthController {
                 }
                 if (method_exists($user, 'getStaffID')) {
                     $userObj['staff_id'] = $user->getStaffID();
+                }
+                if ($user->getRole() === 'course_representative' && method_exists($user, 'getRepIdString')) {
+                    $userObj['rep_id'] = $user->getRepIdString();
                 }
 
                 $isFirstLogin = false;

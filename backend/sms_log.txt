@@ -69,3 +69,8 @@ Item: cs
 Desc: sdcs
 Seen: dcsdc at 2026-09-04T09:11
 Call: 0759818246
+[2026-09-20 08:13:04] TO: 1234567890,94771234567,94771234560,94771234561,94767844066,94759818246 | HTTP: 200 | RESP: {"status":"success","message":"Permission to send an SMS has not been enabled for the region indicated by the 'To' number: 1234567890","data":[{"uid":"6aaf796bc2e52","to":"94771234567","from":"TextLKDemo","message":"UniCore Lost Item\nItem: kjnzjkxc\nDesc: cscknsd \nSeen: zx zxzzxkj zx at 2026-09-01T11:42\nCall: 0759818246","customer_status":"Delivered","cost":"1","sms_count":1},{"uid":"6aaf796cdef7b","to":"94771234560","from":"TextLKDemo","message":"UniCore Lost Item\nItem: kjnzjkxc\nDesc: cscknsd \nSeen: zx zxzzxkj zx at 2026-09-01T11:42\nCall: 0759818246","customer_status":"Delivered","cost":"1","sms_count":1},{"uid":"6aaf796e02ab0","to":"94771234561","from":"TextLKDemo","message":"UniCore Lost Item\nItem: kjnzjkxc\nDesc: cscknsd \nSeen: zx zxzzxkj zx at 2026-09-01T11:42\nCall: 0759818246","customer_status":"Delivered","cost":"1","sms_count":1},{"uid":"6aaf796f24ed3","to":"94767844066","from":"TextLKDemo","message":"UniCore Lost Item\nItem: kjnzjkxc\nDesc: cscknsd \nSeen: zx zxzzxkj zx at 2026-09-01T11:42\nCall: 0759818246","customer_status":"Delivered","cost":"1","sms_count":1},{"uid":"6aaf7970487b5","to":"94759818246","from":"TextLKDemo","message":"UniCore Lost Item\nItem: kjnzjkxc\nDesc: cscknsd \nSeen: zx zxzzxkj zx at 2026-09-01T11:42\nCall: 0759818246","customer_status":"Delivered","cost":"1","sms_count":1}]} | MSG: UniCore Lost Item
+Item: kjnzjkxc
+Desc: cscknsd 
+Seen: zx zxzzxkj zx at 2026-09-01T11:42
+Call: 0759818246

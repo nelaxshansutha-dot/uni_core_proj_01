@@ -257,9 +257,7 @@ class PeerLearningRequestController {
         echo json_encode(['status' => 'error', 'message' => 'Method not allowed.']);
     }
 
-    /**
-     * Notify all students whose request for this courseUnit was just approved.
-     */
+    
     private function dispatchApprovalNotifications(int $repID, string $courseUnitID): void {
         $cuDAO = new CourseUnitDAO();
         $cuRow = $cuDAO->view($courseUnitID);
@@ -280,9 +278,7 @@ class PeerLearningRequestController {
         }
     }
 
-    /**
-     * Notify all seniors and batch mates for help.
-     */
+ 
     private function dispatchBroadcastNotifications(int $repID, string $courseUnitID, string $customMsg = ''): void {
         $cuDAO = new CourseUnitDAO();
         $cuRow = $cuDAO->view($courseUnitID);

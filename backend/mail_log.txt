@@ -22,3 +22,15 @@ Your UniCore OTP is: 742382. It expires in 15 minutes.
 BODY:
 Your UniCore OTP is: 070621. It expires in 15 minutes.
 --------------------------------------------------
+[2026-09-20 08:21:56] TO: cst23088@std.uwu.ac.lk | SUBJECT: UniCore — Course Representative Credentials
+BODY:
+Welcome, Roopavaran Jeevaananth!
+Rep ID: rep_uwu/cst/23/088
+Temp Password: Pmsk@201
+--------------------------------------------------
+[2026-09-20 08:22:05] TO: cst23088@std.uwu.ac.lk | SUBJECT: UniCore — Course Representative Credentials
+BODY:
+Welcome, Roopavaran Jeevaananth!
+Rep ID: rep_uwu/cst/23/088
+Temp Password: Pmsk@201
+--------------------------------------------------

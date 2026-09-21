@@ -90,7 +90,7 @@ class UserDAO extends BaseDAO {
                     FROM course_representative c
                     JOIN users u ON u.userID = c.userID
                     LEFT JOIN student s ON s.userID = c.userID
-                    WHERE c.rep_id_string = :identifier1 OR s.enrollmentNo = :identifier2";
+                    WHERE c.rep_id_string = :identifier1 OR c.enrollmentNo = :identifier2";
         } elseif ($role === 'staff') {
             $sql = "SELECT u.*, st.staffID FROM users u JOIN staff st ON u.userID = st.userID WHERE st.staffID = :identifier1 OR u.email = :identifier2";
         } elseif ($role === 'admin') {
@@ -101,10 +101,10 @@ class UserDAO extends BaseDAO {
 
         $stmt = $this->db->prepare($sql);
         if (in_array($role, ['course_representative', 'staff', 'admin'])) {
-            $stmt->bindParam(':identifier1', $identifier);
-            $stmt->bindParam(':identifier2', $identifier);
+            $stmt->bindValue(':identifier1', $identifier);
+            $stmt->bindValue(':identifier2', $identifier);
         } else {
-            $stmt->bindParam(':identifier', $identifier);
+            $stmt->bindValue(':identifier', $identifier);
         }
         $stmt->execute();
         return $stmt->fetch(PDO::FETCH_ASSOC);
