@@ -116,6 +116,7 @@ class LostItemController {
                         $contact = $data['contact_number'] ?? 'Unknown';
                         
                         $smsMessage = "UniCore Lost Item\nItem: $itemName\nDesc: $descShort\nSeen: $place at $time\nCall: $contact";
+                        
                         // Pass the entire array of phones to SMSService to be sent in one batch request
                         if (!empty($phones)) {
                             \Utils\SMSService::sendSMS($phones, $smsMessage);

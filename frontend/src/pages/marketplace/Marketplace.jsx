@@ -710,7 +710,7 @@ const Marketplace = () => {
 
             {/* ── Custom Deletion Confirmation Modal ── */}
             {confirmDeleteId && (
-                <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 1060 }} onClick={() => setConfirmDeleteId(null)}>
+                <div className="modal show d-block" style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', zIndex: 1060 }} onClick={() => setConfirmDeleteId(null)}>
                     <div className="modal-dialog modal-dialog-centered" style={{ maxWidth: '400px' }} onClick={(e) => e.stopPropagation()}>
                         <div className="modal-content border-0 shadow-lg p-3 text-center" style={{ borderRadius: '16px' }}>
                             <div className="modal-body">

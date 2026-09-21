@@ -65,7 +65,7 @@ class OtpVerification {
         $row = $this->dao->getActiveOtp($userID, $this->otpCode, $now);
 
         if ($row) {
-            // Hydrate the model
+           
             $this->otpID = $row['otpID'];
             $this->created_at = $row['created_at'];
             $this->expired_at = $row['expired_at'];

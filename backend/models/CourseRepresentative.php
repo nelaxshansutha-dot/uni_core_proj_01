@@ -160,7 +160,7 @@ class CourseRepresentative extends Student
             } elseif ($action === 'broadcast_help') {
                 $courseUnitID = $request['courseUnitID'];
 
-                // Fetch module name
+                 
                 $moduleName = $this->courseRepDAO->getCourseUnitName($courseUnitID) ?: $courseUnitID;
 
                 $repBatch = \Models\Student::extractBatchYear($this->enrollmentNo);
